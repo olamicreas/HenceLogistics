@@ -29,6 +29,12 @@ jobs:
         env:
           EXPO_APPLE_ID: "info@hencedelivery.com"
 
+      - name: Submit to App Store Connect
+        run: npx eas submit --platform ios --non-interactive --auto-submit
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_APPLE_ID: "info@hencedelivery.com"
+
       - name: Save the .ipa File
         uses: actions/upload-artifact@v4
         with:
