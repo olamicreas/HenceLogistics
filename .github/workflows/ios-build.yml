@@ -1,7 +1,7 @@
 name: Build iOS App
 
 on:
-  workflow_dispatch: # This allows you to click a manual 'Run' button on GitHub
+  workflow_dispatch:
 
 jobs:
   build:
