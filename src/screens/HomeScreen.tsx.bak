@@ -1,0 +1,1866 @@
+import React, { useEffect, useMemo, useState, useRef } from 'react';
+import {
+  Modal,
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  TextInput,
+  ScrollView,
+  Platform,
+  Alert,
+  KeyboardAvoidingView,
+  Dimensions,
+  Image,
+  StatusBar,
+  Linking,
+  TouchableWithoutFeedback,
+  ActivityIndicator,
+  Animated,
+} from 'react-native';
+import { Polyline } from 'react-native-maps';
+import QRCode from 'react-native-qrcode-svg';
+
+import DateTimePicker from '@react-native-community/datetimepicker';
+import MapView, { Marker, AnimatedRegion } from 'react-native-maps';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Notifications from 'expo-notifications';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAppContext } from '../context/AppProvider';
+import { BookingIcon } from './BookingIcons';
+import ProfileScreen from './ProfileScreen';
+import DriverDashboard from './DriverDashboard';
+import { styles as globalStyles, modalStyles, ratingStyles } from '../styles';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const DEFAULT_AVATAR = require('../../assets/cargovan.png');
+const DUBLIN_REGION = { latitude: 53.3498, longitude: -6.2603, latitudeDelta: 0.05, longitudeDelta: 0.05 };
+const DUBLIN_PICK_REGION = { latitude: 53.3498, longitude: -6.2603, latitudeDelta: 0.005, longitudeDelta: 0.005 };
+
+// --- EXACT V5 PROTOTYPE COLORS ---
+const COLORS = {
+  primary: '#1A7A4A',      // --g
+  primaryLight: '#22A862', // --gl
+  primarySoft: '#E8F5EE',  // --gp
+  primaryMid: '#C5E8D4',   // --gm
+  ink: '#0F1A14',          // --ink
+  mid: '#3D5046',          // --mid
+  soft: '#7A9080',         // --soft
+  mute: '#B8CEC3',         // --mute
+  border: '#D4E2DA',       // --border
+  bg: '#F4F8F6',           // --bg
+  white: '#FFFFFF',        // --white
+  danger: '#C0392B',       // --red
+  dangerSoft: '#FDEDEC',   // --rp
+  warning: '#D4860A',      // --amb
+  warningSoft: '#FEF3E2',  // --ap
+  purple: '#6B3FA0',       // --purp
+  purpleSoft: '#F0EAF8',   // --pp
+};
+
+// --- DATA: OPERATOR TYPES ---
+const OP_SINGLE: Record<string, string[]> = { courier: ['parcel'], delivery: ['pickup', 'delivery'], manvan: ['removal', 'trade'] };
+const OP_MULTI: Record<string, string[]> = { courier: ['parcel', 'sched'], delivery: ['parcel', 'freight', 'sched', 'spec'] };
+const OP_DESC: Record<string, string> = {
+  courier: 'Parcels & city runs · Single and multi-drop',
+  delivery: 'Careful handling · Furniture, appliances, electronics · Single & multi-drop',
+  manvan: 'Hands-on · Removals, trade materials, market stock · Single drop'
+};
+const OP_LABELS: Record<string, string> = {
+  courier: 'Courier',
+  delivery: 'Delivery Driver',
+  manvan: 'Man with a Van',
+};
+
+// --- DATA: VEHICLES ---
+const VEHICLES = [
+  { id: 'large', name: 'Large Van', ops: ['courier', 'delivery', 'manvan'], icon: 'v-large', note: 'Large Van — suits Courier, Delivery Driver and Man with a Van. Up to 1,500 kg.' },
+  { id: 'cargo', name: 'Cargo Van', ops: ['courier', 'delivery', 'manvan'], icon: 'v-cargo', note: 'Cargo Van — suits Courier, Delivery Driver and Man with a Van. Up to 800 kg.' },
+  { id: 'luton', name: 'Luton Van', ops: ['delivery', 'manvan'], icon: 'v-luton', note: 'Luton Van — Delivery Driver and Man with a Van only. Removals and heavy loads up to 3,000 kg.' },
+  { id: 'dropside', name: 'Dropside', ops: ['manvan'], icon: 'v-drop', note: 'Dropside — Man with a Van only. Building materials, scaffolding and oversized flat loads.' },
+  { id: 'flatbed', name: 'Flatbed', ops: ['manvan'], icon: 'v-flat', note: 'Flatbed — Man with a Van only. Oversized loads, steel, timber and machinery.' },
+  
+];
+
+type Service = {
+  id: string; name: string; desc: string; price: string; base: number; svc: number; badge: string; btxt: string; ico: string; v: string[]; ops?: string[];
+};
+
+// --- DATA: SINGLE DROP ---
+const CATEGORIES_SINGLE = [
+  { id: 'parcel', icon: 'cat-parcel', name: 'Parcel' },
+  { id: 'pickup', icon: 'cat-home', name: 'Pickup' },
+  { id: 'delivery', icon: 'cat-elec', name: 'Deliveries' },
+  { id: 'removal', icon: 'cat-auto', name: 'Removals & Recycling' },
+  { id: 'trade', icon: 'cat-build', name: 'Trade & Materials' },
+];
+
+const SERVICES_SINGLE: Record<string, Service[]> = {
+  parcel: [
+    { id: 'p1', name: 'Parcel Delivery', desc: 'Single parcel delivered directly to one address. Point-to-point drop.', price: 'From €20', base: 20, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-01', v: ['large', 'cargo'], ops: ['courier'] },
+  ],
+  pickup: [
+    { id: 'pk1', name: 'Furniture Store Collection', desc: 'Collect flat-pack or assembled furniture from a retailer and deliver to the customer.', price: 'From €65', base: 65, svc: 5, badge: 'bs', btxt: 'Standard', ico: 'si-16', v: ['large', 'luton'], ops: ['delivery', 'manvan'] },
+    { id: 'pk2', name: 'Appliance Collection', desc: 'Collect white goods from a store and deliver to the customer address.', price: 'From €75', base: 75, svc: 6, badge: 'bs', btxt: 'Standard', ico: 'si-17', v: ['large', 'luton'], ops: ['delivery', 'manvan'] },
+    { id: 'pk3', name: 'Pallet Collection', desc: 'Single pallet collected from a supplier or warehouse and delivered to one address.', price: 'From €95', base: 95, svc: 8, badge: 'bs', btxt: 'Standard', ico: 'si-pall', v: ['large', 'luton'], ops: ['delivery', 'manvan'] },
+    { id: 'pk4', name: 'Builders Merchant', desc: 'Materials collected from a trade counter or merchant and delivered to site.', price: 'From €90', base: 90, svc: 8, badge: 'bs', btxt: 'Standard', ico: 'si-13', v: ['large', 'luton', 'dropside', 'flatbed'], ops: ['delivery', 'manvan'] },
+    { id: 'pk5', name: 'Marketplace & Auction', desc: 'Collect a purchased item from a private seller, auction house, or online marketplace.', price: 'From €55', base: 55, svc: 5, badge: 'bs', btxt: 'Standard', ico: 'si-auc', v: ['large', 'cargo', 'luton'], ops: ['delivery', 'manvan'] },
+  ],
+  delivery: [
+    { id: 'd1', name: 'Large Item Delivery', desc: 'Large or heavy items delivered carefully to a single address. Up to 500 kg.', price: 'From €70', base: 70, svc: 5, badge: 'bs', btxt: 'Standard', ico: 'si-03', v: ['large', 'luton'], ops: ['delivery'] },
+    { id: 'd2', name: 'Furniture Delivery', desc: 'Assembled or flat-pack furniture delivered to the customer door.', price: 'From €70', base: 70, svc: 5, badge: 'bs', btxt: 'Standard', ico: 'si-14', v: ['large', 'luton'], ops: ['delivery'] },
+    { id: 'd3', name: 'Appliance Delivery', desc: 'White goods delivered and placed. Tail-lift available where required.', price: 'From €80', base: 80, svc: 6, badge: 'bs', btxt: 'Standard', ico: 'si-17', v: ['large', 'luton'], ops: ['delivery'] },
+    { id: 'd4', name: 'Electronics & Office', desc: 'Consumer or business electronics and office equipment. Anti-static, careful handling.', price: 'From €55', base: 55, svc: 4, badge: 'be', btxt: 'Express', ico: 'si-07', v: ['large', 'cargo'], ops: ['delivery'] },
+    { id: 'd5', name: 'Medical Equipment', desc: 'Beds, wheelchairs, oxygen equipment delivered to a single address.', price: 'From €80', base: 80, svc: 8, badge: 'be', btxt: 'Express', ico: 'si-medeq', v: ['large', 'cargo', 'luton'], ops: ['delivery'] },
+    { id: 'd6', name: 'Pallet Delivery', desc: 'Single pallet delivered directly to a business or customer address.', price: 'From €95', base: 95, svc: 8, badge: 'bs', btxt: 'Standard', ico: 'si-pall', v: ['large', 'luton'], ops: ['delivery'] },
+    { id: 'd7', name: 'Catering & Events', desc: 'Full catering or event load delivered to a single venue.', price: 'From €90', base: 90, svc: 8, badge: 'be', btxt: 'Express', ico: 'si-20', v: ['large', 'luton'], ops: ['delivery'] },
+  ],
+  removal: [
+    { id: 'r1', name: 'House Removal', desc: 'Full or partial home move to a single destination.', price: 'From €180', base: 180, svc: 20, badge: 'bs', btxt: 'Standard', ico: 'si-15', v: ['large', 'luton'], ops: ['manvan'] },
+    { id: 'r2', name: 'Single Item Move', desc: 'One item moved point-to-point. No job too small.', price: 'From €55', base: 55, svc: 4, badge: 'bs', btxt: 'Standard', ico: 'si-pick', v: ['large', 'cargo'], ops: ['manvan'] },
+    { id: 'r3', name: 'Office & IT Relocation', desc: 'Office tech and equipment moved between two addresses.', price: 'From €90', base: 90, svc: 6, badge: 'bs', btxt: 'Standard', ico: 'si-18', v: ['large', 'cargo', 'luton'], ops: ['manvan'] },
+    { id: 'r4', name: 'Furniture & Appliance Disposal', desc: 'Heavy furniture or white goods taken to a recycling centre, tip, or charity.', price: 'From €100', base: 100, svc: 8, badge: 'bs', btxt: 'Standard', ico: 'si-recycle', v: ['large', 'luton'], ops: ['manvan'] },
+    { id: 'r5', name: 'Waste & Recycling', desc: 'General clearance items collected and dropped to a recycling centre or tip.', price: 'From €80', base: 80, svc: 5, badge: 'bs', btxt: 'Standard', ico: 'si-recycle', v: ['large', 'cargo'], ops: ['manvan'] },
+  ],
+  trade: [
+    { id: 't1', name: 'Construction Materials', desc: 'Heavy building materials delivered to a single construction site.', price: 'From €130', base: 130, svc: 12, badge: 'bs', btxt: 'Standard', ico: 'si-13', v: ['luton', 'dropside', 'flatbed'], ops: ['manvan', 'delivery'] },
+    { id: 't2', name: 'HVAC Equipment', desc: 'Heating and air conditioning units delivered to a single job site.', price: 'From €110', base: 110, svc: 10, badge: 'bs', btxt: 'Standard', ico: 'si-11', v: ['large', 'luton', 'dropside'], ops: ['manvan', 'delivery'] },
+    { id: 't3', name: 'Plumbing Supply', desc: 'Pipes, fixtures and tools delivered to a single site.', price: 'From €85', base: 85, svc: 6, badge: 'bs', btxt: 'Standard', ico: 'si-12', v: ['large', 'cargo', 'luton'], ops: ['manvan', 'delivery'] },
+    { id: 't4', name: 'Timber & Lumber', desc: 'Short lengths of timber and lumber delivered to site.', price: 'From €80', base: 80, svc: 6, badge: 'bs', btxt: 'Standard', ico: 'si-con', v: ['large', 'luton', 'dropside', 'flatbed'], ops: ['manvan', 'delivery'] },
+    { id: 't5', name: 'Tools & Equipment', desc: 'Trade tools and equipment moved between locations.', price: 'From €65', base: 65, svc: 4, badge: 'bs', btxt: 'Standard', ico: 'si-11', v: ['large', 'cargo'], ops: ['manvan', 'delivery'] },
+    { id: 't6', name: 'General Trade Materials', desc: 'Mixed supplies and materials delivered to a trade address.', price: 'From €70', base: 70, svc: 5, badge: 'bs', btxt: 'Standard', ico: 'si-build', v: ['large', 'cargo', 'luton'], ops: ['manvan', 'delivery'] },
+  ],
+};
+
+// --- DATA: MULTI DROP ---
+const CATEGORIES_MULTI = [
+  { id: 'parcel', icon: 'cat-parcel', name: 'Parcel & Docs' },
+  { id: 'sched', icon: 'cat-sched', name: 'Scheduled' },
+  { id: 'freight', icon: 'cat-freight', name: 'Freight' },
+  { id: 'spec', icon: 'cat-spec', name: 'Home & Spec' },
+];
+
+const SERVICES_MULTI: Record<string, Service[]> = {
+  parcel: [
+    { id: 'mp0', name: 'Small Parcel Run', desc: 'Multiple small parcels and packages up to 25 kg across several addresses.', price: 'From €85', base: 85, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-01', v: ['large', 'cargo'], ops: ['courier', 'delivery'] },
+    { id: 'mp0b', name: 'Medium Parcel Run', desc: 'Multiple mid-size goods 25–100 kg across several addresses in one run.', price: 'From €95', base: 95, svc: 2, badge: 'bs', btxt: 'Standard', ico: 'si-02', v: ['large', 'cargo'], ops: ['courier', 'delivery'] },
+    { id: 'mp1', name: 'Standard Delivery Run', desc: 'Reliable multi-stop delivery run. Core bread-and-butter van work.', price: 'From €85', base: 85, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-std', v: ['large', 'cargo', 'luton', 'dropside', 'flatbed'], ops: ['courier', 'delivery'] },
+    { id: 'mp2', name: 'Same-Day Delivery Run', desc: 'Batched city runs collected and delivered within the day.', price: 'From €110', base: 110, svc: 4, badge: 'be', btxt: 'Express', ico: 'si-sday', v: ['large', 'cargo'], ops: ['courier', 'delivery'] },
+    { id: 'mp3', name: 'Next-Day Delivery Run', desc: 'Route-optimised overnight preparation, delivered the following morning.', price: 'From €90', base: 90, svc: 2, badge: 'bs', btxt: 'Standard', ico: 'si-nday', v: ['large', 'cargo', 'luton'], ops: ['courier', 'delivery'] },
+    { id: 'mp4', name: 'Express / Priority Run', desc: 'Fastest dispatch. Best for tightly clustered stops where speed is critical.', price: 'From €130', base: 130, svc: 10, badge: 'bp', btxt: 'Priority', ico: 'si-exp', v: ['large', 'cargo'], ops: ['courier', 'delivery'] },
+  ],
+  sched: [
+    { id: 'ms1', name: 'Scheduled / Recurring Delivery', desc: 'Regular delivery route on agreed days and times.', price: 'From €120', base: 120, svc: 8, badge: 'bs', btxt: 'Scheduled', ico: 'si-rec', v: ['large', 'cargo', 'luton', 'dropside', 'flatbed'], ops: ['courier', 'delivery'] },
+    { id: 'ms2', name: 'Dedicated Route Service', desc: 'Exclusive driver assigned to a single business route.', price: 'From €180', base: 180, svc: 15, badge: 'bs', btxt: 'Scheduled', ico: 'si-route', v: ['large', 'cargo', 'luton', 'dropside', 'flatbed'], ops: ['courier', 'delivery'] },
+  ],
+  freight: [
+    { id: 'mf1', name: 'Palletised Freight', desc: 'Single or multi-pallet freight to multiple business addresses.', price: 'From €120', base: 120, svc: 12, badge: 'bm', btxt: 'Multi-Drop', ico: 'si-pall', v: ['large', 'luton', 'dropside', 'flatbed'], ops: ['delivery'] },
+    { id: 'mf2', name: 'B2B Pallet & Freight Distribution', desc: 'Bulk pallet distribution to multiple D2B locations in one run.', price: 'From €180', base: 180, svc: 18, badge: 'bm', btxt: 'Multi-Drop', ico: 'si-b2bp', v: ['large', 'luton', 'dropside', 'flatbed'], ops: ['delivery'] },
+    { id: 'mf3', name: 'Construction Materials Delivery', desc: 'Heavy materials delivered to multiple construction sites on one route.', price: 'From €150', base: 150, svc: 12, badge: 'bs', btxt: 'Standard', ico: 'si-con', v: ['luton', 'dropside', 'flatbed'], ops: ['delivery'] },
+  ],
+  spec: [
+    { id: 'mx1', name: 'Flat-Pack Furniture Run', desc: 'Flat-pack or assembled furniture to multiple customer addresses.', price: 'From €45', base: 45, svc: 5, badge: 'bs', btxt: 'Standard', ico: 'si-flat', v: ['large', 'luton', 'cargo'], ops: ['delivery'] },
+    { id: 'mx2', name: 'Single Item Collection & Delivery', desc: 'Individual items collected and delivered across multiple stops.', price: 'From €70', base: 70, svc: 4, badge: 'bs', btxt: 'Standard', ico: 'si-pick', v: ['large', 'cargo'], ops: ['delivery'] },
+    { id: 'mx3', name: 'Auction / Marketplace Pickup', desc: 'Multi-stop collection from auction houses or private sellers.', price: 'From €80', base: 80, svc: 8, badge: 'bs', btxt: 'Standard', ico: 'si-auc', v: ['large', 'luton', 'cargo', 'dropside'], ops: ['delivery'] },
+  ],
+};
+
+const CAT_TOOLTIPS: Record<string, { title: string; body: string }> = {
+  parcel: { title: 'Parcel & Documents', body: 'Standard, same-day, and express parcel deliveries across multiple addresses in a single run. Includes small and medium parcels, urgent documents, and e-commerce last mile.' },
+  sched: { title: 'Scheduled & Recurring', body: 'Fixed weekly or daily routes with multiple stops. A van dedicated to your contracted route — ideal for businesses that move on a consistent rhythm.' },
+  freight: { title: 'Freight & Pallets', body: 'Bulk B2B goods on pallets or in large quantities, going to multiple business addresses in one run. Ideal for wholesalers and construction materials.' },
+  spec: { title: 'Home & Specialist', body: 'Multi-stop delivery of home goods and specialist items — flat-pack furniture, single item collections, and auction or marketplace pickups.' }
+};
+
+// --- CHAT SUPPORT MODAL ---
+function ChatSupportModal({ visible, onClose, user, activeBooking, sendSupportMessage, createSupportTicket }: any) {
+  const [messages, setMessages] = useState<any[]>([]);
+  const [input, setInput] = useState('');
+  const scrollRef = useRef<ScrollView | null>(null);
+
+  useEffect(() => {
+    if (visible) {
+      setMessages([{ id: 'bot-welcome', sender: 'bot', text: `Hi ${user?.full_name?.split(' ')[0] || 'there'} — I’m Hence Assist. How can I help today?`, time: Date.now() }]);
+      setInput('');
+    }
+  }, [visible, user]);
+
+  const onSend = () => {
+    if (!input.trim()) return;
+    setMessages(prev => [...prev, { id: `u-${Date.now()}`, sender: 'user', text: input.trim(), time: Date.now() }]);
+    setInput('');
+    setTimeout(() => setMessages(prev => [...prev, { id: `b-${Date.now()}`, sender: 'bot', text: 'I am a demo bot. Please escalate to human support for real assistance.', time: Date.now() }]), 600);
+  };
+
+  const escalateToHuman = async () => {
+    const subject = `Chat escalation from ${user?.full_name}`;
+    const body = `Please assist user ${user?.id} with booking ${activeBooking?.id || 'N/A'}`;
+    const mailUrl = `mailto:support@hencelogistics.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    Linking.openURL(mailUrl).catch(() => Alert.alert('Error', 'Could not open email client.'));
+  };
+
+  if (!visible) return null;
+  return (
+    <Modal visible={visible} animationType="slide" transparent>
+      <View style={modalStyles.backdrop} />
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <View style={{ position: 'absolute', top: 40, left: 12, right: 12, bottom: 40, backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderColor: '#F3F4F6' }}>
+            <View style={{ flex: 1 }}><Text style={{ fontWeight: '800', fontSize: 16 }}>Hence Support</Text></View>
+            <TouchableOpacity onPress={onClose} style={{ padding: 8 }}><Ionicons name="close" size={22} color="#374151" /></TouchableOpacity>
+          </View>
+          <ScrollView ref={scrollRef} style={{ flex: 1, padding: 12 }} onContentSizeChange={() => scrollRef.current?.scrollToEnd()}>
+            {messages.map((item) => (
+              <View key={item.id} style={{ marginBottom: 10, alignSelf: item.sender === 'user' ? 'flex-end' : 'flex-start', maxWidth: '85%' }}>
+                <View style={{ backgroundColor: item.sender === 'user' ? COLORS.primary : '#F3F4F6', padding: 10, borderRadius: 12 }}>
+                  <Text style={{ color: item.sender === 'user' ? 'white' : '#111827' }}>{item.text}</Text>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+          <View style={{ flexDirection: 'row', padding: 12, borderTopWidth: 1, borderColor: '#F3F4F6', alignItems: 'center' }}>
+            <TextInput placeholder="Type your message..." value={input} onChangeText={setInput} style={{ flex: 1, backgroundColor: '#F9FAFB', paddingVertical: 10, paddingHorizontal: 12, borderRadius: 12, marginRight: 8 }} />
+            <TouchableOpacity onPress={onSend} style={{ backgroundColor: COLORS.primary, padding: 12, borderRadius: 12 }}><Ionicons name="send" size={18} color="#fff" /></TouchableOpacity>
+            <TouchableOpacity onPress={escalateToHuman} style={{ marginLeft: 8, padding: 10 }}><MaterialCommunityIcons name="headset" size={22} color={COLORS.primary} /></TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+// --- RATING MODAL ---
+function RatingModal({ visible, onClose, onSubmit, defaultRating = 0, proofUrl }: any) {
+  const [rating, setRating] = useState<number>(defaultRating);
+  const [note, setNote] = useState<string>('');
+  useEffect(() => { if (visible) { setRating(defaultRating); setNote(''); } }, [visible, defaultRating]);
+  return (
+    <Modal visible={visible} transparent animationType="slide">
+      <TouchableWithoutFeedback onPress={onClose}><View style={modalStyles.backdrop} /></TouchableWithoutFeedback>
+      <View style={[modalStyles.container, { top: '15%' }]}>
+        <View style={ratingStyles.card}>
+          <Text style={ratingStyles.title}>Rate your driver</Text>
+          {proofUrl && <View style={{ alignItems: 'center', marginVertical: 12 }}><Image source={{ uri: proofUrl }} style={{ width: 220, height: 140, borderRadius: 8, resizeMode: 'cover' }} /></View>}
+          <View style={{ flexDirection: 'row', justifyContent: 'center', marginVertical: 12 }}>
+            {[1, 2, 3, 4, 5].map((s) => (
+              <TouchableOpacity key={s} onPress={() => setRating(s)} style={{ padding: 8 }}><Ionicons name={s <= rating ? 'star' : 'star-outline'} size={32} color="#f59e0b" /></TouchableOpacity>
+            ))}
+          </View>
+          <TextInput placeholder="Leave a note..." value={note} onChangeText={setNote} multiline style={ratingStyles.textInput} />
+          <View style={{ flexDirection: 'row', marginTop: 12 }}>
+            <TouchableOpacity style={[modalStyles.btn, { backgroundColor: '#e5e7eb', flex: 1, marginRight: 8 }]} onPress={onClose}><Text style={[modalStyles.btnText, { color: '#111827' }]}>Cancel</Text></TouchableOpacity>
+            <TouchableOpacity style={[modalStyles.btn, { backgroundColor: COLORS.primary, flex: 1 }]} onPress={() => onSubmit(rating, note)}><Text style={modalStyles.btnText}>Submit</Text></TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function calculateBearing(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const toRad = (d: number) => d * Math.PI / 180;
+  const toDeg = (r: number) => r * 180 / Math.PI;
+  const φ1 = toRad(lat1);
+  const φ2 = toRad(lat2);
+  const Δλ = toRad(lon2 - lon1);
+  const y = Math.sin(Δλ) * Math.cos(φ2);
+  const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+  const θ = Math.atan2(y, x);
+  return (toDeg(θ) + 360) % 360;
+}
+
+// --- MAIN HOME COMPONENT ---
+export default function HomeScreen() {
+  const {
+    user, token, bottomTab, setCurrentScreen,
+    pickupAddr, setPickupAddr, pickupCoord, setPickupCoord, stops, setStops, addStop, removeStop, updateStop,
+    bookingMode, setBookingMode, isScheduled, setIsScheduled, scheduleTime, setScheduleTime,
+    openQuoteFlow, activeSearchIndex, setActiveSearchIndex, scheduleSearch,
+    pickupSuggestions, dropoffSuggestions, selectSearchResult,
+    manService, setManService, followDriver, setFollowDriver, setMapPickTarget,
+    vanType, setVanType, mapPickTarget, reverseGeocode,
+    rideHistory, fetchRideHistory, driverLocation, mapRef, activeBooking, setActiveBooking,
+    quoteModalVisible, setQuoteModalVisible, quoteData, creatingBooking, confirmAndPayAndCreateBooking,
+    rateDriver, acknowledgeBooking, fetchDriverProfile, sendSupportMessage, createSupportTicket
+  } = useAppContext() as any;
+
+  const insets = useSafeAreaInsets();
+  const [step, setStep] = useState<number>(1);
+  const [hiddenHistoryIds, setHiddenHistoryIds] = useState<number[]>([]);
+  const [operatorType, setOperatorType] = useState<string | null>(null);
+  const [localVanType, setLocalVanType] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [expandedStopIdx, setExpandedStopIdx] = useState<number | null>(0);
+  const [selectedStopServices, setSelectedStopServices] = useState<Record<number, Service>>({});
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+// Tracking / App State
+  const [qrVisible, setQrVisible] = useState(false);
+  const [trackingModalVisible, setTrackingModalVisible] = useState(false);
+  const [ratingModalVisible, setRatingModalVisible] = useState(false);
+  const [ratingBookingContext, setRatingBookingContext] = useState<{ bookingId?: number; driverId?: number } | null>(null);
+  const [dismissedRatingIds, setDismissedRatingIds] = useState<number[]>([]);
+  const [chatVisible, setChatVisible] = useState(false);
+  const [tempAddress, setTempAddress] = useState('Move map to select location...');
+  const [tempCoord, setTempCoord] = useState<{ lat: number; lon: number } | null>(null);
+  const [bearing, setBearing] = useState<number>(0);
+
+  // 🔥 The Auto-Close & Auto-Rate Watcher
+  useEffect(() => {
+    if (!activeBooking) {
+      setTrackingModalVisible(false);
+      return;
+    }
+
+    const status = String(activeBooking.status || '').toLowerCase();
+
+    // Condition A: Job is completely finished
+    if (['completed', 'delivered', 'paid'].includes(status)) {
+      setTrackingModalVisible(false); 
+      setQrVisible(false); 
+      
+      // Pop the rating modal if they haven't rated yet
+      if (!activeBooking.customer_rating && !activeBooking.rating && !dismissedRatingIds.includes(activeBooking.id)) {
+        setRatingBookingContext({ bookingId: activeBooking.id, driverId: activeBooking.driver_id || activeBooking.driver?.id });
+        setRatingModalVisible(true);
+      }
+    } 
+    // Condition B: Job was cancelled or escalated
+    else if (['cancelled', 'escalated', 'failed'].includes(status)) {
+      setTrackingModalVisible(false);
+      setQrVisible(false);
+      Alert.alert(
+        "Booking Update", 
+        `This booking has been ${status}. Please contact support if you need assistance.`
+      );
+      setTimeout(() => setActiveBooking(null), 2000);
+    }
+    // Condition C: Job is live and tracking
+    else if (['accepted', 'in_transit', 'picked_up', 'assigned'].includes(status)) {
+      if (!trackingModalVisible && !ratingModalVisible) {
+        setTrackingModalVisible(true);
+      }
+    }
+  }, [activeBooking?.status, activeBooking?.id, dismissedRatingIds]);
+
+  const clearOpType = () => {
+    setOperatorType(null);
+    setLocalVanType('');
+    setSelectedCategory(null);
+    setSelectedService(null);
+  };
+
+  const prevLocationRef = useRef<{ lat: number; lon: number } | null>(
+    driverLocation ? { lat: driverLocation.lat, lon: driverLocation.lon } : null
+  );
+
+  const animatedCoordinate = useRef(
+    new AnimatedRegion({
+      latitude: driverLocation?.lat || DUBLIN_REGION.latitude,
+      longitude: driverLocation?.lon || DUBLIN_REGION.longitude,
+      latitudeDelta: 0,
+      longitudeDelta: 0,
+    })
+  ).current;
+
+  const isMulti = bookingMode === 'multi';
+
+  // --- DERIVED STATE ---
+  const isVehicleLocked = !operatorType;
+  const isServiceLocked = !operatorType || !localVanType;
+  
+  const activeCategories = isMulti ? CATEGORIES_MULTI : CATEGORIES_SINGLE;
+  const activeServicesDict = isMulti ? SERVICES_MULTI : SERVICES_SINGLE;
+
+  const selectedVehicle = VEHICLES.find(v => v.id === localVanType);
+
+  const visibleServices = useMemo(() => {
+    if (!selectedCategory || !selectedVehicle) return [];
+    return (activeServicesDict[selectedCategory] || []).filter(s => 
+      s.v.includes(localVanType) && (!s.ops || !operatorType || s.ops.includes(operatorType))
+    );
+  }, [selectedCategory, localVanType, operatorType, activeServicesDict, selectedVehicle]);
+
+  const canContinue = (isMulti && !isServiceLocked) || (!!selectedService && !isServiceLocked);
+
+  const normalizeVanType = (type: string) => {
+    switch ((type || '').toLowerCase()) {
+      case 'luton': return 'box';
+      case 'flatbed': return 'fleet';
+      default: return type;
+    }
+  };
+
+  const deriveBackendJobType = () => {
+    if (!isMulti) {
+      const sid = selectedService?.id;
+      if (['p1'].includes(sid!)) return 'parcel_small';
+      if (['pk1', 'pk2', 'pk3', 'pk4', 'd1', 'd2', 'd3', 'd6', 'r1', 'r4'].includes(sid!)) return 'furniture_items';
+      return 'parcel_small'; // fallback
+    }
+    const chosen = Object.values(selectedStopServices).find(Boolean) as Service | null | undefined;
+    const sid = chosen?.id;
+    if (['mf1', 'mf2', 'mf3', 'mx1', 'mx2'].includes(sid!)) return 'furniture_items';
+    return 'parcel_small'; // fallback
+  };
+
+  // --- ROBUST STATE UPDATERS ---
+  const handleUpdateStopSafe = (idx: number, field: string, value: any) => {
+    if (typeof setStops === 'function') {
+      const updated = [...stops];
+      if (!updated[idx]) updated[idx] = {};
+      updated[idx][field] = value;
+      setStops(updated);
+    } else if (typeof updateStop === 'function') {
+      updateStop(idx, field, value);
+    }
+  };
+
+  const handleAddStop = () => {
+    const newStop = { 
+      address: '', 
+      recipient: '', 
+      phone: '', 
+      instructions: '', 
+      items: [{ description: '', qty: '1', weight: '', ref: '' }], 
+      weight: 45, 
+      lat: null, 
+      lon: null 
+    };
+
+    if (typeof setStops === 'function') {
+      setStops([...stops, newStop]);
+      setExpandedStopIdx(stops.length); 
+    } else if (typeof addStop === 'function') {
+      addStop(newStop);
+      setExpandedStopIdx(stops.length);
+    } else {
+      Alert.alert("Error", "Could not add a new stop.");
+    }
+  };
+
+  const handleRemoveStopSafe = (idx: number) => {
+    if (typeof setStops === 'function') {
+      const updated = [...stops];
+      updated.splice(idx, 1);
+      setStops(updated);
+    } else if (typeof removeStop === 'function') {
+      removeStop(idx);
+    }
+  };
+
+  // --- EFFECTS ---
+  useEffect(() => {
+    stops.forEach((stop: any, idx: number) => {
+      if (!stop.items || stop.items.length === 0) {
+        handleUpdateStopSafe(idx, 'items', [{ description: '', qty: '1', weight: '', ref: '' }]);
+      }
+      if (stop.weight === undefined || stop.weight === null) {
+        handleUpdateStopSafe(idx, 'weight', 45);
+      }
+    });
+  }, [stops.length]);
+
+  useEffect(() => {
+    if (token && user && bottomTab === 'rides') fetchRideHistory().catch(() => {});
+  }, [bottomTab, user?.id, token]);
+
+  useEffect(() => {
+    if (!driverLocation) return;
+    const newLat = driverLocation.lat;
+    const newLon = driverLocation.lon;
+    const prev = prevLocationRef.current;
+
+    if (prev && (prev.lat !== newLat || prev.lon !== newLon)) {
+      try { setBearing(calculateBearing(prev.lat, prev.lon, newLat, newLon)); } catch (e) {}
+    }
+
+    try {
+      animatedCoordinate.timing({ latitude: newLat, longitude: newLon, duration: 2000 }).start();
+    } catch (e) {
+      animatedCoordinate.setValue({ latitude: newLat, longitude: newLon });
+    }
+
+    if (activeBooking && mapRef.current) {
+      const status = (activeBooking.status || '').toLowerCase();
+      if (['accepted', 'assigned', 'in_progress'].includes(status)) {
+        mapRef.current.animateCamera(
+          { center: { latitude: newLat, longitude: newLon }, pitch: 0, heading: bearing },
+          { duration: 1000 }
+        );
+      }
+    }
+
+    prevLocationRef.current = { lat: newLat, lon: newLon };
+  }, [driverLocation, activeBooking, bearing, animatedCoordinate, mapRef]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        if (!activeBooking) return;
+        const driverId = activeBooking.driver_id ?? activeBooking.driver?.id;
+        const hasFullDriver = activeBooking.driver && (activeBooking.driver.full_name || activeBooking.driver.avatar_url);
+        if (driverId && !hasFullDriver && fetchDriverProfile) {
+          const profile = await fetchDriverProfile(Number(driverId));
+          if (profile && mounted) {
+            setActiveBooking((prev: any) => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                driver: profile,
+                driver_name: prev.driver_name || profile.full_name,
+                driver_avatar: prev.driver_avatar || profile.avatar_url,
+                driver_phone: prev.driver_phone || profile.phone,
+                driver_vehicle: prev.driver_vehicle || profile.vehicle,
+              };
+            });
+          }
+        }
+      } catch (e) {}
+    })();
+    return () => { mounted = false; };
+  }, [activeBooking?.id, activeBooking?.driver_id, fetchDriverProfile, setActiveBooking]);
+
+  useEffect(() => {
+    if (activeBooking && user?.role === 'individual') {
+      const status = (activeBooking.status || '').toString().toLowerCase();
+      const isFinished = ['completed', 'delivered', 'paid'].includes(status);
+      const hasRated = activeBooking.customer_rating ?? activeBooking.rating ?? false;
+      const driverId = activeBooking.driver_id ?? activeBooking.driver?.id;
+      if (isFinished && driverId && !hasRated && !ratingModalVisible && !dismissedRatingIds.includes(activeBooking.id)) {
+        setRatingBookingContext({ bookingId: activeBooking.id, driverId: driverId });
+        setRatingModalVisible(true);
+      }
+    }
+  }, [activeBooking, user?.role, ratingModalVisible, dismissedRatingIds]);
+
+  const getLiveETA = () => {
+    if (!driverLocation || !activeBooking) return '...';
+    const status = String(activeBooking.status || '').toLowerCase();
+    const isHeadingToPickup = ['pending', 'assigned', 'accepted'].includes(status);
+    const targetLat = isHeadingToPickup ? activeBooking.pickup_lat : activeBooking.dropoff_lat;
+    const targetLon = isHeadingToPickup ? activeBooking.pickup_lon : activeBooking.dropoff_lon;
+    if (!targetLat || !targetLon) return '...';
+    const R = 6371;
+    const dLat = (targetLat - driverLocation.lat) * (Math.PI / 180);
+    const dLon = (targetLon - driverLocation.lon) * (Math.PI / 180);
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(driverLocation.lat * (Math.PI / 180)) * Math.cos(targetLat * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const distanceKm = R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+    const timeMins = Math.round((distanceKm / 35) * 60);
+    return timeMins < 1 ? 'Less than a minute' : `${timeMins} min`;
+  };
+
+  // --- FORM HANDLERS ---
+  const handleModeChange = (mode: 'single' | 'multi') => {
+    setBookingMode(mode);
+    setOperatorType(null);
+    setLocalVanType('');
+    setSelectedCategory(null);
+    setSelectedService(null);
+  };
+
+  const handleOperatorSelect = (op: string) => {
+    if (operatorType === op) {
+      setOperatorType(null);
+      setLocalVanType('');
+    } else {
+      setOperatorType(op);
+      if (localVanType) {
+        const vInfo = VEHICLES.find(v => v.id === localVanType);
+        if (vInfo && !vInfo.ops.includes(op)) setLocalVanType('');
+      }
+    }
+    setSelectedCategory(null);
+    setSelectedService(null);
+  };
+
+  const handleDateChange = (e: any, d?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+      if (e.type === 'dismissed') return;
+    }
+    if (d) {
+      setScheduleTime(d);
+      setIsScheduled(true);
+    }
+  };
+
+  const selectVehicle = (id: string) => {
+    setLocalVanType(id);
+    setVanType?.(id);
+    setSelectedCategory(null);
+    setSelectedService(null);
+  };
+
+  const selectCategory = (catId: string) => {
+    setSelectedCategory(catId);
+    setSelectedService(null);
+  };
+
+  const selectService = (svc: Service) => setSelectedService(svc);
+
+  // Stop Management Items
+  const handleAddStopItem = (stopIdx: number) => {
+    const items = [...(stops[stopIdx]?.items || [])];
+    items.push({ description: '', qty: '1', weight: '', ref: '' });
+    handleUpdateStopSafe(stopIdx, 'items', items);
+  };
+
+  const updateStopItem = (stopIdx: number, itemIdx: number, field: string, value: string) => {
+    const items = [...(stops[stopIdx]?.items || [])];
+    if (!items[itemIdx]) items[itemIdx] = { description: '', qty: '1', weight: '', ref: '' };
+    items[itemIdx][field] = value;
+    handleUpdateStopSafe(stopIdx, 'items', items);
+  };
+
+  const handleRemoveStopItem = (stopIdx: number, itemIdx: number) => {
+    const items = [...(stops[stopIdx]?.items || [])];
+    if (items.length > 1) {
+      items.splice(itemIdx, 1);
+      handleUpdateStopSafe(stopIdx, 'items', items);
+    }
+  };
+
+  const adjustWeight = (stopIdx: number, amount: number) => {
+    const current = Number(stops[stopIdx]?.weight || 0);
+    handleUpdateStopSafe(stopIdx, 'weight', Math.max(0, current + amount));
+  };
+
+  const showCatTooltip = (catId: string) => {
+    const tip = CAT_TOOLTIPS[catId];
+    if (tip) {
+      Alert.alert(tip.title, tip.body, [{ text: 'Got it' }]);
+    }
+  };
+
+  // Rendering blocks
+  const renderSuggestions = (idx: number) => {
+    const list = (idx === -1 ? pickupSuggestions : dropoffSuggestions) || [];
+    if (list.length === 0) return null;
+    return (
+      <View style={styles.suggestionBox}>
+        {list.map((item: any, i: number) => (
+          <TouchableOpacity 
+            key={i} 
+            style={styles.suggestionItem} 
+            activeOpacity={0.7}
+            onPress={() => {
+              selectSearchResult(idx, item);
+              setActiveSearchIndex(null);
+            }}
+          >
+            <Ionicons name="location-outline" size={18} color={COLORS.primary} />
+            <Text style={styles.suggestionText}>{item.display_name}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+  };
+
+  const renderItemsTable = (idx: number) => {
+    const stop = stops[idx] || {};
+    const items = stop.items || [{ description: '', qty: '1', weight: '', ref: '' }];
+    return (
+      <View style={styles.itemsSec}>
+        <View style={styles.table}>
+          <View style={styles.tableHdrRow}>
+            <Text style={[styles.th, { flex: 2 }]}>Description</Text>
+            <Text style={[styles.th, { width: 40, textAlign: 'center' }]}>Qty</Text>
+            <Text style={[styles.th, { flex: 1.2 }]}>Weight</Text>
+            <Text style={[styles.th, { flex: 1.5 }]}>PO/Ref</Text>
+            <View style={{ width: 24 }} />
+          </View>
+          {items.map((item: any, i: number) => (
+            <View key={i} style={styles.tr}>
+              <TextInput style={[styles.tdInput, { flex: 2 }]} placeholder="Item desc" value={item.description} onChangeText={(t) => updateStopItem(idx, i, 'description', t)} />
+              <TextInput style={[styles.tdInput, { width: 40, textAlign: 'center' }]} keyboardType="numeric" value={item.qty} onChangeText={(t) => updateStopItem(idx, i, 'qty', t)} />
+              <TextInput style={[styles.tdInput, { flex: 1.2 }]} placeholder="0 kg" value={item.weight} onChangeText={(t) => updateStopItem(idx, i, 'weight', t)} />
+              <TextInput style={[styles.tdInput, { flex: 1.5 }]} placeholder="Ref/PO" value={item.ref} onChangeText={(t) => updateStopItem(idx, i, 'ref', t)} />
+              <TouchableOpacity style={styles.tdDel} onPress={() => handleRemoveStopItem(idx, i)}>
+                <Ionicons name="close" size={16} color={COLORS.soft} />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+        <TouchableOpacity style={styles.addItemBtn} onPress={() => handleAddStopItem(idx)}>
+          <Ionicons name="add" size={12} color={COLORS.primary} />
+          <Text style={styles.addItemBtnText}>Add item</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  const handleGetPrice = async () => {
+    try {
+      if (!pickupAddr) { Alert.alert('Missing Info', 'Please enter pickup location'); return; }
+      
+      const validStops = stops.filter((s: any) => s.lat != null && s.lon != null && s.address);
+      if (validStops.length !== stops.length) { Alert.alert('Missing Info', 'Please enter all drop-off locations'); return; }
+      
+      const activeSvc = isMulti ? Object.values(selectedStopServices).find(Boolean) : selectedService;
+      if (!activeSvc) { Alert.alert('Missing Service', 'Please choose a service before continuing'); return; }
+
+      const quotePayload = {
+        van_type: localVanType,
+        job_type: activeSvc.id,
+        service: activeSvc,
+      };
+
+      await openQuoteFlow(quotePayload);
+
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Could not prepare quote request');
+    }
+  };
+
+  const handleMapPick = (index: number) => { setMapPickTarget(index); };
+
+  const onRegionChangeComplete = async (region: any) => {
+    if (mapPickTarget === null) return;
+    setTempCoord({ lat: region.latitude, lon: region.longitude });
+    const addr = await reverseGeocode(region.latitude, region.longitude);
+    setTempAddress(addr);
+  };
+
+  const confirmLocation = () => {
+    if (!tempCoord || mapPickTarget === null) return;
+    if (mapPickTarget === -1) {
+      setPickupAddr(tempAddress);
+      setPickupCoord({ latitude: tempCoord.lat, longitude: tempCoord.lon });
+    } else {
+      handleUpdateStopSafe(mapPickTarget, 'address', tempAddress);
+      handleUpdateStopSafe(mapPickTarget, 'lat', tempCoord.lat);
+      handleUpdateStopSafe(mapPickTarget, 'lon', tempCoord.lon);
+    }
+    setMapPickTarget(null);
+  };
+
+  // --- ROUTING LOGIC ---
+  if (bottomTab === 'account') return <ProfileScreen />;
+
+  if (bottomTab === 'rides') {
+    const visibleRides = rideHistory.filter(
+      (ride: any) => (ride.status || '').toLowerCase() !== 'escalated' && !hiddenHistoryIds.includes(ride.id)
+    );
+
+    return (
+      <ScrollView contentContainerStyle={globalStyles.scrollContent}>
+        <Text style={globalStyles.screenTitle}>Your Orders</Text>
+        
+        {visibleRides.length === 0 ? (
+          <Text style={globalStyles.emptyText}>No orders yet</Text>
+        ) : (
+          visibleRides.map((ride: any) => {
+            const status = (ride.status || '').toLowerCase();
+            const completed = ['completed', 'paid', 'delivered'].includes(status);
+            const proofUrl = ride.delivery_proof_url ?? ride.proof_url;
+            
+            return (
+              <View key={ride.id} style={[globalStyles.rideCard, { position: 'relative' }]}>
+                <TouchableOpacity style={{ position: 'absolute', top: 12, right: 12, padding: 8, zIndex: 10 }} onPress={() => { Alert.alert("Delete Order", "Remove this order from your history?", [{ text: "Cancel", style: "cancel" }, { text: "Delete", style: "destructive", onPress: () => setHiddenHistoryIds(prev => [...prev, ride.id]) }]); }}><Ionicons name="trash-outline" size={20} color={COLORS.danger} /></TouchableOpacity>
+                <Text style={globalStyles.rideDetail}>{ride.pickup_address} → {ride.dropoff_address}</Text>
+                <Text style={globalStyles.ridePrice}>€{Number(ride.final_price).toFixed(2)}</Text>
+                <Text style={[globalStyles.rideStatus, { color: completed ? COLORS.primary : COLORS.warning }]}>{ride.status}</Text>
+                
+                {proofUrl && (
+                  <TouchableOpacity onPress={() => Linking.openURL(proofUrl)}>
+                    <Text style={{ color: COLORS.primary, marginTop: 8 }}>View Proof</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            );
+          })
+        )}
+      </ScrollView>
+    );
+  }
+
+  if (user?.role === 'driver') return <DriverDashboard />;
+
+  if (mapPickTarget !== null) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#fff' }}>
+        <StatusBar barStyle="dark-content" />
+        <MapView style={{ flex: 1 }} initialRegion={DUBLIN_PICK_REGION} onRegionChangeComplete={onRegionChangeComplete} />
+        <View style={{ position: 'absolute', top: '50%', left: '50%', marginTop: -36, marginLeft: -18, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="location" size={48} color={COLORS.primary} style={{ marginBottom: 18 }} />
+          <View style={{ width: 8, height: 8, backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 4, position: 'absolute', bottom: 18 }} />
+        </View>
+        <TouchableOpacity style={{ position: 'absolute', top: 60, left: 20, backgroundColor: '#fff', padding: 12, borderRadius: 25, elevation: 5 }} onPress={() => setMapPickTarget(null)}>
+          <Ionicons name="arrow-back" size={24} color={COLORS.ink} />
+        </TouchableOpacity>
+        
+        <View style={{ position: 'absolute', bottom: 100, left: 12, right: 12, backgroundColor: '#fff', padding: 18, paddingBottom: 28, borderRadius: 16, elevation: 20 }}>
+          <Text style={{ fontSize: 13, color: COLORS.soft, fontWeight: '700', marginBottom: 12, textTransform: 'uppercase' }}>Confirm Location</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 18 }}>
+            <Ionicons name="location" size={32} color={COLORS.primary} />
+            <View style={{ marginLeft: 16, flex: 1 }}>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.ink }} numberOfLines={1}>{(tempAddress || '').split(',')[0]}</Text>
+              <Text style={{ fontSize: 14, color: COLORS.soft }} numberOfLines={2}>{tempAddress}</Text>
+            </View>
+          </View>
+          <TouchableOpacity style={[globalStyles.primaryButton, { backgroundColor: COLORS.primary }]} onPress={confirmLocation}>
+            <Text style={globalStyles.buttonText}>Confirm Location</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // --- MAIN BOOKING FORM RETURN ---
+  return (
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
+
+     
+      {activeBooking && !trackingModalVisible && !['completed', 'delivered', 'cancelled', 'paid'].includes((activeBooking?.status || '').toLowerCase()) && (
+        <TouchableOpacity 
+           
+          style={{
+            position: 'absolute', top: Math.max(insets.top, 20) + 10, left: 20, right: 20, 
+            backgroundColor: COLORS.ink, padding: 16, borderRadius: 12, 
+            flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+            elevation: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, zIndex: 100
+          }}
+          onPress={() => setTrackingModalVisible(true)}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.success }} />
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Active Delivery in progress</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#fff" />
+        </TouchableOpacity>
+      )}
+
+      {/* 2. THE BOOKING FORM HEADER */}
+      <View style={styles.steps}>
+        <View style={step === 1 ? styles.stepActive : styles.stepDone}>
+          <Text style={styles.stepCircle}>{step === 1 ? '1' : '✓'}</Text>
+          <Text style={styles.stepLabel}>Vehicle & Service</Text>
+        </View>
+        <View style={step === 1 ? styles.stepLinePending : styles.stepLineDone} />
+        <View style={step === 2 ? styles.stepActive : styles.stepPending}>
+          <Text style={styles.stepCircle}>2</Text>
+          <Text style={styles.stepLabel}>Location & Details</Text>
+        </View>
+      </View>
+
+      {/* 3. THE BOOKING FORM CONTENT */}
+      <ScrollView 
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 }]} 
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {step === 1 && (
+          <>
+            {!operatorType && (
+              <View style={styles.modeToggleRow}>
+                <TouchableOpacity style={[styles.modeToggleBtn, !isMulti && styles.modeToggleBtnOn]} onPress={() => handleModeChange('single')}>
+                  <Text style={[styles.modeToggleText, !isMulti && styles.modeToggleTextOn]}>Single Drop</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.modeToggleBtn, isMulti && styles.modeToggleBtnOn]} onPress={() => handleModeChange('multi')}>
+                  <Text style={[styles.modeToggleText, isMulti && styles.modeToggleTextOn]}>Multi Drop</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* OPERATOR TYPE CARD */}
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardTitle}>Driver Type</Text>
+                  <Text style={styles.cardSub}>{operatorType ? OP_DESC[operatorType] : 'Who should handle this delivery?'}</Text>
+                </View>
+                {operatorType && (
+                  <TouchableOpacity onPress={clearOpType}>
+                    <Text style={styles.opReset}>Clear</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              <View style={[styles.cardBody, { padding: 10 }]}>
+                <View style={styles.opRow}>
+                  <TouchableOpacity style={[styles.opBtn, operatorType === 'courier' && styles.opBtnOn]} onPress={() => handleOperatorSelect('courier')} activeOpacity={0.8}>
+                    {operatorType === 'courier' && <View style={styles.opSelDot} />}
+                    <View style={[styles.opBtnIco, operatorType === 'courier' && styles.opBtnIcoOn]}>
+                      <BookingIcon name="op-courier" size={24} />
+                    </View>
+                    <Text style={[styles.opBtnName, operatorType === 'courier' && { color: COLORS.primary }]}>Courier</Text>
+                    <Text style={styles.opBtnTag}>{isMulti ? 'Courier & Runs' : 'Parcel'}</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={[styles.opBtn, operatorType === 'delivery' && styles.opBtnOn]} onPress={() => handleOperatorSelect('delivery')} activeOpacity={0.8}>
+                    {operatorType === 'delivery' && <View style={styles.opSelDot} />}
+                    <View style={[styles.opBtnIco, operatorType === 'delivery' && styles.opBtnIcoOn]}>
+                      <BookingIcon name="op-delivery" size={24} />
+                    </View>
+                    <Text style={[styles.opBtnName, operatorType === 'delivery' && { color: COLORS.primary }]}>Delivery Driver</Text>
+                    <Text style={styles.opBtnTag}>Single & Multi</Text>
+                  </TouchableOpacity>
+
+                  {!isMulti && (
+                    <TouchableOpacity style={[styles.opBtn, operatorType === 'manvan' && styles.opBtnOn]} onPress={() => handleOperatorSelect('manvan')} activeOpacity={0.8}>
+                      {operatorType === 'manvan' && <View style={styles.opSelDot} />}
+                      <View style={[styles.opBtnIco, operatorType === 'manvan' && styles.opBtnIcoOn]}>
+                        <BookingIcon name="op-manvan" size={24} />
+                      </View>
+                      <Text style={[styles.opBtnName, operatorType === 'manvan' && { color: COLORS.primary }]}>Man with a Van</Text>
+                      <Text style={styles.opBtnTag}>Moves & trade</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            </View>
+
+            {/* VEHICLE CARD */}
+            <View style={[styles.card, isVehicleLocked && styles.cardLocked]}>
+              <View style={styles.cardHeader}>
+                <View>
+                  <Text style={styles.cardTitle}>Vehicle</Text>
+                  <Text style={styles.cardSub}>{isVehicleLocked ? 'Select a driver type first' : (selectedVehicle ? `IDP auto-matched to ${selectedVehicle.name} · override below` : 'Select a vehicle')}</Text>
+                </View>
+                {!isVehicleLocked ? (
+                   <Text style={styles.autoBadge}>AUTO</Text>
+                ) : (
+                   <View style={styles.lockedBadge}>
+                     <Ionicons name="lock-closed" size={10} color={COLORS.mute} style={{ marginRight: 2 }}/>
+                     <Text style={styles.lockedBadgeText}>LOCKED</Text>
+                   </View>
+                )}
+              </View>
+              <View style={styles.cardBody}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.vehicleScroll, isMulti && { flexGrow: 1, width: '100%', justifyContent: 'center' }]}>
+                  {VEHICLES.map((v) => {
+                    if (isMulti && ['tow', 'dropside', 'flatbed'].includes(v.id)) return null;
+                    
+                    const active = localVanType === v.id;
+                    const incompatible = operatorType && !v.ops.includes(operatorType);
+
+                    return (
+                      <TouchableOpacity 
+                        key={v.id} 
+                        style={[styles.vehicleChip, active && styles.vehicleChipOn, incompatible && styles.vehicleChipDim, isMulti && { flex: 1, minWidth: 0 }]} 
+                        onPress={() => !incompatible && selectVehicle(v.id)}
+                        disabled={!!incompatible}
+                        activeOpacity={0.8}
+                      >
+                        {active && <View style={styles.vehicleSelDot} />}
+                        <BookingIcon name={v.icon} size={34} color={active ? COLORS.primary : COLORS.soft} />
+                        <Text style={[styles.vehicleName, active && styles.vehicleNameOn]}>{v.name}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+                {selectedVehicle && (
+                  <View style={styles.noteBox}><Text style={styles.noteText}>{selectedVehicle.note}</Text></View>
+                )}
+              </View>
+            </View>
+
+            {/* SERVICE CARD */}
+            <View style={[styles.card, isServiceLocked && styles.cardLocked]}>
+              <View style={styles.cardHeader}>
+                <View>
+                  <Text style={styles.cardTitle}>Select a Service</Text>
+                  <Text style={styles.cardSub}>{isServiceLocked ? 'Select a vehicle first' : 'Select a category — filtered for your chosen vehicle'}</Text>
+                </View>
+                {isServiceLocked && (
+                   <View style={styles.lockedBadge}>
+                     <Ionicons name="lock-closed" size={10} color={COLORS.mute} style={{ marginRight: 2 }}/>
+                     <Text style={styles.lockedBadgeText}>LOCKED</Text>
+                   </View>
+                )}
+              </View>
+              <View style={styles.cardBody}>
+                <View style={[styles.catGrid, isMulti && { gridTemplateColumns: 'repeat(2, 1fr)' }]}>
+                  {activeCategories.map((cat) => {
+                    const compatibleWithVehicle = selectedVehicle ? (activeServicesDict[cat.id] || []).some(s => s.v.includes(selectedVehicle.id)) : false;
+                    
+                    let isHidden = false;
+                    let isDimmed = false;
+                    const primaryCats = isMulti ? OP_MULTI[operatorType!] : OP_SINGLE[operatorType!];
+                    
+                    if (operatorType === 'courier') {
+                       isHidden = !primaryCats?.includes(cat.id);
+                    } else if (operatorType) {
+                       isDimmed = primaryCats ? !primaryCats.includes(cat.id) : false;
+                    }
+
+                    if (isHidden) return null;
+
+                    const active = selectedCategory === cat.id;
+                    const finalDimmed = !compatibleWithVehicle || isDimmed;
+
+                    const isAuto = !isMulti && cat.id === 'trade'; 
+
+                    return (
+                      <TouchableOpacity
+                        key={cat.id}
+                        style={[
+                          styles.catChip,
+                          isMulti ? styles.catChipMulti : styles.catChipSingle,
+                          isAuto && styles.catChipAuto,
+                          active && styles.catChipOn,
+                          finalDimmed && styles.catChipDim
+                        ]}
+                        onPress={() => !finalDimmed && selectCategory(cat.id)}
+                        disabled={finalDimmed}
+                      >
+                        {isMulti && (
+                          <TouchableOpacity style={styles.catInfoBtn} onPress={(e) => { e.stopPropagation(); showCatTooltip(cat.id); }}>
+                            <Text style={styles.catInfoText}>i</Text>
+                          </TouchableOpacity>
+                        )}
+                        <BookingIcon name={cat.icon} size={isAuto ? 22 : 28} color={active ? COLORS.primary : COLORS.soft} />
+                        <Text style={[styles.catName, isAuto && styles.catNameAuto, active && styles.catNameOn]}>{cat.name}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {selectedCategory && !selectedService && (
+                  <>
+                    <View style={styles.serviceListHeader}>
+                      <Text style={styles.sectionDivider}>{activeCategories.find(c => c.id === selectedCategory)?.name.toUpperCase()}</Text>
+                      <TouchableOpacity onPress={() => setSelectedCategory(null)}><Text style={styles.backLink}>← Categories</Text></TouchableOpacity>
+                    </View>
+                    {visibleServices.length === 0 ? (
+                      <Text style={styles.emptyText}>No services available for a {selectedVehicle?.name} in this category.</Text>
+                    ) : (
+                      <View style={styles.serviceList}>
+                        {visibleServices.map((svc) => (
+                          <TouchableOpacity key={svc.id} style={styles.serviceItem} onPress={() => selectService(svc)}>
+                            <View style={styles.svcIcoWrap}><BookingIcon name={svc.ico} size={28} color={COLORS.soft} /></View>
+                            <View style={styles.serviceInfo}>
+                              <Text style={styles.serviceName}>{svc.name}</Text>
+                              <Text style={styles.serviceDesc}>{svc.desc}</Text>
+                            </View>
+                            <View style={styles.serviceRight}>
+                              <Text style={styles.servicePrice}>{svc.price}</Text>
+                              <Text style={[
+                                styles.serviceBadge,
+                                svc.badge === 'bp' ? styles.badgeBp :
+                                  svc.badge === 'be' ? styles.badgeBe :
+                                    svc.badge === 'bs' ? styles.badgeBs : styles.badgeBm
+                              ]}>{svc.btxt}</Text>
+                            </View>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+                  </>
+                )}
+
+                {selectedService && (
+                  <>
+                    <View style={styles.selectedPill}>
+                      <View style={styles.svcIcoWrap}><BookingIcon name={selectedService.ico} size={26} color={COLORS.soft} /></View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.selectedPillName}>{selectedService.name}</Text>
+                        <Text style={styles.selectedPillPrice}>{selectedService.price} · {selectedService.btxt}</Text>
+                      </View>
+                      <TouchableOpacity onPress={() => setSelectedService(null)}><Text style={styles.changeLink}>Change</Text></TouchableOpacity>
+                    </View>
+
+                    {!isMulti && (
+                      <>
+                        <View style={styles.sdivRow}><Text style={styles.sdivText}>Items</Text></View>
+                        {renderItemsTable(0)}
+                      </>
+                    )}
+
+                    <View style={styles.sdivRow}><Text style={styles.sdivText}>{isMulti ? 'Approx Total Weight' : 'Total Weight (Approx)'}</Text></View>
+                    <View style={styles.row2}>
+                      <View style={styles.fieldHalf}>
+                        <Text style={styles.fieldLabel}>Total Weight (kg)</Text>
+                        
+                        <View style={styles.weightStepperContainer}>
+                          <TouchableOpacity style={styles.stepperBtn} onPress={() => adjustWeight(0, -1)}>
+                            <Ionicons name="remove" size={16} color={COLORS.ink} />
+                          </TouchableOpacity>
+                          <TextInput
+                            style={styles.weightStepperInput}
+                            keyboardType="numeric"
+                            value={String(stops[0]?.weight || 0)}
+                            onChangeText={(t) => handleUpdateStopSafe(0, 'weight', parseInt(t) || 0)}
+                          />
+                          <TouchableOpacity style={styles.stepperBtn} onPress={() => adjustWeight(0, 1)}>
+                            <Ionicons name="add" size={16} color={COLORS.ink} />
+                          </TouchableOpacity>
+                        </View>
+
+                      </View>
+                      <View style={[styles.fieldHalf, { justifyContent: 'flex-end', paddingBottom: 4 }]}>
+                        <Text style={{ fontSize: 10, color: COLORS.soft, lineHeight: 14 }}>
+                          {isMulti ? 'Combined weight across all stops in this run.' : 'Approximate combined weight of all items in this delivery.'}
+                        </Text>
+                      </View>
+                    </View>
+                  </>
+                )}
+              </View>
+            </View>
+
+            <View style={styles.priceBanner}>
+              <View style={styles.priceBannerIco}><Ionicons name="checkmark-circle-outline" size={24} color={COLORS.primary} /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.priceBannerTitle}>Price confirmed after booking</Text>
+                <Text style={styles.priceBannerSub}>Your price will be shown once you complete your booking details.</Text>
+              </View>
+            </View>
+
+            <View style={[styles.bottomCta, { paddingBottom: Math.max(insets.bottom, 20), marginBottom: 80 }]}>
+              <TouchableOpacity 
+                style={[styles.ctaBtn, !canContinue && styles.ctaBtnDim]} 
+                onPress={() => { if (canContinue) setStep(2); }} 
+                disabled={!canContinue} 
+                activeOpacity={0.85}
+              >
+                <Text style={styles.ctaBtnText}>Continue to Location & Details</Text>
+                <Ionicons name="arrow-forward" size={18} color="#FFF" />
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <View style={styles.serviceBanner}>
+              <BookingIcon name={selectedService?.ico || 'si-01'} size={18} color="#fff" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.serviceBannerName}>{selectedService?.name || 'Service'}</Text>
+                <Text style={styles.serviceBannerSub}>{selectedVehicle?.name || 'Van'} · {operatorType ? OP_LABELS[operatorType] : 'Any driver type'}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setStep(1)}><Text style={styles.serviceBannerChange}>Change</Text></TouchableOpacity>
+            </View>
+
+            <View style={styles.schedToggle}>
+              <TouchableOpacity style={[styles.schedBtn, !isScheduled && styles.schedBtnOn]} onPress={() => setIsScheduled(false)}>
+                <Text style={[styles.schedText, !isScheduled && styles.schedTextOn]}>Pick up now</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.schedBtn, isScheduled && styles.schedBtnOn]} onPress={() => { setIsScheduled(true); setShowDatePicker(true); if (!scheduleTime) setScheduleTime(new Date()); }}>
+                <BookingIcon name="ic-clock" size={14} color={isScheduled ? '#FFF' : COLORS.soft} />
+                <Text style={[styles.schedText, isScheduled && styles.schedTextOn]}>{isScheduled && scheduleTime ? scheduleTime.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'Schedule for later'}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {isScheduled && showDatePicker && (
+              <View style={styles.datePickerCard}>
+                <DateTimePicker value={scheduleTime || new Date()} mode="datetime" display={Platform.OS === 'ios' ? 'spinner' : 'default'} onChange={handleDateChange} textColor={COLORS.ink} themeVariant="light" />
+                {Platform.OS === 'ios' && (
+                  <TouchableOpacity style={styles.dateConfirmBtn} onPress={() => setShowDatePicker(false)}>
+                    <Text style={styles.dateConfirmText}>Confirm Time</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
+            {!isMulti ? (
+              <>
+                <View style={styles.card}>
+                  <View style={styles.cardHeader}>
+                    <View>
+                      <Text style={styles.cardTitle}>Pickup & Drop-off</Text>
+                      <Text style={styles.cardSub}><Ionicons name="location" size={10} color={COLORS.soft} /> Tap to pin exact location</Text>
+                    </View>
+                  </View>
+                  <View style={styles.cardBody}>
+                    <TouchableOpacity style={styles.mapStrip} onPress={() => handleMapPick(-1)} activeOpacity={0.9}>
+                      <View style={styles.mapBgReal}>
+                        <View style={styles.mapRoadMain} />
+                        <View style={styles.mapRouteLine} />
+                        <View style={styles.mapPinsWrap}>
+                          <View style={styles.mapPinGroup}>
+                            <View style={[styles.mapPinDotReal, styles.mapPinPickup]}><Text style={styles.mapPinLetter}>P</Text></View>
+                            <Text style={styles.mapPinTag}>Pickup</Text>
+                          </View>
+                          <View style={styles.mapPinGroup}>
+                            <View style={[styles.mapPinDotReal, styles.mapPinDropoff]}><Text style={styles.mapPinLetter}>D</Text></View>
+                            <Text style={styles.mapPinTag}>Drop-off</Text>
+                          </View>
+                        </View>
+                      </View>
+                      <View style={styles.mapEditBtn}><Ionicons name="map-outline" size={12} color={COLORS.primary} /><Text style={styles.mapEditText}>Edit map</Text></View>
+                    </TouchableOpacity>
+
+                    <View style={{ zIndex: activeSearchIndex === -1 ? 100 : 1 }}>
+                      <TouchableOpacity style={styles.locRowPick} onPress={() => handleMapPick(-1)}>
+                        <View style={styles.locDotG} />
+                        <View style={styles.locInfo}>
+                          <Text style={styles.locLblG}>Pickup</Text>
+                          <TextInput style={styles.locInput} placeholder="Search address or Eircode" placeholderTextColor={COLORS.soft} value={pickupAddr} onChangeText={(t) => { setPickupAddr(t); scheduleSearch(t, -1); }} onFocus={() => setActiveSearchIndex(-1)} />
+                        </View>
+                        <View style={styles.locPinBtn}><Ionicons name="location-outline" size={16} color={COLORS.primary} /></View>
+                      </TouchableOpacity>
+                      {activeSearchIndex === -1 && renderSuggestions(-1)}
+                    </View>
+
+                    <View style={styles.connectorLine} />
+
+                    <View style={{ zIndex: activeSearchIndex === 0 ? 100 : 1 }}>
+                      <TouchableOpacity style={styles.locRowDrop} onPress={() => handleMapPick(0)}>
+                        <View style={styles.locDotR} />
+                        <View style={styles.locInfo}>
+                          <Text style={styles.locLblR}>Drop-off</Text>
+                          <TextInput style={styles.locInput} placeholder="Where to? Enter address or pin on map" placeholderTextColor={COLORS.soft} value={stops[0]?.address || ''} onChangeText={(t) => { handleUpdateStopSafe(0, 'address', t); scheduleSearch(t, 0); }} onFocus={() => setActiveSearchIndex(0)} />
+                        </View>
+                        <View style={styles.locPinBtnRed}><Ionicons name="location-outline" size={16} color={COLORS.danger} /></View>
+                      </TouchableOpacity>
+                      {activeSearchIndex === 0 && renderSuggestions(0)}
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.card}>
+                  <View style={styles.cardHeader}>
+                    <View>
+                      <Text style={styles.cardTitle}>Recipient Details</Text>
+                      <Text style={styles.cardSub}>Who is receiving this delivery?</Text>
+                    </View>
+                  </View>
+                  <View style={styles.cardBody}>
+                    <View style={styles.row2}>
+                      <View style={styles.fieldHalf}><Text style={styles.fieldLabel}>Name</Text><TextInput style={styles.fieldInput} placeholder="Full name" value={stops[0]?.recipient || ''} onChangeText={(t) => handleUpdateStopSafe(0, 'recipient', t)} /></View>
+                      <View style={styles.fieldHalf}><Text style={styles.fieldLabel}>Phone</Text><TextInput style={styles.fieldInput} placeholder="+353..." keyboardType="phone-pad" value={stops[0]?.phone || ''} onChangeText={(t) => handleUpdateStopSafe(0, 'phone', t)} /></View>
+                    </View>
+                    <View style={styles.fieldFull}><Text style={styles.fieldLabel}>Delivery Instructions</Text><TextInput style={[styles.fieldInput, { minHeight: 60, textAlignVertical: 'top' }]} placeholder="e.g. Leave at reception, call buzzer 3..." multiline value={stops[0]?.instructions || ''} onChangeText={(t) => handleUpdateStopSafe(0, 'instructions', t)} /></View>
+                  </View>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.card}>
+                  <View style={styles.cardHeader}>
+                    <View>
+                      <Text style={styles.cardTitle}>Stops</Text>
+                      <Text style={styles.cardSub}>Each stop can have different items and services</Text>
+                    </View>
+                    <Text style={styles.stopCount}>{stops.length} stops</Text>
+                  </View>
+                  <View style={styles.cardBody}>
+                    <TouchableOpacity style={styles.mapStrip} onPress={() => handleMapPick(-1)} activeOpacity={0.9}>
+                      <View style={styles.mapBgReal}>
+                        <View style={styles.mapRoadMain} />
+                        <View style={styles.mapRouteLine} />
+                        <View style={styles.mapPinsWrap}>
+                          <View style={styles.mapPinGroup}>
+                            <View style={[styles.mapPinDotReal, styles.mapPinPickup]}><Text style={styles.mapPinLetter}>P</Text></View>
+                            <Text style={styles.mapPinTag}>Pickup</Text>
+                          </View>
+                          {stops.map((_: any, idx: number) => (
+                            <View key={idx} style={styles.mapPinGroup}>
+                              <View style={[styles.mapPinDotReal, styles.mapPinStop]}><Text style={styles.mapPinLetter}>{idx + 1}</Text></View>
+                              <Text style={styles.mapPinTag}>Stop {idx + 1}</Text>
+                            </View>
+                          ))}
+                          <View style={styles.mapPinGroup}>
+                            <View style={[styles.mapPinDotReal, styles.mapPinDropoff]}><Text style={styles.mapPinLetter}>D</Text></View>
+                            <Text style={styles.mapPinTag}>Drop-off</Text>
+                          </View>
+                        </View>
+                      </View>
+                      <View style={styles.mapEditBtn}><Ionicons name="map-outline" size={12} color={COLORS.primary} /><Text style={styles.mapEditText}>Edit map</Text></View>
+                    </TouchableOpacity>
+
+                    <View style={{ zIndex: activeSearchIndex === -1 ? 100 : 1 }}>
+                      <TouchableOpacity style={styles.locRowPick} onPress={() => handleMapPick(-1)}>
+                        <View style={styles.locDotG} />
+                        <View style={styles.locInfo}>
+                          <Text style={styles.locLblG}>Collection</Text>
+                          <TextInput style={styles.locInput} placeholder="Search address or Eircode" placeholderTextColor={COLORS.soft} value={pickupAddr} onChangeText={(t) => { setPickupAddr(t); scheduleSearch(t, -1); }} onFocus={() => setActiveSearchIndex(-1)} />
+                        </View>
+                        <View style={styles.locPinBtn}><Ionicons name="location-outline" size={16} color={COLORS.primary} /></View>
+                        <TouchableOpacity onPress={() => handleMapPick(-1)}><Text style={{ fontSize: 10, color: COLORS.primary, fontWeight: '600', textDecorationLine: 'underline' }}>Change</Text></TouchableOpacity>
+                      </TouchableOpacity>
+                      {activeSearchIndex === -1 && renderSuggestions(-1)}
+                    </View>
+
+                    <View style={styles.stopsWrap}>
+                      {stops.map((stop: any, idx: number) => {
+                        const expanded = expandedStopIdx === idx;
+                        const itemsCount = stop.items?.length || 0;
+                        const chosenSvc = selectedStopServices[idx];
+
+                        return (
+                          <View key={idx} style={[styles.stopCard, expanded && styles.stopCardExp]}>
+                            <TouchableOpacity style={styles.stopHdr} onPress={() => setExpandedStopIdx(expanded ? null : idx)}>
+                              <View style={[styles.stopNum, expanded && styles.stopNumActive]}><Text style={styles.stopNumText}>{idx + 1}</Text></View>
+                              <View style={styles.stopPrev}>
+                                <Text style={[styles.stopAddr, !stop.address && styles.stopAddrPh]} numberOfLines={1}>{stop.address || 'Enter delivery address...'}</Text>
+                                <Text style={styles.stopMeta}>{itemsCount} item{itemsCount !== 1 ? 's' : ''}{chosenSvc ? ` · ${chosenSvc.name}` : ' · no service selected'}</Text>
+                              </View>
+                              <View style={styles.stopRight}>
+                                {!stop.address && <Text style={styles.incBadge}>Incomplete</Text>}
+                                <TouchableOpacity style={styles.stopPinBtn} onPress={() => handleMapPick(idx)}><Ionicons name="location-outline" size={14} color={COLORS.primary} /></TouchableOpacity>
+                                {idx > 0 && (<TouchableOpacity style={styles.delBtn} onPress={() => handleRemoveStopSafe(idx)}><Ionicons name="close" size={16} color={COLORS.soft} /></TouchableOpacity>)}
+                                <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={COLORS.soft} />
+                              </View>
+                            </TouchableOpacity>
+
+                            {expanded && (
+                              <View style={styles.stopBody}>
+                                <View style={styles.row2}>
+                                  <View style={styles.fieldHalf}><Text style={styles.fieldLabel}>Recipient</Text><TextInput style={styles.fieldInput} placeholder="e.g. Client Ltd" value={stop.recipient || ''} onChangeText={(t) => handleUpdateStopSafe(idx, 'recipient', t)} /></View>
+                                  <View style={styles.fieldHalf}><Text style={styles.fieldLabel}>Phone</Text><TextInput style={styles.fieldInput} placeholder="+353..." keyboardType="phone-pad" value={stop.phone || ''} onChangeText={(t) => handleUpdateStopSafe(idx, 'phone', t)} /></View>
+                                </View>
+                                <View style={styles.fieldFull}>
+                                  <Text style={styles.fieldLabel}>Address</Text>
+                                  <View style={[styles.addrWrap, { zIndex: activeSearchIndex === idx ? 100 : 1 }]}>
+                                    <TextInput style={[styles.fieldInput, { paddingRight: 36 }]} placeholder="Full address with Eircode" value={stop.address || ''} onChangeText={(t) => { handleUpdateStopSafe(idx, 'address', t); scheduleSearch(t, idx); }} onFocus={() => setActiveSearchIndex(idx)} />
+                                    <TouchableOpacity style={styles.addrPin} onPress={() => handleMapPick(idx)}><Ionicons name="location-outline" size={16} color={COLORS.primary} /></TouchableOpacity>
+                                    {activeSearchIndex === idx && renderSuggestions(idx)}
+                                  </View>
+                                </View>
+
+                                <View style={styles.row2}>
+                                  <View style={styles.fieldHalf}><Text style={styles.fieldLabel}>Order Number</Text><TextInput style={styles.fieldInput} placeholder="e.g. ORD-00142" value={stop.ref || ''} onChangeText={(t) => handleUpdateStopSafe(idx, 'ref', t)} /></View>
+                                  <View style={styles.fieldHalf}><Text style={styles.fieldLabel}>Instructions</Text><TextInput style={styles.fieldInput} placeholder="e.g. Loading bay" value={stop.instructions || ''} onChangeText={(t) => handleUpdateStopSafe(idx, 'instructions', t)} /></View>
+                                </View>
+
+                                <View style={styles.stopSvcSel}>
+                                  <Text style={styles.stopSvcLbl}>Service for this stop</Text>
+                                  {chosenSvc ? (
+                                    <TouchableOpacity style={styles.stopSvcChosen} onPress={() => { const updated = { ...selectedStopServices }; delete updated[idx]; setSelectedStopServices(updated); }}>
+                                      <BookingIcon name={chosenSvc.ico} size={18} color={COLORS.primary} />
+                                      <Text style={styles.stopSvcChosenName}>{chosenSvc.name}</Text>
+                                      <Text style={styles.stopSvcChosenChange}>Change</Text>
+                                    </TouchableOpacity>
+                                  ) : (
+                                    <View style={styles.stopCatsGrid}>
+                                      {CATEGORIES_MULTI.map((cat) => {
+                                        const compatible = (SERVICES_MULTI[cat.id] || []).some(s => s.v.includes(localVanType));
+                                        return (
+                                          <TouchableOpacity
+                                            key={cat.id}
+                                            style={[styles.stopCatBtn, !compatible && styles.stopCatBtnDim]}
+                                            disabled={!compatible}
+                                            onPress={() => {
+                                              const firstSvc = (SERVICES_MULTI[cat.id] || []).find(s => s.v.includes(localVanType));
+                                              if (firstSvc) setSelectedStopServices(prev => ({ ...prev, [idx]: firstSvc }));
+                                            }}
+                                          >
+                                            <Text style={styles.stopCatBtnText}>{cat.name.split(' ')[0]}</Text>
+                                          </TouchableOpacity>
+                                        );
+                                      })}
+                                    </View>
+                                  )}
+                                </View>
+
+                                <View style={styles.itemsSec}>
+                                  <View style={styles.sdivRow}><Text style={styles.sdivText}>Items for this stop</Text></View>
+                                  <View style={styles.table}>
+                                    <View style={styles.tableHdrRow}>
+                                      <Text style={[styles.th, { flex: 2 }]}>Description</Text>
+                                      <Text style={[styles.th, { width: 40, textAlign: 'center' }]}>Qty</Text>
+                                      <Text style={[styles.th, { flex: 1.2 }]}>Weight</Text>
+                                      <Text style={[styles.th, { flex: 1.5 }]}>PO/Ref</Text>
+                                      <View style={{ width: 24 }} />
+                                    </View>
+                                    {(stop.items || [{ description: '', qty: '1', weight: '', ref: '' }]).map((item: any, i: number) => (
+                                      <View key={i} style={styles.tr}>
+                                        <TextInput style={[styles.tdInput, { flex: 2 }]} placeholder="Item description" value={item.description} onChangeText={(t) => updateStopItem(idx, i, 'description', t)} />
+                                        <TextInput style={[styles.tdInput, { width: 40, textAlign: 'center' }]} keyboardType="numeric" value={item.qty} onChangeText={(t) => updateStopItem(idx, i, 'qty', t)} />
+                                        <TextInput style={[styles.tdInput, { flex: 1.2 }]} placeholder="0 kg" value={item.weight} onChangeText={(t) => updateStopItem(idx, i, 'weight', t)} />
+                                        <TextInput style={[styles.tdInput, { flex: 1.5 }]} placeholder="Ref/PO" value={item.ref} onChangeText={(t) => updateStopItem(idx, i, 'ref', t)} />
+                                        <TouchableOpacity style={styles.tdDel} onPress={() => {
+                                          const items = [...(stop.items || [])];
+                                          if (items.length > 1) {
+                                            items.splice(i, 1);
+                                            handleUpdateStopSafe(idx, 'items', items);
+                                          }
+                                        }}><Ionicons name="close" size={16} color={COLORS.soft} /></TouchableOpacity>
+                                      </View>
+                                    ))}
+                                  </View>
+                                  <TouchableOpacity style={styles.addItemBtn} onPress={() => {
+                                    const items = [...(stop.items || [])];
+                                    items.push({ description: '', qty: '1', weight: '', ref: '' });
+                                    handleUpdateStopSafe(idx, 'items', items);
+                                  }}>
+                                    <Ionicons name="add" size={12} color={COLORS.primary} />
+                                    <Text style={styles.addItemBtnText}>Add item</Text>
+                                  </TouchableOpacity>
+                                </View>
+                              </View>
+                            )}
+                          </View>
+                        );
+                      })}
+                    </View>
+
+                    <TouchableOpacity style={styles.addStopBtn} onPress={handleAddStop}>
+                      <Ionicons name="add" size={16} color={COLORS.soft} />
+                      <Text style={styles.addStopBtnText}>Add another drop-off stop</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </>
+            )}
+
+            
+            <View style={[styles.bottomCta, { paddingBottom: Math.max(insets.bottom, 20), marginBottom: 80 }]}>
+              <TouchableOpacity style={styles.ctaBtnGreen} onPress={handleGetPrice} activeOpacity={0.85}>
+                <Text style={styles.ctaBtnText}>Confirm & Book</Text>
+                <Ionicons name="checkmark" size={18} color="#FFF" />
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+      </ScrollView>
+
+      {/* 🚀 4. THE FULL-SCREEN TRACKING MODAL */}
+      <Modal visible={trackingModalVisible} animationType="slide" transparent={false}>
+        <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
+          
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: Math.max(insets.top, 20) + 10, paddingHorizontal: 20, paddingBottom: 15, backgroundColor: '#fff', zIndex: 10, elevation: 5 }}>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: COLORS.ink }}>Live Tracking</Text>
+            <TouchableOpacity onPress={() => setTrackingModalVisible(false)} style={{ backgroundColor: COLORS.bg, padding: 8, borderRadius: 20 }}>
+              <Ionicons name="close" size={24} color={COLORS.ink} />
+            </TouchableOpacity>
+          </View>
+
+          <MapView
+            ref={mapRef} style={{ flex: 1 }}
+            mapPadding={{ top: 20, right: 0, bottom: SCREEN_HEIGHT * 0.40, left: 0 }}
+            initialRegion={{
+              latitude: driverLocation?.lat || activeBooking?.pickup_lat || DUBLIN_REGION.latitude, 
+              longitude: driverLocation?.lon || activeBooking?.pickup_lon || DUBLIN_REGION.longitude,
+              latitudeDelta: 0.08, longitudeDelta: 0.08,
+            }}
+          >
+            {driverLocation && activeBooking?.pickup_lat && (
+              <Polyline
+                coordinates={[
+                  { latitude: driverLocation.lat, longitude: driverLocation.lon },
+                  { latitude: activeBooking.pickup_lat, longitude: activeBooking.pickup_lon }
+                ]}
+                strokeColor={COLORS.primary} strokeWidth={4} lineDashPattern={[10, 10]}
+              />
+            )}
+            {activeBooking?.pickup_lat && (
+              <Marker coordinate={{ latitude: activeBooking.pickup_lat, longitude: activeBooking.pickup_lon }}>
+                <View style={[styles.mapPinDotReal, styles.mapPinPickup]}><Text style={styles.mapPinLetter}>P</Text></View>
+              </Marker>
+            )}
+            {driverLocation && (
+              // @ts-ignore
+              <Marker.Animated coordinate={animatedCoordinate} anchor={{ x: 0.5, y: 0.5 }}>
+                <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                  <Animated.View style={{ transform: [{ rotate: `${bearing}deg` }] }}>
+                    <Image
+                      source={ activeBooking?.driver?.avatar_url || activeBooking?.driver_avatar ? { uri: activeBooking?.driver?.avatar_url || activeBooking?.driver_avatar } : DEFAULT_AVATAR }
+                      style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: '#fff' }}
+                    />
+                  </Animated.View>
+                </View>
+              </Marker.Animated>
+            )}
+          </MapView>
+
+          {/* REAL DRIVER INFO BOTTOM SHEET */}
+          <View style={{ height: SCREEN_HEIGHT * 0.40, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, elevation: 20, padding: 24, paddingBottom: Math.max(insets.bottom, 20) }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={{ fontSize: 20, fontWeight: '800', color: COLORS.ink }}>
+                {(() => { const s = String(activeBooking?.status || '').toLowerCase(); if (['pending', 'awaiting_payment'].includes(s)) return 'Looking for a driver...'; if (s === 'accepted') return 'Driver heading to pickup'; if (s === 'arrived_pickup') return 'Driver arrived at pickup'; if (s === 'in_transit') return 'Driver en route to delivery'; if (s === 'arrived_dropoff') return 'Driver arrived at delivery'; return 'Driver is nearby'; })()}
+              </Text>
+            </View>
+            <Text style={{ fontSize: 16, color: COLORS.primaryLight, fontWeight: '600', marginTop: 4 }}>
+              {['arrived_pickup', 'arrived_dropoff'].includes(String(activeBooking?.status).toLowerCase()) ? 'Waiting outside' : `Arriving in ${getLiveETA()}`}
+            </Text>
+
+            {(activeBooking?.driver_id || activeBooking?.driver?.id || activeBooking?.driver_name) ? (
+              <View style={{ marginTop: 24 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Image 
+                      source={ activeBooking?.driver?.avatar_url || activeBooking?.driver_avatar ? { uri: activeBooking?.driver?.avatar_url || activeBooking?.driver_avatar } : DEFAULT_AVATAR } 
+                      style={{ width: 56, height: 56, borderRadius: 28, marginRight: 14, borderWidth: 1, borderColor: COLORS.border }} 
+                    />
+                    <View>
+                      <Text style={{ fontSize: 18, fontWeight: '800', color: COLORS.ink }}>
+                        {activeBooking?.driver?.full_name || activeBooking?.driver_name || 'Your Driver'}
+                      </Text>
+                      <Text style={{ color: COLORS.soft, fontSize: 13, marginTop: 2, fontWeight: '600', textTransform: 'capitalize' }}>
+                        {activeBooking?.driver?.vehicle_type || activeBooking?.driver_vehicle || activeBooking?.van_type || 'Van'} • ⭐ {activeBooking?.driver?.rating_avg ? Number(activeBooking?.driver?.rating_avg).toFixed(1) : '5.0'}
+                      </Text>
+                    </View>
+                  </View>
+                  {activeBooking?.driver_phone && (
+                    <TouchableOpacity onPress={() => Linking.openURL(`tel:${activeBooking?.driver_phone}`)} style={{ backgroundColor: COLORS.successSoft, padding: 12, borderRadius: 24 }}>
+                      <Ionicons name="call" size={22} color={COLORS.success} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 12, marginTop: 24 }}>
+                  <TouchableOpacity onPress={() => setChatVisible(true)} style={{ flex: 1, paddingVertical: 14, backgroundColor: COLORS.bg, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border, flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
+                    <Ionicons name="chatbubbles" size={18} color={COLORS.ink} />
+                    <Text style={{ color: COLORS.ink, fontWeight: '700', fontSize: 14 }}>Support</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setQrVisible(true)} style={{ flex: 2, paddingVertical: 14, backgroundColor: COLORS.primary, borderRadius: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 }}>
+                    <Ionicons name="qr-code" size={18} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Show PIN</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View style={{ padding: 40, alignItems: 'center' }}>
+                <ActivityIndicator color={COLORS.primary} size="large" />
+                <Text style={{ color: COLORS.soft, marginTop: 10 }}>Awaiting driver confirmation...</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* 🔥 5. THE PERFECTED QR HANDSHAKE MODAL */}
+      <Modal visible={qrVisible} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 30, alignItems: 'center', width: '100%' }}>
+            <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 10, color: COLORS.ink }}>Handshake Required</Text>
+            <Text style={{ fontSize: 13, color: COLORS.soft, textAlign: 'center', marginBottom: 24 }}>
+              Show this code to your driver so they can scan it and unlock the drop-off.
+            </Text>
+            <View style={{ padding: 10, backgroundColor: COLORS.white, elevation: 5, borderRadius: 12, marginBottom: 20 }}>
+              <QRCode 
+                value={JSON.stringify({ 
+                  booking_id: activeBooking?.id, 
+                  driver_id: activeBooking?.driver_id || activeBooking?.driver?.id, 
+                  type: 'PICKUP_CONFIRMATION' 
+                })} 
+                size={200} color={COLORS.ink} backgroundColor="#fff" 
+              />
+            </View>
+            <Text style={{ fontSize: 24, fontWeight: '800', letterSpacing: 4, color: COLORS.primary }}>
+              {activeBooking?.id?.toString().padStart(4, '0')}
+            </Text>
+            <TouchableOpacity onPress={() => setQrVisible(false)} style={{ marginTop: 24, padding: 12, width: '100%', backgroundColor: COLORS.bg, borderRadius: 12, alignItems: 'center' }}>
+              <Text style={{ fontWeight: '700', color: COLORS.ink }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 6. QUOTE / PAY MODAL */}
+      <Modal visible={quoteModalVisible} transparent animationType="slide" onRequestClose={() => setQuoteModalVisible(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: 'white', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, maxHeight: '60%' }}>
+            <Text style={{ fontSize: 20, fontWeight: '700', marginBottom: 16 }}>Confirm Booking</Text>
+            {quoteData ? (
+              <>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <Text style={{ color: COLORS.soft, fontSize: 15 }}>Total Distance:</Text>
+                  <Text style={{ fontWeight: '700', fontSize: 15 }}>{(quoteData.distance_km || quoteData.distance || 0).toFixed(2)} km</Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <Text style={{ color: COLORS.soft, fontSize: 15 }}>Van Type:</Text>
+                  <Text style={{ fontWeight: '700', fontSize: 15, textTransform: 'capitalize' }}>{quoteData.van_type}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
+                  <Text style={{ color: COLORS.soft, fontSize: 15 }}>Est. Time:</Text>
+                  <Text style={{ fontWeight: '700', fontSize: 15 }}>{quoteData.duration_min} mins</Text>
+                </View>
+                <View style={{ borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 16, marginBottom: 24, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 32, fontWeight: '800', color: COLORS.ink, textAlign: 'center' }}>€{quoteData.final_price ?? quoteData.price}</Text>
+                  <Text style={{ textAlign: 'center', color: COLORS.soft, fontSize: 13, marginTop: 4 }}>Includes taxes & fees</Text>
+                </View>
+                <TouchableOpacity style={[globalStyles.primaryButton, { backgroundColor: COLORS.primary }]} onPress={confirmAndPayAndCreateBooking} disabled={creatingBooking}>
+                  {creatingBooking ? <ActivityIndicator color="#fff" /> : <Text style={globalStyles.buttonText}>Pay & Book Now</Text>}
+                </TouchableOpacity>
+                <TouchableOpacity style={{ marginTop: 16, alignItems: 'center', padding: 10 }} onPress={() => setQuoteModalVisible(false)}>
+                  <Text style={{ color: COLORS.soft, fontWeight: '600' }}>Cancel</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <View style={{ padding: 40, alignItems: 'center' }}>
+                <ActivityIndicator size="large" color={COLORS.primary} />
+                <Text style={{ marginTop: 16, color: COLORS.soft, marginBottom: 20, textAlign: 'center' }}>Fetching best price...</Text>
+                <TouchableOpacity style={{ padding: 10, marginBottom: 10 }} onPress={handleGetPrice}>
+                  <Text style={{ color: COLORS.primary, fontWeight: '600' }}>Retry</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setQuoteModalVisible(false)}>
+                  <Text style={{ color: COLORS.danger, fontWeight: '600' }}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* 7. RATING MODAL */}
+      <RatingModal
+        visible={ratingModalVisible}
+        proofUrl={activeBooking?.delivery_proof_url ?? activeBooking?.proof_url}
+        onClose={() => {
+          if (ratingBookingContext?.bookingId) setDismissedRatingIds(prev => [...prev, ratingBookingContext.bookingId!]);
+          setRatingModalVisible(false);
+          setRatingBookingContext(null);
+          // 🔥 Wipe the job so the booking form comes back!
+          setActiveBooking(null); 
+        }}
+        onSubmit={async (rating: number, note: string) => {
+          if (!ratingBookingContext?.driverId) return;
+          await rateDriver(ratingBookingContext.driverId, rating, note, ratingBookingContext.bookingId);
+          if (ratingBookingContext?.bookingId) setDismissedRatingIds(prev => [...prev, ratingBookingContext.bookingId!]);
+          await acknowledgeBooking?.(ratingBookingContext.bookingId!);
+          setRatingModalVisible(false);
+          // 🔥 Wipe the job so the booking form comes back!
+          setActiveBooking(null); 
+        }}
+      />
+
+      {/* 8. LIVE CHAT TRIGGER & MODAL */}
+      <TouchableOpacity onPress={() => setChatVisible(true)} style={{ position: 'absolute', right: 18, bottom: 90, width: 60, height: 60, borderRadius: 30, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', elevation: 8, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8 }}>
+        <Ionicons name="chatbubbles" size={26} color="#fff" />
+      </TouchableOpacity>
+
+      <ChatSupportModal visible={chatVisible} onClose={() => setChatVisible(false)} user={user} activeBooking={activeBooking} sendSupportMessage={sendSupportMessage} createSupportTicket={createSupportTicket} />
+      
+    </KeyboardAvoidingView>
+  );
+}
+
+
+// --- STYLES ---
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: COLORS.bg },
+  scrollContent: { paddingHorizontal: 16, paddingBottom: 80, paddingTop: 0 },
+
+  closeBtn: { padding: 8, backgroundColor: COLORS.bg, borderRadius: 20 },
+  headerTitle: { fontSize: 13, fontWeight: '600', color: COLORS.ink },
+
+  steps: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: COLORS.ink,
+  },
+  stepActive: { flex: 1, alignItems: 'center' },
+  stepDone: { flex: 1, alignItems: 'center' },
+  stepPending: { flex: 1, alignItems: 'center' },
+  stepCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+
+    textAlign: 'center',
+    textAlignVertical: 'center',
+
+    fontSize: 12,
+    fontWeight: '800',
+    color: COLORS.white,
+
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    overflow: 'hidden',
+
+    paddingTop: 4, // 👈 pushes number slightly down
+  },
+  stepLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: COLORS.white,
+    marginTop: 4,
+  },
+  stepLineDone: { width: 40, height: 2, backgroundColor: COLORS.primary, marginHorizontal: 4 },
+  stepLinePending: { width: 40, height: 2, backgroundColor: 'rgba(255,255,255,0.12)', marginHorizontal: 4 },
+
+  modeToggleRow: { flexDirection: 'row', backgroundColor: COLORS.primarySoft, borderRadius: 28, padding: 3, marginBottom: 12,marginTop: 12, borderWidth: 1, borderColor: COLORS.primaryMid },
+  modeToggleBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 24, backgroundColor: 'transparent' },
+  modeToggleBtnOn: { backgroundColor: COLORS.ink },
+  modeToggleText: { fontSize: 12, fontWeight: '600', color: COLORS.soft },
+  modeToggleTextOn: { color: COLORS.white },
+
+  card: { backgroundColor: COLORS.white, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, marginBottom: 10, overflow: 'hidden', elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8 },
+  cardLocked: { opacity: 0.42 },
+  cardHeader: { paddingVertical: 11, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: COLORS.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cardTitle: { fontSize: 11, fontWeight: '700', color: COLORS.ink, textTransform: 'uppercase', letterSpacing: 0.5 },
+  cardSub: { fontSize: 10, color: COLORS.soft, marginTop: 1 },
+  cardBody: { padding: 12 },
+  autoBadge: { fontSize: 9, color: COLORS.primary, fontWeight: '700', backgroundColor: COLORS.primarySoft, paddingVertical: 2, paddingHorizontal: 8, borderRadius: 20, letterSpacing: 0.5 },
+  lockedBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border, paddingVertical: 2, paddingHorizontal: 8, borderRadius: 10 },
+  lockedBadgeText: { fontSize: 9, fontWeight: '700', color: COLORS.mute, letterSpacing: 0.5 },
+
+  // Operator UI
+  opRow: { flexDirection: 'row', gap: 6, marginBottom: 0 },
+  opBtn: { flex: 1, alignItems: 'center', gap: 5, paddingVertical: 9, paddingHorizontal: 6, borderWidth: 1.5, borderColor: COLORS.border, borderRadius: 10, backgroundColor: COLORS.white, position: 'relative' },
+  opBtnOn: { borderColor: COLORS.primary, backgroundColor: COLORS.primarySoft },
+  opBtnIco: { width: 34, height: 34, borderRadius: 8, backgroundColor: COLORS.bg, alignItems: 'center', justifyContent: 'center' },
+  opBtnIcoOn: { backgroundColor: COLORS.primaryMid },
+  opBtnName: { fontSize: 9, fontWeight: '700', color: COLORS.soft, textAlign: 'center', lineHeight: 12, marginTop: 1 },
+  opBtnTag: { fontSize: 8, fontWeight: '700', color: COLORS.primary, backgroundColor: COLORS.primarySoft, borderWidth: 1, borderColor: COLORS.primaryMid, paddingVertical: 1, paddingHorizontal: 5, borderRadius: 6, textTransform: 'uppercase', letterSpacing: 0.2, marginTop: 2 },
+  opSelDot: { position: 'absolute', top: 4, right: 4, width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.primary },
+  opReset: { fontSize: 10, color: COLORS.soft, fontWeight: '600', textDecorationLine: 'underline' },
+
+  vehicleScroll: { flexDirection: 'row', gap: 8, paddingBottom: 4 },
+  vehicleChip: { minWidth: 70, alignItems: 'center', paddingVertical: 8, paddingHorizontal: 10, borderRadius: 10, borderWidth: 1.5, borderColor: COLORS.border, backgroundColor: COLORS.white, flexShrink: 0, position: 'relative' },
+  vehicleChipOn: { borderColor: COLORS.primary, backgroundColor: COLORS.primarySoft },
+  vehicleChipDim: { opacity: 0.28 },
+  vehicleName: { fontSize: 9, fontWeight: '600', color: COLORS.soft, textAlign: 'center', marginTop: 4 },
+  vehicleNameOn: { color: COLORS.primary },
+  vehicleSelDot: { position: 'absolute', top: 4, right: 4, width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.primary },
+  noteBox: { marginTop: 10, padding: 8, backgroundColor: COLORS.bg, borderRadius: 7, borderWidth: 1, borderColor: COLORS.border },
+  noteText: { fontSize: 10, color: COLORS.soft, lineHeight: 15 },
+
+  catGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  catChip: { alignItems: 'center', paddingVertical: 9, paddingHorizontal: 6, borderRadius: 8, borderWidth: 1.5, borderColor: COLORS.border, backgroundColor: COLORS.white, marginBottom: 0, position: 'relative' },
+  catChipSingle: { width: '48.5%', flexGrow: 1 },
+  catChipMulti: { width: '48.5%', flexGrow: 1 },
+
+  catChipAuto: { width: '100%', flexDirection: 'row', justifyContent: 'center', paddingVertical: 10, gap: 10 },
+  catChipOn: { borderColor: COLORS.primary, backgroundColor: COLORS.primarySoft },
+  catChipDim: { opacity: 0.28 },
+  catName: { fontSize: 9, fontWeight: '600', color: COLORS.soft, marginTop: 4, textAlign: 'center' },
+  catNameAuto: { marginTop: 0 },
+  catNameOn: { color: COLORS.primary },
+  catInfoBtn: { position: 'absolute', top: 4, right: 4, width: 14, height: 14, borderRadius: 7, backgroundColor: COLORS.border, alignItems: 'center', justifyContent: 'center', zIndex: 2 },
+  catInfoText: { fontSize: 9, fontWeight: '700', color: COLORS.soft },
+
+  serviceListHeader: { marginTop: 10, marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  sectionDivider: { fontSize: 9, fontWeight: '700', color: COLORS.soft, textTransform: 'uppercase', letterSpacing: 0.5 },
+  backLink: { fontSize: 10, color: COLORS.primary, fontWeight: '600' },
+  emptyText: { fontSize: 11, color: COLORS.soft, textAlign: 'center', paddingVertical: 14 },
+
+  serviceList: { gap: 6 },
+  serviceItem: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 9, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, backgroundColor: COLORS.white },
+  serviceItemOn: { borderColor: COLORS.primary, backgroundColor: COLORS.primarySoft },
+  svcIcoWrap: { width: 34, height: 34, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.primarySoft },
+  serviceInfo: { flex: 1 },
+  serviceName: { fontSize: 12, fontWeight: '600', color: COLORS.ink },
+  serviceDesc: { fontSize: 10, color: COLORS.soft, marginTop: 2, lineHeight: 14 },
+  serviceRight: { alignItems: 'flex-end' },
+  servicePrice: { fontSize: 11, fontWeight: '500', color: COLORS.mid, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  serviceBadge: { fontSize: 8, fontWeight: '700', marginTop: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10, textTransform: 'uppercase', overflow: 'hidden' },
+  badgeBp: { backgroundColor: COLORS.dangerSoft, color: COLORS.danger },
+  badgeBe: { backgroundColor: COLORS.warningSoft, color: COLORS.warning },
+  badgeBs: { backgroundColor: COLORS.primarySoft, color: COLORS.primary },
+  badgeBm: { backgroundColor: COLORS.purpleSoft, color: COLORS.purple },
+
+  selectedPill: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, borderRadius: 10, backgroundColor: COLORS.primarySoft, borderWidth: 1.5, borderColor: COLORS.primary, marginBottom: 10 },
+  selectedPillName: { fontSize: 13, fontWeight: '700', color: COLORS.primary },
+  selectedPillPrice: { fontSize: 11, color: COLORS.mid, marginTop: 2, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  changeLink: { fontSize: 10, color: COLORS.primary, textDecorationLine: 'underline', fontWeight: '600' },
+
+  sdivRow: { marginTop: 10, marginBottom: 6, flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 10 },
+  sdivText: { fontSize: 9, fontWeight: '700', textTransform: 'uppercase', color: COLORS.soft, letterSpacing: 0.5 },
+
+  weightStepperContainer: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border, borderRadius: 6, backgroundColor: COLORS.white },
+  stepperBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.bg },
+  weightStepperInput: { flex: 1, textAlign: 'center', fontSize: 13, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: COLORS.ink },
+
+  itemsSec: { marginTop: 2 },
+  table: { width: '100%' },
+  tableHdrRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: COLORS.border, paddingVertical: 6, marginBottom: 4, backgroundColor: COLORS.bg, paddingHorizontal: 8, borderRadius: 6 },
+  th: { fontSize: 8, fontWeight: '700', color: COLORS.soft, textTransform: 'uppercase', letterSpacing: 0.5 },
+  tr: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    borderBottomWidth: 1, 
+    borderBottomColor: COLORS.border, 
+    paddingVertical: 6, 
+    paddingHorizontal: 8 // <-- This centers the inputs
+  },
+  tdInput: { fontSize: 10, color: COLORS.ink, paddingVertical: 4, paddingHorizontal: 6 },
+  tdDel: { width: 22, height: 22, alignItems: 'center', justifyContent: 'center', borderRadius: 4 },
+  addItemBtn: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 5, marginTop: 4 },
+  addItemBtnText: { fontSize: 10, fontWeight: '600', color: COLORS.primary },
+
+  row2: { flexDirection: 'row', gap: 7, marginTop: 8 },
+  fieldHalf: { flex: 1 },
+  fieldFull: { marginTop: 8 },
+  fieldLabel: { fontSize: 9, fontWeight: '700', color: COLORS.mid, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3 },
+  fieldInput: { width: '100%', borderWidth: 1, borderColor: COLORS.border, borderRadius: 6, paddingHorizontal: 9, paddingVertical: 7, fontSize: 11, color: COLORS.ink, backgroundColor: COLORS.white },
+
+  priceBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, backgroundColor: COLORS.primarySoft, borderWidth: 1, borderColor: COLORS.primaryMid, borderRadius: 12, marginBottom: 10 },
+  priceBannerIco: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
+  priceBannerTitle: { fontSize: 12, fontWeight: '700', color: COLORS.primary },
+  priceBannerSub: { fontSize: 10, color: COLORS.mid, marginTop: 2, lineHeight: 14 },
+
+  bottomCta: { marginTop: 10, paddingBottom: 20 },
+  ctaBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.primary, paddingVertical: 14, borderRadius: 12, gap: 8, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.28, shadowRadius: 14, elevation: 5 },
+  ctaBtnGreen: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.primary, paddingVertical: 14, borderRadius: 12, gap: 8, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.28, shadowRadius: 14, elevation: 5 },
+  ctaBtnDim: { backgroundColor: COLORS.mute, shadowOpacity: 0, elevation: 0 },
+  ctaBtnText: { fontSize: 14, fontWeight: '700', color: COLORS.white },
+
+  schedToggle: { flexDirection: 'row', backgroundColor: COLORS.white, borderRadius: 24, padding: 3, marginBottom: 16, borderWidth: 1, borderColor: COLORS.border, elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3 },
+  schedBtn: { flex: 1, paddingVertical: 7, borderRadius: 20, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 5 },
+  schedBtnOn: { backgroundColor: COLORS.ink },
+  schedText: { fontSize: 12, fontWeight: '500', color: COLORS.soft },
+  schedTextOn: { color: COLORS.white, fontWeight: '600' },
+  datePickerCard: { backgroundColor: COLORS.white, borderRadius: 12, padding: 10, marginBottom: 16, borderWidth: 1, borderColor: COLORS.border },
+  dateConfirmBtn: { backgroundColor: COLORS.primary, padding: 12, borderRadius: 8, alignItems: 'center', marginTop: 10 },
+  dateConfirmText: { color: COLORS.white, fontWeight: '700', fontSize: 14 },
+
+  serviceBanner: { backgroundColor: COLORS.primary, padding: 10, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 10, marginBottom: 12, marginTop:10 },
+  serviceBannerName: { fontSize: 11, color: COLORS.white, fontWeight: '600' },
+  serviceBannerSub: { fontSize: 10, color: 'rgba(255,255,255,0.7)', marginTop: 1 },
+  serviceBannerChange: { fontSize: 10, color: 'rgba(255,255,255,0.75)', textDecorationLine: 'underline' },
+
+  mapStrip: { width: '100%', height: 90, borderRadius: 8, overflow: 'hidden', position: 'relative', marginBottom: 10, borderWidth: 1, borderColor: COLORS.border },
+  mapEditBtn: { position: 'absolute', bottom: 6, right: 6, backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.border, borderRadius: 5, paddingHorizontal: 8, paddingVertical: 3, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  mapEditText: { fontSize: 9, fontWeight: '600', color: COLORS.primary },
+
+  locRowPick: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: COLORS.primaryMid, backgroundColor: COLORS.primarySoft, marginBottom: 8 },
+  locRowDrop: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#f1b8b4', backgroundColor: COLORS.dangerSoft, marginBottom: 8 },
+  locDotG: { width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.primary },
+  locDotR: { width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.danger },
+  locInfo: { flex: 1, justifyContent: 'center' },
+  locLblG: { fontSize: 9, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2, color: COLORS.primary },
+  locLblR: { fontSize: 9, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2, color: COLORS.danger },
+  locInput: { fontSize: 12, fontWeight: '500', color: COLORS.ink, padding: 0, margin: 0 },
+  locPinBtn: { width: 26, height: 26, borderRadius: 5, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
+  locPinBtnRed: { width: 26, height: 26, borderRadius: 5, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
+  connectorLine: { width: 2, height: 16, marginLeft: 14, marginTop: -4, marginBottom: -4, borderLeftWidth: 2, borderLeftColor: COLORS.border, borderStyle: 'dashed' },
+
+  stopsWrap: { position: 'relative', marginTop: 4 },
+  stopCard: { backgroundColor: COLORS.white, borderRadius: 8, borderWidth: 1, borderColor: COLORS.border, marginTop: 8, overflow: 'hidden', position: 'relative' },
+  stopCardExp: { borderColor: COLORS.primary },
+  stopHdr: { flexDirection: 'row', alignItems: 'center', padding: 9 },
+  stopNum: { width: 20, height: 20, borderRadius: 10, backgroundColor: COLORS.ink, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
+  stopNumActive: { backgroundColor: COLORS.primary },
+  stopNumText: { color: COLORS.white, fontSize: 9, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  stopPrev: { flex: 1 },
+  stopAddr: { fontSize: 11, fontWeight: '500', color: COLORS.ink },
+  stopAddrPh: { color: COLORS.soft, fontWeight: '400' },
+  stopMeta: { fontSize: 10, color: COLORS.soft, marginTop: 1 },
+  stopRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  stopPinBtn: { width: 22, height: 22, borderRadius: 4, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
+  delBtn: { width: 22, height: 22, borderRadius: 4, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
+  stopBody: { padding: 10, borderTopWidth: 1, borderTopColor: COLORS.border, backgroundColor: '#FAFCFB' },
+
+  addrWrap: { position: 'relative' },
+  addrPin: { position: 'absolute', right: 5, top: '50%', marginTop: -10, width: 20, height: 20, borderRadius: 3, backgroundColor: COLORS.primarySoft, alignItems: 'center', justifyContent: 'center' },
+
+  stopSvcSel: { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: COLORS.border },
+  stopSvcLbl: { fontSize: 9, fontWeight: '700', color: COLORS.mid, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
+  stopSvcChosen: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 7, backgroundColor: COLORS.primarySoft, borderWidth: 1, borderColor: COLORS.primaryMid, borderRadius: 7, marginBottom: 6 },
+  stopSvcChosenName: { flex: 1, fontSize: 11, fontWeight: '600', color: COLORS.primary },
+  stopSvcChosenChange: { fontSize: 9, color: COLORS.primary, textDecorationLine: 'underline' },
+  stopCatsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  stopCatBtn: { width: '32%', borderWidth: 1.5, borderColor: COLORS.border, borderRadius: 6, paddingVertical: 5, alignItems: 'center', backgroundColor: COLORS.white },
+  stopCatBtnDim: { opacity: 0.3 },
+  stopCatBtnText: { fontSize: 9, fontWeight: '600', color: COLORS.soft },
+  incBadge: { fontSize: 9, fontWeight: '700', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 20, textTransform: 'uppercase', backgroundColor: COLORS.warningSoft, color: COLORS.warning, overflow: 'hidden' },
+
+  addStopBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, borderWidth: 1.5, borderStyle: 'dashed', borderColor: COLORS.border, borderRadius: 8, marginTop: 10 },
+  addStopBtnText: { fontSize: 11, fontWeight: '500', color: COLORS.soft },
+  stopCount: { fontSize: 10, color: COLORS.soft, fontWeight: '500', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+
+  suggestionBox: { backgroundColor: COLORS.white, borderRadius: 8, marginTop: 4, paddingHorizontal: 4, paddingBottom: 4, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, zIndex: 10 },
+  suggestionItem: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+  suggestionText: { marginLeft: 8, fontSize: 13, color: '#374151' },
+
+  mapBgReal: { flex: 1, backgroundColor: '#c8e6d4', position: 'relative', overflow: 'hidden' },
+  mapRoadMain: { position: 'absolute', left: -10, right: -10, top: '44%', height: 10, backgroundColor: 'rgba(255,255,255,0.5)', transform: [{ rotate: '-2deg' }] },
+  mapRouteLine: { position: 'absolute', left: '10%', right: '10%', top: '39%', height: 2, borderBottomWidth: 2, borderBottomColor: COLORS.primary, borderStyle: 'dashed' },
+  mapPinsWrap: { ...StyleSheet.absoluteFillObject, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', paddingHorizontal: '10%', zIndex: 4 },
+  mapPinGroup: { alignItems: 'center', justifyContent: 'center', gap: 1 },
+  mapPinDotReal: { width: 16, height: 16, borderRadius: 8, borderTopRightRadius: 0, transform: [{ rotate: '-45deg' }], alignItems: 'center', justifyContent: 'center', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 5 },
+  mapPinPickup: { backgroundColor: COLORS.primary },
+  mapPinStop: { backgroundColor: COLORS.ink },
+  mapPinDropoff: { backgroundColor: COLORS.danger },
+  mapPinLetter: { color: COLORS.white, fontSize: 7, fontWeight: '700', transform: [{ rotate: '45deg' }] },
+  mapPinTag: { fontSize: 8, fontWeight: '600', color: COLORS.ink, backgroundColor: COLORS.white, paddingHorizontal: 4, paddingVertical: 1, borderRadius: 3, overflow: 'hidden', marginTop: 3 },
+});

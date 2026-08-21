@@ -1,0 +1,105 @@
+{
+  "expo": {
+    "name": "Hence",
+    "slug": "HenceLogistics",
+    "scheme": "hencelogistics",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": false,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "bundleIdentifier": "com.hence.oyedotun",
+      "buildNumber": "3",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "fetch",
+          "remote-notification",
+          "fetch",
+          "remote-notification"
+        ],
+        "NSCameraUsageDescription": "Hence Logistics needs camera access to take photos for proof of delivery.",
+        "NSPhotoLibraryUsageDescription": "Hence Logistics needs photo library access to upload profile pictures and delivery receipts.",
+        "NSLocationWhenInUseUsageDescription": "Hence Logistics needs your location to provide accurate tracking for deliveries.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Hence Logistics needs background location access to update delivery statuses while you are driving.",
+        "NSMicrophoneUsageDescription": "Hence Logistics needs microphone access for voice notes and video delivery proof.",
+        "NSUserTrackingUsageDescription": "Hence Logistics uses tracking to optimize the delivery experience.",
+        "NSFaceIDUsageDescription": "Hence Logistics uses Face ID for secure driver login.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.hencelogistics.app",
+      "usesCleartextTraffic": true,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "CAMERA",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "RECORD_AUDIO"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": false,
+      "predictiveBackGestureEnabled": false,
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCnt02Uotcj2lXun70USSQ2hRsOcDXrZLY"
+        }
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.hencelogistics.test",
+          "enableGooglePay": false,
+          "enableApplePay": true
+        }
+      ],
+      "expo-font",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Hence needs camera access to scan QR codes and upload delivery proof."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Hence to use your location to find nearby jobs and track deliveries."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#1A7A4A"
+        }
+      ],
+      "@react-native-community/datetimepicker",
+      "expo-sharing",
+      "expo-status-bar"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "b0ad43f4-c5c8-4274-9639-2f6965170365"
+      }
+    }
+  }
+}

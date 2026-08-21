@@ -1,0 +1,36 @@
+name: Build iOS App
+
+on:
+  workflow_dispatch: # This allows you to click a manual 'Run' button on GitHub
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+
+      - name: Setup Expo & EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build iOS Locally on Cloud Mac
+        run: EAS_NO_VCS=1 eas build --platform ios --local --non-interactive
+        env:
+          EXPO_APPLE_ID: "info@hencedelivery.com"
+
+      - name: Save the .ipa File
+        uses: actions/upload-artifact@v4
+        with:
+          name: HenceLogistics-iOS
+          path: '*.ipa'
