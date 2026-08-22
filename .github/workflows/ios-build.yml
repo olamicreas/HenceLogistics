@@ -28,13 +28,8 @@ jobs:
       - name: Run Expo Prebuild (Generate iOS Native Folder)
         run: npx expo prebuild --platform ios --clean
 
-      - name: Install CocoaPods Dependencies
-        run: |
-          cd ios
-          pod install
-
-      - name: Build iOS Locally on Cloud Mac
-        run: EAS_NO_VCS=1 eas build --platform ios --local --non-interactive
+      - name: Build iOS Locally on Free Cloud Mac (No Plan Usage)
+        run: EAS_NO_VCS=1 RCT_USE_PREBUILT_RNCORE=0 eas build --platform ios --local --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EXPO_APPLE_ID: "info@hencedelivery.com"
