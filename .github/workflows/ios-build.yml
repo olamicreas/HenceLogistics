@@ -10,7 +10,7 @@ jobs:
       - name: "Checkout Code"
         uses: actions/checkout@v4
         with:
-          persist-credentials: false # THIS IS THE MAGIC BULLET FOR SPM AUTH ISSUES
+          persist-credentials: false
 
       - name: "Setup Node"
         uses: actions/setup-node@v4
@@ -23,14 +23,21 @@ jobs:
         with:
           xcode-version: '16.1'
 
-      - name: "Configure Xcode & Fix SPM Networking"
+      - name: "Configure Xcode & Bypass SPM Rate Limits"
         run: |
+          # 1. Throttle Memory so the runner stays alive
           defaults write com.apple.dt.Xcode IDEBuildOperationMaxNumberOfConcurrentCompileTasks 2
           defaults write com.apple.dt.Xcode PBXNumberOfParallelBuildSubtasks 2
           defaults write com.apple.dt.Xcode IDEPackageResolutionUseSystemGit -bool YES
-          defaults write com.apple.dt.Xcode IDESourceControlUseSystemGit -bool YES
           
-          # Force HTTPS for all GitHub SPM fetches to prevent SSH hangs
+          # 2. Prevent Xcode from hanging on SSH verification
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          
+          # 3. Give SPM a VIP pass to bypass GitHub Rate Limiting
+          echo "machine github.com login x-access-token password ${{ secrets.GITHUB_TOKEN }}" > ~/.netrc
+          
+          # 4. Force HTTPS routing for all background package fetches
           git config --global url."https://github.com/".insteadOf "git@github.com:"
           git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
 
@@ -41,7 +48,7 @@ jobs:
         run: npm install -g eas-cli
 
       - name: "Build iOS Locally on Free Cloud Mac"
-        run: EAS_NO_VCS=1 RCT_USE_PREBUILT_RNCORE=0 EXPO_USE_SPM=0 eas build --platform ios --local --non-interactive
+        run: EAS_NO_VCS=1 eas build --platform ios --local --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EXPO_APPLE_ID: "info@hencedelivery.com"
