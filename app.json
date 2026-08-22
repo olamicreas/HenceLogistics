@@ -79,7 +79,17 @@
       ],
       "@react-native-community/datetimepicker",
       "expo-sharing",
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "extraXCBuildSettings": {
+              "ENABLE_USER_SCRIPT_SANDBOXING": "NO"
+            }
+          }
+        }
+      ]
     ],
     "extra": {
       "eas": {
