@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: macos-14
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -16,19 +16,20 @@ jobs:
           node-version: 20.x
           cache: 'npm'
 
+      - name: Force Xcode 16.1 System-Wide
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.1'
+
       - name: Install Project Dependencies
         run: npm install
 
       - name: Install EAS CLI Globally
         run: npm install -g eas-cli
 
-      - name: Run Expo Prebuild
-        run: npx expo prebuild --platform ios --clean
-
-      - name: Build iOS Locally on Free Cloud Mac
+      - name: Build iOS Locally on Free Cloud Mac (No Plan Usage)
         run: EAS_NO_VCS=1 RCT_USE_PREBUILT_RNCORE=0 eas build --platform ios --local --non-interactive
         env:
-          DEVELOPER_DIR: /Applications/Xcode_16.2.app/Contents/Developer
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EXPO_APPLE_ID: "info@hencedelivery.com"
 
