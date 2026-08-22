@@ -9,11 +9,13 @@ jobs:
     steps:
       - name: "Checkout Code"
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false # THIS IS THE MAGIC BULLET FOR SPM AUTH ISSUES
 
       - name: "Setup Node"
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 22.x
           cache: 'npm'
 
       - name: "Force Xcode 16.1 System-Wide"
@@ -26,13 +28,11 @@ jobs:
           defaults write com.apple.dt.Xcode IDEBuildOperationMaxNumberOfConcurrentCompileTasks 2
           defaults write com.apple.dt.Xcode PBXNumberOfParallelBuildSubtasks 2
           defaults write com.apple.dt.Xcode IDEPackageResolutionUseSystemGit -bool YES
+          defaults write com.apple.dt.Xcode IDESourceControlUseSystemGit -bool YES
           
-          # Scrub GitHub Actions auth token from LOCAL git config so Apple SPM doesn't crash
-          git config --local --unset-all http.https://github.com/.extraheader || true
-          
-          # Wipe corrupted Swift Package caches from previous failed runs
-          rm -rf ~/Library/Caches/org.swift.swiftpm
-          rm -rf ~/Library/Developer/Xcode/DerivedData
+          # Force HTTPS for all GitHub SPM fetches to prevent SSH hangs
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+          git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
 
       - name: "Install Project Dependencies"
         run: npm install
@@ -41,7 +41,7 @@ jobs:
         run: npm install -g eas-cli
 
       - name: "Build iOS Locally on Free Cloud Mac"
-        run: EAS_NO_VCS=1 RCT_USE_PREBUILT_RNCORE=0 eas build --platform ios --local --non-interactive
+        run: EAS_NO_VCS=1 RCT_USE_PREBUILT_RNCORE=0 EXPO_USE_SPM=0 eas build --platform ios --local --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EXPO_APPLE_ID: "info@hencedelivery.com"
