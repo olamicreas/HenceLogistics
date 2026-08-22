@@ -159,10 +159,11 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={globalStyles.container}>
       <View style={localStyles.header}>
+        {/* 🔥 FIXED ROUTING: Takes user back to account hub */}
         <TouchableOpacity
           onPress={() => {
-            setCurrentScreen('home');
-            setBottomTab('home');
+            setCurrentScreen('account-hub');
+            setBottomTab('account');
           }}
           style={localStyles.backButton}
         >
@@ -935,8 +936,8 @@ const localStyles = StyleSheet.create({
   },
   editButtonText: {
     color: '#1A7A4A',
-    fontWeight: '800',
-    fontSize: 15,
+    fontWeight: '600', // 🔥 FIXED
+    fontSize: 14,      // 🔥 FIXED
   },
   saveButton: {
     backgroundColor: '#1A7A4A',
@@ -951,8 +952,8 @@ const localStyles = StyleSheet.create({
   },
   saveButtonText: {
     color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 15,
+    fontWeight: '600', // 🔥 FIXED
+    fontSize: 14,      // 🔥 FIXED
   },
   cancelButton: {
     backgroundColor: '#FFFFFF',
@@ -964,8 +965,8 @@ const localStyles = StyleSheet.create({
   },
   cancelButtonText: {
     color: '#4B5563',
-    fontWeight: '700',
-    fontSize: 15,
+    fontWeight: '600', // 🔥 FIXED
+    fontSize: 14,      // 🔥 FIXED
   },
   logoutButton: {
     backgroundColor: '#FDEDEC',
@@ -977,7 +978,7 @@ const localStyles = StyleSheet.create({
   },
   logoutButtonText: {
     color: '#C0392B',
-    fontWeight: '800',
-    fontSize: 15,
+    fontWeight: '600', // 🔥 FIXED
+    fontSize: 14,      // 🔥 FIXED
   },
 });

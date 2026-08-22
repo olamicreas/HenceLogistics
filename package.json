@@ -6,7 +6,8 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "postinstall": "node -e \"const fs = require('fs'); const file = 'node_modules/expo-modules-jsi/apple/scripts/build-xcframework.sh'; if (fs.existsSync(file)) { let content = fs.readFileSync(file, 'utf8'); content = content.replace(/xcodebuild \\\\\\\\/g, 'xcodebuild ENABLE_USER_SCRIPT_SANDBOXING=NO \\\\\\\\'); fs.writeFileSync(file, content); console.log('Patched ExpoModulesJSI build script'); }\""
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
