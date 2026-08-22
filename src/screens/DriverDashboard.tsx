@@ -587,6 +587,7 @@ export default function DriverDashboard() {
   const pollRef = useRef<number | null>(null);
   const skipProcessingRef = useRef<Record<number, boolean>>({});
   const acceptProcessingRef = useRef<Record<number, boolean>>({});
+  
   const activeJob = activeJobs?.[0] || null;
   const nextAvailableJob = availableJobs?.[0] || null;
   const docsFromProfile = useMemo(() => getVerificationDocs(profileDraft), [profileDraft]);
@@ -1081,7 +1082,34 @@ export default function DriverDashboard() {
     });
   }, [rideHistory, selectedHistoryFilter, hiddenHistoryIds]);
 
-// 🔥 Make sure the function is async!
+  const activeJobStatus = statusValue(activeJob?.status);
+  
+  const activePickup = activeJob
+    ? { latitude: Number(activeJob.pickup_lat), longitude: Number(activeJob.pickup_lon) }
+    : null;
+  
+  // 🔥 SEPARATION FIX: Safely pull drop-off from stops[0] if it's a single drop
+  const activeDropoff = activeJob ? { 
+    latitude: Number(activeJob.dropoff_lat || activeJob.stops?.[activeJob.stops.length - 1]?.lat || 0), 
+    longitude: Number(activeJob.dropoff_lon || activeJob.stops?.[activeJob.stops.length - 1]?.lon || 0) 
+  } : null;
+
+  // 🔥 SEPARATION FIX: It is ONLY multi-drop if explicitly flagged, or if there are 2+ stops!
+  const isMulti = activeJob?.booking_mode === 'multi' || (activeJob?.stops && activeJob.stops.length > 1);
+  
+  // FIX 1: Force to lowercase so "COMPLETED" doesn't jam the app!
+  const pendingStops = (activeJob?.stops || []).filter((s: any) => String(s.status).toLowerCase() !== 'completed');
+  const nextStop = pendingStops.length > 0 ? pendingStops[0] : null;
+  const stopIndex = activeJob?.stops ? activeJob.stops.findIndex((s: any) => s.id === nextStop?.id) : 0;
+  
+  // FIX 2: Ensure it doesn't say "All Stops Completed" if there are 0 stops total
+  const allStopsCompleted = isMulti && activeJob?.stops?.length > 0 && pendingStops.length === 0;
+
+  // 🔥 SEPARATION FIX: Display correct name/address depending on Single vs Multi
+  const displayName = nextStop && isMulti ? (nextStop.recipient || nextStop.name || 'Customer') : (jobDriverProfile?.full_name || activeJob?.customer_name || 'Customer');
+  const displayAddress = nextStop && isMulti ? nextStop.address : (activeJob?.dropoff_address || activeJob?.stops?.[0]?.address || 'Delivery address');
+
+  // 🔥 Make sure the function is async!
   const handleBarcodeScanned = async ({ data }: any) => {
     if (scanned || !activeJob) return;
     setScanned(true);
@@ -1107,14 +1135,12 @@ export default function DriverDashboard() {
         try {
           await axios.patch(`${BASE_URL}/driver/jobs/${activeJob.id}/status`, { status: 'IN_TRANSIT' }, { headers: { Authorization: `Bearer ${token}` } });
 
-          
           // Only runs if the database actually updated!
           setScannerVisible(false);
           Alert.alert('Success', 'Collection confirmed! Starting route.', [
             {
               text: 'OK',
               onPress: async () => {
-                if (typeof updateJobStatus === 'function') await updateJobStatus('in_transit');
                 if (typeof refreshDriverJobs === 'function') await refreshDriverJobs();
                 setScanned(false);
               }
@@ -1187,9 +1213,6 @@ export default function DriverDashboard() {
     if (stopId) mockData.stop_id = stopId;
     handleBarcodeScanned({ type: 'qr', data: encodeURIComponent(JSON.stringify(mockData)) });
   };
-
-
-
 
   // 🔥 Generic scanner used for Drop-off
   const openScanner = async () => {
@@ -1593,33 +1616,6 @@ export default function DriverDashboard() {
     }
   };
 
-const activeJobStatus = statusValue(activeJob?.status);
-  
-  const activePickup = activeJob
-    ? { latitude: Number(activeJob.pickup_lat), longitude: Number(activeJob.pickup_lon) }
-    : null;
-  
-  // 🔥 SEPARATION FIX: Safely pull drop-off from stops[0] if it's a single drop
-  const activeDropoff = activeJob ? { 
-    latitude: Number(activeJob.dropoff_lat || activeJob.stops?.[activeJob.stops.length - 1]?.lat || 0), 
-    longitude: Number(activeJob.dropoff_lon || activeJob.stops?.[activeJob.stops.length - 1]?.lon || 0) 
-  } : null;
-
-  // 🔥 SEPARATION FIX: It is ONLY multi-drop if explicitly flagged, or if there are 2+ stops!
-  const isMulti = activeJob?.booking_mode === 'multi' || (activeJob?.stops && activeJob.stops.length > 1);
-  
-  // FIX 1: Force to lowercase so "COMPLETED" doesn't jam the app!
-  const pendingStops = (activeJob?.stops || []).filter((s: any) => String(s.status).toLowerCase() !== 'completed');
-  const nextStop = pendingStops.length > 0 ? pendingStops[0] : null;
-  const stopIndex = activeJob?.stops ? activeJob.stops.findIndex((s: any) => s.id === nextStop?.id) : 0;
-  
-  // FIX 2: Ensure it doesn't say "All Stops Completed" if there are 0 stops total
-  const allStopsCompleted = isMulti && activeJob?.stops?.length > 0 && pendingStops.length === 0;
-
-  // 🔥 SEPARATION FIX: Display correct name/address depending on Single vs Multi
-  const displayName = nextStop && isMulti ? (nextStop.recipient || nextStop.name || 'Customer') : (jobDriverProfile?.full_name || activeJob?.customer_name || 'Customer');
-  const displayAddress = nextStop && isMulti ? nextStop.address : (activeJob?.dropoff_address || activeJob?.stops?.[0]?.address || 'Delivery address');
-
   const handleCompleteStop = async (stopId: number) => {
     try {
       try {
@@ -1629,7 +1625,7 @@ const activeJobStatus = statusValue(activeJob?.status);
       }
       
       // 🔥 THE FIX: Check if this was the last stop! If yes, automatically finish the whole job!
-      const remainingStops = pendingStops.filter(s => String(s.id) !== String(stopId));
+      const remainingStops = pendingStops.filter((s: any) => String(s.id) !== String(stopId));
       if (remainingStops.length === 0) {
         await markDelivered(activeJob.id);
         setScreenIndex(0);
@@ -1920,9 +1916,6 @@ const activeJobStatus = statusValue(activeJob?.status);
       line: '#E2E8E4', textMuted: '#6B7670', amber: '#E8910C', red: '#D64545',
     };
 
-
-
-
     const pickup = activePickup;
     const dropoff = activeDropoff;
 
@@ -1939,58 +1932,58 @@ const activeJobStatus = statusValue(activeJob?.status);
     
     const stage = isDelivered ? 2 : isCollected ? 1 : 0;
 
-  const getDriverLiveETA = () => {
-    // 1. Check if we have coordinates
-    if (!driverLocation?.lat || !driverLocation?.lon || !activeBooking) return '...';
+    const getDriverLiveETA = () => {
+      // 1. Check if we have coordinates
+      if (!driverLocation?.lat || !driverLocation?.lon || !activeJob) return '...';
 
-    const status = String(activeBooking.status || '').toLowerCase();
-    const isHeadingToPickup = ['pending', 'accepted', 'assigned', 'arrived_pickup'].includes(status);
+      const status = String(activeJob.status || '').toLowerCase();
+      const isHeadingToPickup = ['pending', 'accepted', 'assigned', 'arrived_pickup'].includes(status);
 
-    let targetLat = null;
-    let targetLon = null;
+      let targetLat = null;
+      let targetLon = null;
 
-    // 2. Find the correct target destination!
-    if (isHeadingToPickup) {
-      targetLat = activeBooking.pickup_lat;
-      targetLon = activeBooking.pickup_lon;
-    } else {
-      // If it's multi-drop, find the FIRST stop that is NOT completed
-      if (activeBooking.stops && activeBooking.stops.length > 0) {
-        const nextStop = activeBooking.stops.find((s: any) => String(s.status).toLowerCase() !== 'completed');
-        if (nextStop) {
-          targetLat = nextStop.lat;
-          targetLon = nextStop.lon;
-        } else {
-          targetLat = activeBooking.dropoff_lat;
-          targetLon = activeBooking.dropoff_lon;
-        }
+      // 2. Find the correct target destination!
+      if (isHeadingToPickup) {
+        targetLat = activeJob.pickup_lat;
+        targetLon = activeJob.pickup_lon;
       } else {
-        // Single drop
-        targetLat = activeBooking.dropoff_lat;
-        targetLon = activeBooking.dropoff_lon;
+        // If it's multi-drop, find the FIRST stop that is NOT completed
+        if (activeJob.stops && activeJob.stops.length > 0) {
+          const nextPendingStop = activeJob.stops.find((s: any) => String(s.status).toLowerCase() !== 'completed');
+          if (nextPendingStop) {
+            targetLat = nextPendingStop.lat;
+            targetLon = nextPendingStop.lon;
+          } else {
+            targetLat = activeJob.dropoff_lat;
+            targetLon = activeJob.dropoff_lon;
+          }
+        } else {
+          // Single drop
+          targetLat = activeJob.dropoff_lat;
+          targetLon = activeJob.dropoff_lon;
+        }
       }
-    }
 
-    // 3. If no target found, safely fallback
-    if (!targetLat || !targetLon) return '...';
+      // 3. If no target found, safely fallback
+      if (!targetLat || !targetLon) return '...';
 
-    // 4. Bulletproof Distance Math (Haversine Formula)
-    const R = 6371; // Earth radius in km
-    const dLat = (targetLat - driverLocation.lat) * (Math.PI / 180);
-    const dLon = (targetLon - driverLocation.lon) * (Math.PI / 180);
-    const a = 
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) + 
-      Math.cos(driverLocation.lat * (Math.PI / 180)) * Math.cos(targetLat * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    
-    const distanceKm = R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+      // 4. Bulletproof Distance Math (Haversine Formula)
+      const R = 6371; // Earth radius in km
+      const dLat = (targetLat - driverLocation.lat) * (Math.PI / 180);
+      const dLon = (targetLon - driverLocation.lon) * (Math.PI / 180);
+      const a = 
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) + 
+        Math.cos(driverLocation.lat * (Math.PI / 180)) * Math.cos(targetLat * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      
+      const distanceKm = R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 
-    // 5. Convert distance to minutes (Assuming ~35 km/h average city speed)
-    const timeMins = Math.ceil((distanceKm / 35) * 60);
+      // 5. Convert distance to minutes (Assuming ~35 km/h average city speed)
+      const timeMins = Math.ceil((distanceKm / 35) * 60);
 
-    // 6. Guarantee it NEVER says "0"
-    if (isNaN(timeMins) || timeMins <= 1) return '< 1 min';
-    return `${timeMins} min`;
-  };
+      // 6. Guarantee it NEVER says "0"
+      if (isNaN(timeMins) || timeMins <= 1) return '< 1 min';
+      return `${timeMins} min`;
+    };
 
     const updateJobStatus = async (newStatus: string) => {
       try {

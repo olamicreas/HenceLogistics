@@ -80,6 +80,7 @@
       "@react-native-community/datetimepicker",
       "expo-sharing",
       "expo-status-bar",
+      "./plugins/withDisableSandboxing.js",
       [
         "expo-build-properties",
         {
