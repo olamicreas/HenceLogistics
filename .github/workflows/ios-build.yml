@@ -25,26 +25,37 @@ jobs:
         run: |
           npm install
           npx expo install react-native-webview
+          npm install -g eas-cli
 
-      - name: "Install EAS CLI Globally"
-        run: npm install -g eas-cli
-
-      - name: "Configure Xcode Optimization"
+      - name: "Smuggle Environment Variables into EAS Sandbox"
         run: |
-          defaults write com.apple.dt.Xcode IDEBuildOperationMaxNumberOfConcurrentCompileTasks 2
-          defaults write com.apple.dt.Xcode PBXNumberOfParallelBuildSubtasks 2
-          git config --global url."https://github.com/".insteadOf "git@github.com:"
+          # EAS strips GitHub's environment variables. 
+          # We MUST write them into eas.json so they survive the trip into the sandbox.
+          node -e "
+          const fs = require('fs');
+          const eas = JSON.parse(fs.readFileSync('eas.json', 'utf8'));
+          eas.build = eas.build || {};
+          eas.build.production = eas.build.production || {};
+          eas.build.production.env = eas.build.production.env || {};
+          
+          // 1. Kill Xcode 16 Sandboxing
+          eas.build.production.env.ENABLE_USER_SCRIPT_SANDBOXING = 'NO';
+          
+          // 2. Give Xcode the exact absolute path to Node.js
+          eas.build.production.env.NODE_BINARY = process.execPath;
+          
+          // 3. Force full debug logs just in case
+          eas.build.production.env.EXPO_DEBUG = '1';
+          
+          fs.writeFileSync('eas.json', JSON.stringify(eas, null, 2));
+          console.log('Successfully injected Sandbox lifelines into eas.json');
+          "
+          
+          # Fix CocoaPods SSH hanging issue
+          git config --global url.\"https://github.com/\".insteadOf \"git@github.com:\"
 
       - name: "Build iOS Locally on Free Cloud Mac"
-        run: |
-          # 1. Provide a global fallback for Node
-          export NODE_BINARY="$(which node)"
-          
-          # 2. THE FIX: Force Expo to compile from source, deleting the script phase that crashes
-          export EXPO_USE_PRECOMPILED_MODULES=0
-          export ENABLE_USER_SCRIPT_SANDBOXING=NO
-          
-          EXPO_DEBUG=1 EAS_NO_VCS=1 eas build --platform ios --local --non-interactive
+        run: EAS_NO_VCS=1 eas build --platform ios --local --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EXPO_APPLE_ID: "info@hencedelivery.com"
