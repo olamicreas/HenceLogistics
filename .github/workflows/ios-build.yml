@@ -22,6 +22,14 @@ jobs:
       - name: Install EAS CLI Globally
         run: npm install -g eas-cli
 
+      - name: Run Expo Prebuild (Generate iOS Native Folder)
+        run: npx expo prebuild --platform ios --clean
+
+      - name: Install CocoaPods Dependencies
+        run: |
+          cd ios
+          pod install
+
       - name: Build iOS Locally on Cloud Mac
         run: EAS_NO_VCS=1 eas build --platform ios --local --non-interactive
         env:
