@@ -34,8 +34,9 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan github.com >> ~/.ssh/known_hosts
           
-          # 3. Give SPM a VIP pass to bypass GitHub Rate Limiting
+          # 3. Give SPM a VIP pass and STRICTLY lock the file permissions for CocoaPods
           echo "machine github.com login x-access-token password ${{ secrets.GITHUB_TOKEN }}" > ~/.netrc
+          chmod 600 ~/.netrc
           
           # 4. Force HTTPS routing for all background package fetches
           git config --global url."https://github.com/".insteadOf "git@github.com:"
@@ -48,7 +49,7 @@ jobs:
         run: npm install -g eas-cli
 
       - name: "Build iOS Locally on Free Cloud Mac"
-        run: EAS_NO_VCS=1 eas build --platform ios --local --non-interactive
+        run: EAS_NO_VCS=1 RCT_USE_PREBUILT_RNCORE=0 EXPO_USE_SPM=0 eas build --platform ios --local --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EXPO_APPLE_ID: "info@hencedelivery.com"
