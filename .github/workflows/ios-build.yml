@@ -27,8 +27,12 @@ jobs:
           defaults write com.apple.dt.Xcode PBXNumberOfParallelBuildSubtasks 2
           defaults write com.apple.dt.Xcode IDEPackageResolutionUseSystemGit -bool YES
           
-          git config --global --unset-all http.https://github.com/.extraheader || true
-          git config --global url."https://github.com/".insteadOf git@github.com:
+          # Scrub GitHub Actions auth token from LOCAL git config so Apple SPM doesn't crash
+          git config --local --unset-all http.https://github.com/.extraheader || true
+          
+          # Wipe corrupted Swift Package caches from previous failed runs
+          rm -rf ~/Library/Caches/org.swift.swiftpm
+          rm -rf ~/Library/Developer/Xcode/DerivedData
 
       - name: "Install Project Dependencies"
         run: npm install
@@ -37,9 +41,7 @@ jobs:
         run: npm install -g eas-cli
 
       - name: "Build iOS Locally on Free Cloud Mac"
-        run: |
-          rm -rf ios 
-          EAS_NO_VCS=1 RCT_USE_PREBUILT_RNCORE=1 eas build --platform ios --local --non-interactive
+        run: EAS_NO_VCS=1 RCT_USE_PREBUILT_RNCORE=0 eas build --platform ios --local --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EXPO_APPLE_ID: "info@hencedelivery.com"
