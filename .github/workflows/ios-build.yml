@@ -21,13 +21,18 @@ jobs:
         with:
           xcode-version: '16.1'
 
+      - name: Throttle Xcode Memory (Prevent Runner Crash)
+        run: |
+          defaults write com.apple.dt.Xcode IDEBuildOperationMaxNumberOfConcurrentCompileTasks 2
+          defaults write com.apple.dt.Xcode PBXNumberOfParallelBuildSubtasks 2
+
       - name: Install Project Dependencies
         run: npm install
 
       - name: Install EAS CLI Globally
         run: npm install -g eas-cli
 
-      - name: Build iOS Locally on Free Cloud Mac (No Plan Usage)
+      - name: Build iOS Locally on Free Cloud Mac
         run: EAS_NO_VCS=1 RCT_USE_PREBUILT_RNCORE=0 eas build --platform ios --local --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
