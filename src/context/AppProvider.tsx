@@ -22,6 +22,8 @@ import * as ImagePicker from 'expo-image-picker';
 
 const API_URL = 'https://hencedelivery.com';
 
+export const BASE_URL = API_URL;
+
 const api = axios.create({
   baseURL: API_URL,
   timeout: 20000,
@@ -115,7 +117,7 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
   } catch {}
 });
 
-type CurrentScreen = 'login' | 'home' | 'create-job' | 'profile' | 'subscription';
+type CurrentScreen = 'login' | 'home' | 'create-job' | 'profile' | 'subscription' | 'account-hub' | 'support' | 'settings' | 'delete';
 type BottomTab = 'home' | 'rides' | 'account';
 
 export interface RouteStop {
