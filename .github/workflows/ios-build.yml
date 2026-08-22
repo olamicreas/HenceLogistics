@@ -27,10 +27,12 @@ jobs:
           npx expo install react-native-webview
           npm install -g eas-cli
 
-      - name: "Smuggle Environment Variables into EAS Sandbox"
+      - name: "Configure Sandbox Environment & Bypasses"
         run: |
-          # EAS strips GitHub's environment variables. 
-          # We MUST write them into eas.json so they survive the trip into the sandbox.
+          # 1. Prevent SPM Rate Limiting by Apple/GitHub
+          rm -rf .git
+          
+          # 2. Inject Sandbox Variables into eas.json
           node -e "
           const fs = require('fs');
           const eas = JSON.parse(fs.readFileSync('eas.json', 'utf8'));
@@ -38,21 +40,18 @@ jobs:
           eas.build.production = eas.build.production || {};
           eas.build.production.env = eas.build.production.env || {};
           
-          // 1. Kill Xcode 16 Sandboxing
-          eas.build.production.env.ENABLE_USER_SCRIPT_SANDBOXING = 'NO';
+          // Force everything to build from source (Bypasses ExpoModulesJSI recursive script crash)
+          eas.build.production.env.EXPO_USE_PRECOMPILED_MODULES = '0';
+          eas.build.production.env.RCT_USE_PREBUILT_RNCORE = '0';
+          eas.build.production.env.EXPO_USE_SPM = '0';
           
-          // 2. Give Xcode the exact absolute path to Node.js
+          // Give Xcode the exact absolute path to Node.js
           eas.build.production.env.NODE_BINARY = process.execPath;
-          
-          // 3. Force full debug logs just in case
           eas.build.production.env.EXPO_DEBUG = '1';
           
           fs.writeFileSync('eas.json', JSON.stringify(eas, null, 2));
-          console.log('Successfully injected Sandbox lifelines into eas.json');
+          console.log('Successfully injected build-from-source flags into eas.json');
           "
-          
-          # Fix CocoaPods SSH hanging issue
-          git config --global url.\"https://github.com/\".insteadOf \"git@github.com:\"
 
       - name: "Build iOS Locally on Free Cloud Mac"
         run: EAS_NO_VCS=1 eas build --platform ios --local --non-interactive
