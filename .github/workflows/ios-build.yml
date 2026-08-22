@@ -16,22 +16,19 @@ jobs:
           node-version: 20.x
           cache: 'npm'
 
-      - name: Force Latest Xcode 16 Selection
-        run: |
-          XCODE_APP=$(ls -d /Applications/Xcode_16*.app | tail -n 1)
-          echo "Selecting Xcode at $XCODE_APP"
-          sudo xcode-select -s "$XCODE_APP/Contents/Developer"
-          xcodebuild -version
-
       - name: Install Project Dependencies
         run: npm install
 
       - name: Install EAS CLI Globally
         run: npm install -g eas-cli
 
-      - name: Build iOS Locally on Free Cloud Mac (No Plan Usage)
-        run: EAS_NO_VCS=1 eas build --platform ios --local --non-interactive
+      - name: Run Expo Prebuild
+        run: npx expo prebuild --platform ios --clean
+
+      - name: Build iOS Locally on Free Cloud Mac
+        run: EAS_NO_VCS=1 RCT_USE_PREBUILT_RNCORE=0 eas build --platform ios --local --non-interactive
         env:
+          DEVELOPER_DIR: /Applications/Xcode_16.2.app/Contents/Developer
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EXPO_APPLE_ID: "info@hencedelivery.com"
 
