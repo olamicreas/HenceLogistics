@@ -1127,11 +1127,7 @@ export default function HomeScreen() {
   
   if (bottomTab === 'account') {
     const { currentScreen } = useAppContext();
-    if (currentScreen === 'profile') return <ProfileScreen />;
-    // Add these if you have them built, otherwise they can just load placeholders
-    // if (currentScreen === 'settings') return <SettingsScreen />;
-    // if (currentScreen === 'support') return <SupportScreen />;
-    
+    if (currentScreen === 'profile') return <ProfileScreen />;    
     return <AccountHubScreen />;
   }
 
@@ -1425,6 +1421,7 @@ export default function HomeScreen() {
                       <View style={styles.fieldHalf}><Text style={styles.fieldLabel}>Name</Text><TextInput style={styles.fieldInput} placeholder="Full name" value={String(currentStop.recipient || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'recipient', t)} /></View>
                       <View style={styles.fieldHalf}><Text style={styles.fieldLabel}>Phone</Text><TextInput style={styles.fieldInput} placeholder="+353..." keyboardType="phone-pad" value={String(currentStop.phone || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'phone', t)} /></View>
                     </View>
+
                     <View style={[styles.fieldFull, { marginTop: 12 }]}>
                       <Text style={styles.fieldLabel}>Order Number <Text style={{fontWeight: '400', color: COLORS.mute, fontSize: 10, textTransform: 'none'}}>(optional)</Text></Text>
                       <TextInput style={styles.fieldInput} placeholder="e.g. 20481" value={String(currentStop.ref || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'ref', t)} />
@@ -1968,9 +1965,20 @@ export default function HomeScreen() {
             <View style={{ padding: 18, zIndex: 10 }}>
               <Text style={styles.fieldLabel}>{mapPickTarget === 0 ? 'Drop-off Address' : 'Pickup / Stop Address'}</Text>
               <View style={{ position: 'relative', zIndex: 100 }}>
-                <TextInput style={styles.fieldInput} value={tempAddress} onChangeText={(t) => { setTempAddress(t); scheduleSearch(t, mapPickTarget!); }} onFocus={() => setActiveSearchIndex(mapPickTarget!)} placeholder="Search full address or Eircode..." />
+                <TextInput 
+                  style={styles.fieldInput} 
+                  value={tempAddress} 
+                  onChangeText={(t) => { setTempAddress(t); scheduleSearch(t, mapPickTarget!); }} 
+                  onFocus={() => setActiveSearchIndex(mapPickTarget!)} 
+                  placeholder="Search full address or Eircode..." 
+                />
                 {activeSearchIndex === mapPickTarget && (
-                  <View style={[styles.suggestionBox, { position: 'absolute', top: 50, left: 0, right: 0, zIndex: 999 }]}>
+                  <ScrollView 
+                    keyboardShouldPersistTaps="handled"
+                    style={[styles.suggestionBox, { position: 'absolute', top: 50, left: 0, right: 0, zIndex: 999, maxHeight: 220 }]}
+                  >
+                    {/* 🚀 FIXED: Changed to ScrollView, added maxHeight, and handled taps over keyboard */}
+
                     {((mapPickTarget === -1 ? pickupSuggestions : dropoffSuggestions) || []).map((item: any, i: number) => {
                       const displayTitle = item?.display_name || item?.formatted || item?.description || item?.name || (typeof item === 'string' ? item : '');
                       return (
@@ -1992,10 +2000,11 @@ export default function HomeScreen() {
                         </TouchableOpacity>
                       );
                     })}
-                  </View>
+                  </ScrollView>
                 )}
               </View>
             </View>
+
 
             {/* Buttons Footer */}
             <View style={{ flexDirection: 'row', paddingHorizontal: 18, paddingBottom: Math.max(insets.bottom, 20), gap: 10, marginTop: 16 }}>
