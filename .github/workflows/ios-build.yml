@@ -29,21 +29,22 @@ jobs:
       - name: "Install EAS CLI Globally"
         run: npm install -g eas-cli
 
-      - name: "Configure Native iOS Project & Fix Node Path"
+      - name: "Configure Xcode Optimization"
         run: |
           defaults write com.apple.dt.Xcode IDEBuildOperationMaxNumberOfConcurrentCompileTasks 2
           defaults write com.apple.dt.Xcode PBXNumberOfParallelBuildSubtasks 2
-          
-          npx expo prebuild --platform ios --clean
-          echo "export NODE_BINARY=\"$(which node)\"" > ios/.xcode.env.local
-          
-          # THE SMOKING GUN FIX:
-          # Overwrite .gitignore so EAS is forced to transport our custom 'ios' folder into its sandbox
-          echo "node_modules/" > .gitignore
-          echo ".git/" >> .gitignore
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
 
       - name: "Build iOS Locally on Free Cloud Mac"
-        run: EAS_NO_VCS=1 eas build --platform ios --local --non-interactive
+        run: |
+          # 1. Provide a global fallback for Node
+          export NODE_BINARY="$(which node)"
+          
+          # 2. THE FIX: Force Expo to compile from source, deleting the script phase that crashes
+          export EXPO_USE_PRECOMPILED_MODULES=0
+          export ENABLE_USER_SCRIPT_SANDBOXING=NO
+          
+          EXPO_DEBUG=1 EAS_NO_VCS=1 eas build --platform ios --local --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EXPO_APPLE_ID: "info@hencedelivery.com"
