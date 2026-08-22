@@ -1,8 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, SafeAreaView, Alert } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppProvider';
-import { styles as globalStyles } from '../styles';
 
 const COLORS = {
   primary: '#1A7A4A',
@@ -33,13 +32,13 @@ export default function AccountHubScreen() {
       }}
     >
       <View style={[localStyles.iconBox, isDanger && { backgroundColor: '#FDEDEC' }]}>
-        <Ionicons name={icon} size={22} color={isDanger ? COLORS.danger : COLORS.primary} />
+        <Ionicons name={icon} size={20} color={isDanger ? COLORS.danger : COLORS.primary} />
       </View>
       <View style={localStyles.textCol}>
         <Text style={[localStyles.title, isDanger && { color: COLORS.danger }]}>{title}</Text>
         {subtitle ? <Text style={localStyles.subtitle}>{subtitle}</Text> : null}
       </View>
-      <Ionicons name="chevron-forward" size={18} color={COLORS.soft} />
+      <Ionicons name="chevron-forward" size={16} color={COLORS.soft} />
     </TouchableOpacity>
   );
 
@@ -69,7 +68,7 @@ export default function AccountHubScreen() {
           {renderOption("document-text-outline", "Terms & Policies", "Legal and privacy agreements", "terms")}
         </View>
 
-        <View style={[localStyles.card, { marginTop: 24 }]}>
+        <View style={[localStyles.card, { marginTop: 20 }]}>
           {renderOption("log-out-outline", "Log Out", "", "logout")}
           <View style={localStyles.divider} />
           {renderOption("trash-outline", "Delete Account", "Permanently remove your data", "delete", true)}
@@ -82,17 +81,17 @@ export default function AccountHubScreen() {
 
 const localStyles = StyleSheet.create({
   scroll: { padding: 16, paddingBottom: 100 },
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 24, marginTop: 10 },
-  avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#C5E8D4', alignItems: 'center', justifyContent: 'center', marginRight: 16 },
-  avatarText: { fontSize: 24, fontWeight: '800', color: COLORS.primary },
-  userName: { fontSize: 20, fontWeight: '800', color: COLORS.ink },
-  userEmail: { fontSize: 13, color: COLORS.soft, marginTop: 2, fontWeight: '500' },
+  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, marginTop: 10 },
+  avatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#C5E8D4', alignItems: 'center', justifyContent: 'center', marginRight: 14 },
+  avatarText: { fontSize: 20, fontWeight: '600', color: COLORS.primary },
+  userName: { fontSize: 18, fontWeight: '600', color: COLORS.ink },
+  userEmail: { fontSize: 13, color: COLORS.soft, marginTop: 2, fontWeight: '400' },
   
-  card: { backgroundColor: COLORS.white, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border, marginBottom: 16, overflow: 'hidden' },
-  optionRow: { flexDirection: 'row', alignItems: 'center', padding: 16 },
-  iconBox: { width: 40, height: 40, borderRadius: 10, backgroundColor: '#E8F5EE', alignItems: 'center', justifyContent: 'center', marginRight: 14 },
+  card: { backgroundColor: COLORS.white, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, marginBottom: 14, overflow: 'hidden' },
+  optionRow: { flexDirection: 'row', alignItems: 'center', padding: 14 },
+  iconBox: { width: 38, height: 38, borderRadius: 10, backgroundColor: '#E8F5EE', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   textCol: { flex: 1 },
-  title: { fontSize: 15, fontWeight: '700', color: COLORS.ink },
+  title: { fontSize: 14, fontWeight: '500', color: COLORS.ink },
   subtitle: { fontSize: 12, color: COLORS.soft, marginTop: 2 },
-  divider: { height: 1, backgroundColor: COLORS.border, marginLeft: 70 },
+  divider: { height: 1, backgroundColor: COLORS.border, marginLeft: 64 },
 });
