@@ -13,7 +13,8 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 18.x
+          node-version: 20.x
+          cache: 'npm'
 
       - name: Setup Expo & EAS
         uses: expo/expo-github-action@v8
@@ -25,7 +26,7 @@ jobs:
         run: npm install
 
       - name: Build iOS Locally on Cloud Mac
-        run: EAS_NO_VCS=1 eas build --platform ios --local --non-interactive
+        run: EAS_NO_VCS=1 npx eas build --platform ios --local --non-interactive
         env:
           EXPO_APPLE_ID: "info@hencedelivery.com"
 
