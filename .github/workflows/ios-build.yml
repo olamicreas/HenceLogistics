@@ -1,51 +1,52 @@
 name: Build iOS App
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: macos-14
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+  build:
+    runs-on: macos-14
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20.x
-          cache: 'npm'
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
 
-      - name: Force Xcode 16.1 System-Wide
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: '16.1'
+      - name: Force Xcode 16.1 System-Wide
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.1'
 
-      - name: Throttle Xcode Memory (Prevent Runner Crash)
-        run: |
-          defaults write com.apple.dt.Xcode IDEBuildOperationMaxNumberOfConcurrentCompileTasks 2
-          defaults write com.apple.dt.Xcode PBXNumberOfParallelBuildSubtasks 2
+      - name: Configure Xcode (Memory Limits & SPM Networking Fix)
+        run: |
+          defaults write com.apple.dt.Xcode IDEBuildOperationMaxNumberOfConcurrentCompileTasks 2
+          defaults write com.apple.dt.Xcode PBXNumberOfParallelBuildSubtasks 2
+          defaults write com.apple.dt.Xcode IDEPackageResolutionUseSystemGit -bool YES
 
-      - name: Install Project Dependencies
-        run: npm install
+      - name: Install Project Dependencies
+        run: npm install
 
-      - name: Install EAS CLI Globally
-        run: npm install -g eas-cli
+      - name: Install EAS CLI Globally
+        run: npm install -g eas-cli
 
-      - name: Build iOS Locally on Free Cloud Mac
-        run: EAS_NO_VCS=1 RCT_USE_PREBUILT_RNCORE=0 eas build --platform ios --local --non-interactive
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          EXPO_APPLE_ID: "info@hencedelivery.com"
+      - name: Build iOS Locally on Free Cloud Mac
+        run: EAS_NO_VCS=1 RCT_USE_PREBUILT_RNCORE=0 eas build --platform ios --local --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_APPLE_ID: "info@hencedelivery.com"
 
-      - name: Submit to App Store Connect
-        run: npx eas submit --platform ios --non-interactive --auto-submit
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          EXPO_APPLE_ID: "info@hencedelivery.com"
+      - name: Submit to App Store Connect
+        run: npx eas submit --platform ios --non-interactive --auto-submit
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_APPLE_ID: "info@hencedelivery.com"
 
-      - name: Save the .ipa File
-        uses: actions/upload-artifact@v4
-        with:
-          name: HenceLogistics-iOS
-          path: '*.ipa'
+      - name: Save the .ipa File
+        uses: actions/upload-artifact@v4
+        with:
+          name: HenceLogistics-iOS
+          path: '*.ipa'
