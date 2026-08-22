@@ -43,16 +43,14 @@ jobs:
           git config --global url."https://github.com/".insteadOf "git@github.com:"
           git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
 
-      - name: "Install & Auto-Fix Dependencies"
-        run: |
-          npm install
-          npx expo install --fix
-          npm uninstall @types/react-native
+      - name: "Install Project Dependencies"
+        run: npm install
 
       - name: "Install EAS CLI Globally"
         run: npm install -g eas-cli
 
       - name: "Build iOS Locally on Free Cloud Mac"
+        # DISABLE XCODE 16 SCRIPT SANDBOXING HERE
         run: ENABLE_USER_SCRIPT_SANDBOXING=NO EAS_NO_VCS=1 eas build --platform ios --local --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
