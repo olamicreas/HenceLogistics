@@ -21,34 +21,30 @@ jobs:
         with:
           xcode-version: '16.1'
 
-      - name: "Fix Apple SPM & Xcode Sandboxing"
-        run: |
-          # 1. DELETE .GIT FOLDER (The real SPM fix)
-          # This prevents GitHub Actions' scoped tokens from leaking into Swift Package Manager
-          # and breaking public downloads like Stripe.
-          rm -rf .git
-
-          # 2. Kill Xcode 16 Sandboxing so Expo scripts can execute
-          defaults write com.apple.dt.Xcode IDEEnableUserScriptSandboxing -bool NO
-          defaults write com.apple.dt.Xcode IDESkipPackagePluginValidation -bool YES
-          defaults write com.apple.dt.Xcode IDESkipMacroValidation -bool YES
-          
-          # 3. Prevent Memory Crashes
-          defaults write com.apple.dt.Xcode IDEBuildOperationMaxNumberOfConcurrentCompileTasks 2
-          defaults write com.apple.dt.Xcode PBXNumberOfParallelBuildSubtasks 2
-          
-          # 4. Link Node globally just in case Expo needs it in a subshell
-          sudo mkdir -p /usr/local/bin
-          sudo ln -sf $(which node) /usr/local/bin/node
-
       - name: "Install Project Dependencies"
         run: npm install
 
       - name: "Install EAS CLI Globally"
         run: npm install -g eas-cli
 
+      - name: "Configure Native iOS Project & Fix Node Path"
+        run: |
+          # 1. Limit Xcode memory to prevent Free Runner crashes
+          defaults write com.apple.dt.Xcode IDEBuildOperationMaxNumberOfConcurrentCompileTasks 2
+          defaults write com.apple.dt.Xcode PBXNumberOfParallelBuildSubtasks 2
+          
+          # 2. Generate the native iOS code manually
+          npx expo prebuild --platform ios --clean
+          
+          # 3. Inject the exact GitHub Actions Node path so Xcode scripts don't crash
+          echo "export NODE_BINARY=\"$(which node)\"" > ios/.xcode.env.local
+          
+          # 4. Ensure SPM doesn't get blocked by SSH auth routing
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+
       - name: "Build iOS Locally on Free Cloud Mac"
-        run: ENABLE_USER_SCRIPT_SANDBOXING=NO EAS_NO_VCS=1 eas build --platform ios --local --non-interactive
+        # EXPO_DEBUG=1 forces Fastlane to print the true error if it fails
+        run: EXPO_DEBUG=1 EAS_NO_VCS=1 eas build --platform ios --local --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EXPO_APPLE_ID: "info@hencedelivery.com"
