@@ -23,18 +23,28 @@ jobs:
         with:
           xcode-version: '16.1'
 
-      - name: "Configure Xcode & Bypass SPM Rate Limits"
+      - name: "Configure Xcode & Fix Build Environment"
         run: |
+          # 1. Skip Xcode 16 Security Prompts that freeze CI runners
+          defaults write com.apple.dt.Xcode IDESkipPackagePluginValidation -bool YES
+          defaults write com.apple.dt.Xcode IDESkipMacroValidation -bool YES
+          
+          # 2. Prevent Memory Crashes
           defaults write com.apple.dt.Xcode IDEBuildOperationMaxNumberOfConcurrentCompileTasks 2
           defaults write com.apple.dt.Xcode PBXNumberOfParallelBuildSubtasks 2
           defaults write com.apple.dt.Xcode IDEPackageResolutionUseSystemGit -bool YES
           
+          # 3. Force Xcode script phases to find Node
+          sudo mkdir -p /usr/local/bin
+          sudo ln -sf $(which node) /usr/local/bin/node
+          sudo ln -sf $(which npm) /usr/local/bin/npm
+          sudo ln -sf $(which npx) /usr/local/bin/npx
+          
+          # 4. VIP SPM Network Access
           mkdir -p ~/.ssh
           ssh-keyscan github.com >> ~/.ssh/known_hosts
-          
           echo "machine github.com login x-access-token password ${{ secrets.GITHUB_TOKEN }}" > ~/.netrc
           chmod 600 ~/.netrc
-          
           git config --global url."https://github.com/".insteadOf "git@github.com:"
           git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
 
