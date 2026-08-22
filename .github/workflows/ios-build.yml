@@ -23,7 +23,7 @@ jobs:
         with:
           xcode-version: '16.1'
 
-      - name: "Configure Xcode & Absolute Network Override"
+      - name: "Configure Xcode & Fix Build Environment"
         run: |
           defaults write com.apple.dt.Xcode IDESkipPackagePluginValidation -bool YES
           defaults write com.apple.dt.Xcode IDESkipMacroValidation -bool YES
@@ -31,19 +31,17 @@ jobs:
           defaults write com.apple.dt.Xcode PBXNumberOfParallelBuildSubtasks 2
           defaults write com.apple.dt.Xcode IDEPackageResolutionUseSystemGit -bool YES
           
-          # 1. Inject Node PATH into every subshell so Xcode scripts never fail
-          for profile in .bash_profile .bashrc .zprofile .zshrc; do
-            echo "export PATH=\"$PATH\"" >> ~/$profile
-            echo "export NODE_BINARY=\"$(which node)\"" >> ~/$profile
-          done
+          sudo mkdir -p /usr/local/bin
+          sudo ln -sf $(which node) /usr/local/bin/node
+          sudo ln -sf $(which npm) /usr/local/bin/npm
+          sudo ln -sf $(which npx) /usr/local/bin/npx
           
-          # 2. Kill the macOS credential helper that causes the 3-second network timeout
-          git config --global credential.helper ""
-          
-          # 3. Hardcode the auth token into the URL so SPM never prompts for SSH/Passwords
-          git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
-          git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "git@github.com:"
-          git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "ssh://git@github.com/"
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          echo "machine github.com login x-access-token password ${{ secrets.GITHUB_TOKEN }}" > ~/.netrc
+          chmod 600 ~/.netrc
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+          git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
 
       - name: "Install Project Dependencies"
         run: npm install
@@ -52,11 +50,11 @@ jobs:
         run: npm install -g eas-cli
 
       - name: "Build iOS Locally on Free Cloud Mac"
-        run: EAS_NO_VCS=1 eas build --platform ios --local --non-interactive
+        # DISABLE XCODE 16 SCRIPT SANDBOXING HERE
+        run: ENABLE_USER_SCRIPT_SANDBOXING=NO EAS_NO_VCS=1 eas build --platform ios --local --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EXPO_APPLE_ID: "info@hencedelivery.com"
-          NODE_BINARY: node
 
       - name: "Submit to App Store Connect"
         run: npx eas submit --platform ios --non-interactive --auto-submit
