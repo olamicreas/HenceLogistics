@@ -1695,6 +1695,30 @@ const activeJobStatus = statusValue(activeJob?.status);
       </View>
 
       <ScrollView contentContainerStyle={styles.pad}>
+        
+        {/* 🚀 BULLETPROOF FIX: THE ACTIVE JOB CAN NEVER BE LOST */}
+        {activeJob && (
+          <TouchableOpacity 
+            style={[styles.card, { borderColor: COLORS.primary, borderWidth: 2, overflow: 'hidden' }]} 
+            onPress={() => setScreenIndex(2)}
+            activeOpacity={0.9}
+            
+          >
+            <View style={[styles.ch, { backgroundColor: COLORS.primary, borderBottomWidth: 0 }]}>
+              <Text style={[styles.ct, { color: '#fff' }]}>Current Active Delivery</Text>
+              <Text style={[styles.linkText, { color: '#fff' }]}>View Map →</Text>
+            </View>
+            <View style={[styles.cb, { backgroundColor: '#fff' }]}>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: COLORS.ink }}>
+                {activeJob.pickup_address?.split(',')[0] || 'Pickup'} → {activeJob.dropoff_address?.split(',')[0] || 'Drop-off'}
+              </Text>
+              <Text style={{ fontSize: 12, color: COLORS.soft, marginTop: 4 }}>
+                Tap here to return to your live navigation and delivery controls.
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
         <View style={styles.kpiRow}>
           <View style={styles.kpi}>
             <Text style={styles.kpiV}>€{money(todayEarnings)}</Text>
@@ -1709,6 +1733,7 @@ const activeJobStatus = statusValue(activeJob?.status);
             <Text style={styles.kpiL}>Rating</Text>
           </View>
         </View>
+
 
         {isOnline && nextAvailableJob && (
           <TouchableOpacity
@@ -1878,8 +1903,13 @@ const activeJobStatus = statusValue(activeJob?.status);
     if (!activeJob) {
       return (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-          <Text style={{ color: COLORS.soft, fontSize: 16, marginBottom: 14 }}>No active job right now.</Text>
-          
+          <ActivityIndicator size="large" color={COLORS.primary} style={{ marginBottom: 16 }} />
+          <Text style={{ color: COLORS.ink, fontSize: 18, fontWeight: '800', marginBottom: 8 }}>
+            Syncing Delivery...
+          </Text>
+          <Text style={{ color: COLORS.soft, fontSize: 14, textAlign: 'center', lineHeight: 20 }}>
+            If you just accepted a job, we are securely fetching the route details from the server.
+          </Text>
         </View>
       );
     }
@@ -1889,6 +1919,9 @@ const activeJobStatus = statusValue(activeJob?.status);
       ink: '#0F1F17', paper: '#F6F8F6', card: '#FFFFFF',
       line: '#E2E8E4', textMuted: '#6B7670', amber: '#E8910C', red: '#D64545',
     };
+
+
+
 
     const pickup = activePickup;
     const dropoff = activeDropoff;
