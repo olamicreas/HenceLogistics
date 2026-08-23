@@ -4,10 +4,10 @@ const fs = require('fs');
 const dateFile = 'node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI/Coding/JavaScriptCodable+Date.swift';
 if (fs.existsSync(dateFile)) {
   let content = fs.readFileSync(dateFile, 'utf8');
-  if (!content.includes('let rounded: Double')) {
+  if (content.includes('abs(milliseconds) <= maxJavaScriptDateMilliseconds')) {
     content = content.replace(
-      /.*return Date\(timeIntervalSince1970:.*/g,
-      '  let rounded: Double = milliseconds.rounded(FloatingPointRoundingRule.towardZero)\n  let seconds: Double = rounded / 1000.0\n  return Date(timeIntervalSince1970: seconds)'
+      'abs(milliseconds) <= maxJavaScriptDateMilliseconds',
+      'milliseconds >= -maxJavaScriptDateMilliseconds && milliseconds <= maxJavaScriptDateMilliseconds'
     );
     fs.writeFileSync(dateFile, content);
     console.log('Patched JavaScriptCodable+Date.swift successfully.');
