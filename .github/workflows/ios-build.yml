@@ -42,8 +42,6 @@ jobs:
           eas.build.production.env = eas.build.production.env || {};
           
           // User traps bypasses
-          eas.build.production.env.EXPO_USE_PRECOMPILED_MODULES = '0';
-          eas.build.production.env.RCT_USE_PREBUILT_RNCORE = '0';
           eas.build.production.env.EXPO_USE_SPM = '0';
           eas.build.production.env.ENABLE_USER_SCRIPT_SANDBOXING = 'NO';
           
