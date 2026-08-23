@@ -47,6 +47,7 @@ for (const file of glob) {
     let changed = false;
     if (content.includes('weak let ')) {
       content = content.replace(/weak let /g, 'weak var ');
+      content = content.replace(/Sendable\s*\{/g, '@unchecked Sendable {');
       changed = true;
     }
     if (content.match(/,(\s*\))/)) {
