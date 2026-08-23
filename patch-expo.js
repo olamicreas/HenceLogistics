@@ -21,5 +21,14 @@ if (fs.existsSync(file)) {
 
 const packageFile = 'node_modules/expo-modules-jsi/apple/Package.swift';
 if (fs.existsSync(packageFile)) {
-  console.log('Skipping Package.swift patch as macOS-15 uses Xcode 16.2+');
+  let packageContent = fs.readFileSync(packageFile, 'utf8');
+  
+  // 1. Downgrade swift-tools-version to 6.1
+  packageContent = packageContent.replace(/swift-tools-version:\s*6\.2/g, 'swift-tools-version: 6.1');
+  
+  // 2. Fix invalid trailing commas in parameter lists (Swift 6.1 does not support this)
+  packageContent = packageContent.replace(/,(\s*\))/g, '$1');
+  
+  fs.writeFileSync(packageFile, packageContent);
+  console.log('Patched ExpoModulesJSI Package.swift for Swift 6.1 successfully.');
 }
