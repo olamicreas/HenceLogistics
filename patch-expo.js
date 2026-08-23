@@ -1,4 +1,17 @@
 const fs = require('fs');
+
+// Fix Swift 8 ambiguous type error in JavaScriptCodable+Date.swift
+const dateFile = 'node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI/Coding/JavaScriptCodable+Date.swift';
+if (fs.existsSync(dateFile)) {
+  let content = fs.readFileSync(dateFile, 'utf8');
+  content = content.replace(
+    'return Date(timeIntervalSince1970: milliseconds.rounded(.towardZero) / 1000.0)',
+    'return Date(timeIntervalSince1970: TimeInterval(milliseconds.rounded(.towardZero)) / 1000.0)'
+  );
+  fs.writeFileSync(dateFile, content);
+  console.log('Patched JavaScriptCodable+Date.swift successfully.');
+}
+
 const file = 'node_modules/expo-modules-jsi/apple/scripts/build-xcframework.sh';
 if (fs.existsSync(file)) {
   let content = fs.readFileSync(file, 'utf8');
