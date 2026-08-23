@@ -18,3 +18,11 @@ if (fs.existsSync(file)) {
   fs.writeFileSync(file, content);
   console.log('Patched ExpoModulesJSI build script successfully.');
 }
+
+const packageFile = 'node_modules/expo-modules-jsi/apple/Package.swift';
+if (fs.existsSync(packageFile)) {
+  let packageContent = fs.readFileSync(packageFile, 'utf8');
+  packageContent = packageContent.replace(/swift-tools-version:\s*6\.2/g, 'swift-tools-version: 6.0');
+  fs.writeFileSync(packageFile, packageContent);
+  console.log('Patched ExpoModulesJSI Package.swift successfully.');
+}

@@ -1,0 +1,31 @@
+Command line invocation:
+    /Applications/Xcode_16.1.app/Contents/Developer/usr/bin/xcodebuild ENABLE_USER_SCRIPT_SANDBOXING=NO build -scheme ExpoModulesJSI -sdk iphoneos -destination generic/platform=iOS -derivedDataPath /var/folders/g3/pffjr_y96bq06blnkf72x_hw0000gn/T/eas-build-local-nodejs/02a077d1-c707-429f-bf83-733566215e85/build/node_modules/expo-modules-jsi/apple/.DerivedData -configuration Release -disableAutomaticPackageResolution -skipPackagePluginValidation -skipMacroValidation -parallelizeTargets SYMROOT=/var/folders/g3/pffjr_y96bq06blnkf72x_hw0000gn/T/eas-build-local-nodejs/02a077d1-c707-429f-bf83-733566215e85/build/node_modules/expo-modules-jsi/apple/.DerivedData/Build/Products OBJROOT=/var/folders/g3/pffjr_y96bq06blnkf72x_hw0000gn/T/eas-build-local-nodejs/02a077d1-c707-429f-bf83-733566215e85/build/node_modules/expo-modules-jsi/apple/.DerivedData/Build/Intermediates.noindex BUILD_LIBRARY_FOR_DISTRIBUTION=YES SKIP_INSTALL=NO DEBUG_INFORMATION_FORMAT=dwarf-with-dsym COMPILER_INDEX_STORE_ENABLE=NO SWIFT_COMPILATION_MODE=wholemodule
+
+User defaults from command line:
+    IDEDerivedDataPathOverride = /var/folders/g3/pffjr_y96bq06blnkf72x_hw0000gn/T/eas-build-local-nodejs/02a077d1-c707-429f-bf83-733566215e85/build/node_modules/expo-modules-jsi/apple/.DerivedData
+    IDEPackageOnlyUseVersionsFromResolvedFile = YES
+    IDEPackageSupportUseBuiltinSCM = YES
+
+Build settings from command line:
+    BUILD_LIBRARY_FOR_DISTRIBUTION = YES
+    COMPILER_INDEX_STORE_ENABLE = NO
+    DEBUG_INFORMATION_FORMAT = dwarf-with-dsym
+    ENABLE_USER_SCRIPT_SANDBOXING = NO
+    OBJROOT = /var/folders/g3/pffjr_y96bq06blnkf72x_hw0000gn/T/eas-build-local-nodejs/02a077d1-c707-429f-bf83-733566215e85/build/node_modules/expo-modules-jsi/apple/.DerivedData/Build/Intermediates.noindex
+    SDKROOT = iphoneos18.1
+    SKIP_INSTALL = NO
+    SWIFT_COMPILATION_MODE = wholemodule
+    SYMROOT = /var/folders/g3/pffjr_y96bq06blnkf72x_hw0000gn/T/eas-build-local-nodejs/02a077d1-c707-429f-bf83-733566215e85/build/node_modules/expo-modules-jsi/apple/.DerivedData/Build/Products
+
+Resolve Package Graph
+package 'apple' is using Swift tools version 6.2.0 but the installed version is 6.0.0
+
+Resolved source packages:
+  apple: (null)
+
+2026-08-23 00:32:30.890 xcodebuild[31097:85763] Writing error result bundle to /var/folders/g3/pffjr_y96bq06blnkf72x_hw0000gn/T/ResultBundle_2026-23-08_00-32-0030.xcresult
+Resolve Package Graph
+package 'apple' is using Swift tools version 6.2.0 but the installed version is 6.0.0
+xcodebuild: error: Could not resolve package dependencies:
+  package 'apple' is using Swift tools version 6.2.0 but the installed version is 6.0.0
+
