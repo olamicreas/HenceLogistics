@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - name: "Checkout Code"
         uses: actions/checkout@v4
@@ -16,11 +16,6 @@ jobs:
         with:
           node-version: 22.x
           cache: 'npm'
-
-      - name: "Force Xcode 16.1 System-Wide"
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: '16.1'
 
       - name: "Install Project Dependencies"
         run: |
