@@ -39,21 +39,27 @@ if (fs.existsSync(packageFile)) {
   console.log('Patched ExpoModulesJSI Package.swift for Swift 6.1 successfully.');
 }
 
-// 4. Fix 'weak let' -> 'weak var' and trailing commas in all Swift source files
+// 4. Fix 'weak let' -> 'nonisolated(unsafe) weak var' in all Swift source files
 const glob = require('child_process').execSync('find node_modules/expo-modules-jsi/apple/Sources -name "*.swift"').toString().trim().split('\n');
 for (const file of glob) {
   if (fs.existsSync(file)) {
     let content = fs.readFileSync(file, 'utf8');
     let changed = false;
+    
+    // Fix Swift 6.1 mutability error by converting `weak let` to `weak var`.
+    // Add `nonisolated(unsafe)` to prevent the compiler from throwing a Sendable error
+    // because these properties are inside Sendable classes.
     if (content.includes('weak let ')) {
-      content = content.replace(/weak let /g, 'weak var ');
-      content = content.replace(/Sendable\s*\{/g, '@unchecked Sendable {');
+      content = content.replace(/weak let /g, 'nonisolated(unsafe) weak var ');
       changed = true;
     }
+    
+    // Fix invalid trailing commas in parameter lists (Swift 6.1 does not support this)
     if (content.match(/,(\s*\))/)) {
       content = content.replace(/,(\s*\))/g, '$1');
       changed = true;
     }
+    
     if (changed) {
       fs.writeFileSync(file, content);
       console.log('Fixed syntax in ' + file);
