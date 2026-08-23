@@ -30,8 +30,9 @@ jobs:
 
       - name: "Configure Sandbox Environment & Bypasses"
         run: |
-          # 1. Prevent SPM Rate Limiting by Apple/GitHub
-          rm -rf .git
+          # 1. Prevent SPM Rate Limiting & SSH Hangs
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+          git config --global url."https://".insteadOf "git://"
           
           # 2. Inject Sandbox Variables into eas.json
           node -e "
