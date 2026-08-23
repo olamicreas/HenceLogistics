@@ -26,9 +26,45 @@ if (fs.existsSync(packageFile)) {
   // 1. Downgrade swift-tools-version to 6.1
   packageContent = packageContent.replace(/swift-tools-version:\s*6\.2/g, 'swift-tools-version: 6.1');
   
-  // 2. Fix invalid trailing commas in parameter lists (Swift 6.1 does not support this)
+  // 2. Fix invalid trailing commas in parameter lists
   packageContent = packageContent.replace(/,(\s*\))/g, '$1');
+  
+  // 3. Add NonescapableTypes experimental feature
+  packageContent = packageContent.replace(
+    /\.enableUpcomingFeature\(\"InferIsolatedConformances\"\),/g,
+    '.enableUpcomingFeature("InferIsolatedConformances"),\n        .enableExperimentalFeature("NonescapableTypes"),'
+  );
   
   fs.writeFileSync(packageFile, packageContent);
   console.log('Patched ExpoModulesJSI Package.swift for Swift 6.1 successfully.');
+}
+
+// 4. Fix 'weak let' -> 'weak var' and trailing commas in all Swift source files
+const glob = require('child_process').execSync('find node_modules/expo-modules-jsi/apple/Sources -name "*.swift"').toString().trim().split('\n');
+for (const file of glob) {
+  if (fs.existsSync(file)) {
+    let content = fs.readFileSync(file, 'utf8');
+    let changed = false;
+    if (content.includes('weak let ')) {
+      content = content.replace(/weak let /g, 'weak var ');
+      changed = true;
+    }
+    if (content.match(/,(\s*\))/)) {
+      content = content.replace(/,(\s*\))/g, '$1');
+      changed = true;
+    }
+    if (changed) {
+      fs.writeFileSync(file, content);
+      console.log('Fixed syntax in ' + file);
+    }
+  }
+}
+
+// 5. Fix CppError library evolution visibility issue in JavaScriptError.swift
+const jsErrorFile = 'node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI/Runtime/Values/JavaScriptError.swift';
+if (fs.existsSync(jsErrorFile)) {
+  let content = fs.readFileSync(jsErrorFile, 'utf8');
+  content = content.replace(/public var message:\s*String\s*\{/g, 'internal var message: String {');
+  fs.writeFileSync(jsErrorFile, content);
+  console.log('Fixed CppError visibility in JavaScriptError.swift');
 }
