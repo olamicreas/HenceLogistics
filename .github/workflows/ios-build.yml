@@ -68,7 +68,9 @@ jobs:
           path: /tmp/expo_build.log
 
       - name: "Submit to App Store Connect"
-        run: npx eas submit --platform ios --non-interactive
+        run: |
+          IPA_FILE=$(find . -name "*.ipa" | head -n 1)
+          npx eas submit --platform ios --path "$IPA_FILE" --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EXPO_APPLE_ID: "info@hencedelivery.com"
