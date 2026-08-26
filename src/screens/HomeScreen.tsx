@@ -1205,6 +1205,7 @@ export default function HomeScreen() {
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {step === 1 && (
           <>
+            {/* 🚀 TEMPORARILY DISABLED MULTI-DROP FOR NOW
             <View style={styles.modeToggleRow}>
               <TouchableOpacity style={[styles.modeToggleBtn, !isMulti && styles.modeToggleBtnOn]} onPress={() => handleModeChange('single')}>
                 <Text style={[styles.modeToggleText, !isMulti && styles.modeToggleTextOn]}>Single Drop</Text>
@@ -1213,6 +1214,7 @@ export default function HomeScreen() {
                 <Text style={[styles.modeToggleText, isMulti && styles.modeToggleTextOn]}>Multi Drop</Text>
               </TouchableOpacity>
             </View>
+            */}
 
             <View style={styles.card}>
               <View style={styles.cardHeader}>
@@ -1305,7 +1307,7 @@ export default function HomeScreen() {
               <TouchableOpacity onPress={() => setStep(1)}><Text style={styles.serviceBannerChange}>Change</Text></TouchableOpacity>
             </View>
 
-            {/* 🚀 SPLIT DATE AND TIME SELECTOR */}
+            {/* 🚀 TEMPORARILY DISABLED SCHEDULING
             <View style={styles.schedToggle}>
               <TouchableOpacity style={[styles.schedBtn, !isScheduled && styles.schedBtnOn]} onPress={() => setIsScheduled(false)}>
                 <Text style={[styles.schedText, !isScheduled && styles.schedTextOn]}>Pick up now</Text>
@@ -1315,6 +1317,7 @@ export default function HomeScreen() {
                 <Text style={[styles.schedText, isScheduled && styles.schedTextOn]}>Schedule for later</Text>
               </TouchableOpacity>
             </View>
+            */}
 
             {isScheduled && (
               <View style={styles.card}>
