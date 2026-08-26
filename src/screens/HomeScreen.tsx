@@ -1216,7 +1216,8 @@ export default function HomeScreen() {
             </View>
             */}
 
-            <View style={styles.card}>
+          {/* 🚀 ADDED MTD: marginTop to push it down cleanly */}
+            <View style={[styles.card, { marginTop: 16 }]}>
               <View style={styles.cardHeader}>
                 <View style={{ flex: 1, paddingRight: 10 }}>
                   <Text style={styles.cardTitle}>Our Vehicles</Text>
