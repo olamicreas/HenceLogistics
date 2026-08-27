@@ -10,7 +10,7 @@ import AuthScreen from './screens/AuthScreen';
 import HomeScreen from './screens/HomeScreen';
 import CreateJobScreen from './screens/CreateJobScreen';
 import ProfileScreen from './screens/ProfileScreen';
-import AccountHubScreen from './screens/AccountHubScreen'; // <-- Added Import
+import AccountHubScreen from './screens/AccountHubScreen'; 
 import SubscriptionScreen from './screens/SubscriptionScreen';
 import { styles } from './styles';
 
@@ -118,11 +118,12 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
 
         <Text style={localStyles.sdiv}>Legal</Text>
         <View style={localStyles.card}>
-          <TouchableOpacity style={localStyles.supRow}>
+          {/* 🔥 FIXED: Added Linking to external website so users do not get stuck */}
+          <TouchableOpacity style={localStyles.supRow} onPress={() => Linking.openURL('https://hence.com/privacy')}>
             <Text style={[localStyles.supTitle, { flex: 1 }]}>Privacy Policy</Text>
             <Ionicons name="chevron-forward" size={16} color="#B8CEC3" />
           </TouchableOpacity>
-          <TouchableOpacity style={[localStyles.supRow, { borderBottomWidth: 0 }]}>
+          <TouchableOpacity style={[localStyles.supRow, { borderBottomWidth: 0 }]} onPress={() => Linking.openURL('https://hence.com/terms')}>
             <Text style={[localStyles.supTitle, { flex: 1 }]}>Terms of Service</Text>
             <Ionicons name="chevron-forward" size={16} color="#B8CEC3" />
           </TouchableOpacity>
@@ -202,7 +203,8 @@ export default function AppRoot() {
 
   const isDriver = user?.role === 'driver' || user?.role?.value === 'driver';
   
-  const showBottomNav = token && !isDriver && (currentScreen === 'home' || currentScreen === 'create-job');
+  // 🔥 FIXED: Added 'account-hub' to the allowed list so the BottomNav stays visible
+  const showBottomNav = token && !isDriver && (currentScreen === 'home' || currentScreen === 'create-job' || currentScreen === 'account-hub');
 
   return (
     <SafeAreaProvider>
@@ -222,7 +224,6 @@ export default function AppRoot() {
           {/* ACCOUNT & SUPPORT ROUTES WITH BACK NAVIGATION */}
           {token && currentScreen === 'account-hub' && <AccountHubScreen />}
           {token && currentScreen === 'profile' && <ProfileScreen />}
-          {/* 👇 FIXED: Pointing back to 'account-hub' instead of 'profile' */}
           {token && currentScreen === 'support' && <SupportScreen onBack={() => setCurrentScreen('account-hub')} />}
           {token && currentScreen === 'settings' && <SettingsScreen onBack={() => setCurrentScreen('account-hub')} />}
           {token && currentScreen === 'delete' && <DeleteScreen logout={logout} onBack={() => setCurrentScreen('account-hub')} />}

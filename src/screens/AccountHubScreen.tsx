@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, SafeAreaView, Alert } from 'react-native';
+// 🔥 FIXED: Imported Linking from react-native
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, SafeAreaView, Alert, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppProvider';
 
@@ -26,6 +27,9 @@ export default function AccountHubScreen() {
             { text: "Cancel", style: "cancel" },
             { text: "Log Out", style: "destructive", onPress: logout }
           ]);
+        } else if (screenTarget === 'terms') {
+          // 🔥 FIXED: safely opens the browser instead of getting stuck on a blank screen
+          Linking.openURL('https://hence.com/terms');
         } else {
           setCurrentScreen(screenTarget);
         }
