@@ -93,6 +93,8 @@ const COLORS = {
   line: '#E2E8E4',
   textMuted: '#6B7670',
   amber: '#E8910C',
+  success: '#1A7A4A',
+  successSoft: '#E8F5EE',
 };
 
 const mapStyle = [
@@ -120,6 +122,24 @@ const CATEGORIES_MULTI = [
   { id: 'deliveries', icon: 'car-outline', name: 'Deliveries', desc: 'Same-day delivery across Ireland' },
   { id: 'warehouse', icon: 'business-outline', name: 'Warehouse', desc: 'Pallet, depot & fulfilment runs' }
 ];
+
+const OP_DESC: Record<string, string> = {
+  courier: 'Fast parcel & small item delivery',
+  delivery: 'Standard multi-drop & larger deliveries',
+  manvan: 'Heavy lifting, removals & bulky items'
+};
+
+const OP_SINGLE: Record<string, string[]> = {
+  courier: ['collection', 'deliveries'],
+  delivery: ['collection', 'deliveries', 'warehouse'],
+  manvan: ['collection', 'deliveries', 'removals', 'warehouse']
+};
+
+const OP_MULTI: Record<string, string[]> = {
+  courier: ['deliveries'],
+  delivery: ['deliveries', 'warehouse'],
+  manvan: ['deliveries', 'warehouse']
+};
 
 type Service = {
   id: string; name: string; desc: string; price: string; base: number; svc: number; badge: string; btxt: string; ico: string; v: string[]; mode?: 'desc' | 'items';
