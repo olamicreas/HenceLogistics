@@ -18,7 +18,8 @@ import {
   ActivityIndicator,
   Animated,
   PanResponder,
-  AppState 
+  AppState,
+  Keyboard
 } from 'react-native';
 import { Polyline } from 'react-native-maps';
 import QRCode from 'react-native-qrcode-svg';
@@ -1044,7 +1045,7 @@ export default function HomeScreen() {
       if (!activeSvc) { Alert.alert('Missing Service', 'Please choose a service before continuing'); return; }
       
       const quotePayload = { 
-        van_type: localVanType, 
+        van_type: 'large', 
         job_type: activeSvc.id, 
         service: activeSvc,
         pickup_address: pickupAddr,
@@ -1073,6 +1074,7 @@ export default function HomeScreen() {
   };
 
   const handleMapPick = (index: number) => { 
+    Keyboard.dismiss();
     setMapPickTarget(index); 
     setTempAddress(''); 
     setTempCoord(null);
@@ -1305,7 +1307,7 @@ export default function HomeScreen() {
               <BookingIcon name={selectedService?.ico || 'si-01'} size={18} color="#fff" />
               <View style={{ flex: 1 }}>
                 <Text style={styles.serviceBannerName}>{selectedService?.name || 'Service'}</Text>
-                <Text style={styles.serviceBannerSub}>{selectedVehicle?.name || 'Van'} · Standard Delivery</Text>
+                <Text style={styles.serviceBannerSub}>Vehicle Auto-Assigned · Standard Delivery</Text>
               </View>
               <TouchableOpacity onPress={() => setStep(1)}><Text style={styles.serviceBannerChange}>Change</Text></TouchableOpacity>
             </View>
@@ -1371,7 +1373,7 @@ export default function HomeScreen() {
                     </View>
                   </View>
                   <View style={styles.cardBody}>
-                    <TouchableOpacity style={styles.mapStrip} onPress={() => handleMapPick(-1)} activeOpacity={0.9}>
+                    <TouchableOpacity style={styles.mapStrip} onPress={() => handleMapPick(pickupAddr ? 0 : -1)} activeOpacity={0.9}>
                       <View style={styles.mapBgReal}>
                         <View style={styles.mapRoadMain} />
                         <View style={styles.mapRouteLine} />
@@ -1485,7 +1487,7 @@ export default function HomeScreen() {
                     <Text style={styles.stopCount}>{(stops || []).length} stops</Text>
                   </View>
                   <View style={styles.cardBody}>
-                    <TouchableOpacity style={styles.mapStrip} onPress={() => handleMapPick(-1)} activeOpacity={0.9}>
+                    <TouchableOpacity style={styles.mapStrip} onPress={() => handleMapPick(pickupAddr ? 0 : -1)} activeOpacity={0.9}>
                       <View style={styles.mapBgReal}>
                         <View style={styles.mapRoadMain} />
                         <View style={styles.mapRouteLine} />
@@ -2013,7 +2015,7 @@ export default function HomeScreen() {
 
 
             {/* Buttons Footer */}
-            <View style={{ flexDirection: 'row', paddingHorizontal: 18, paddingBottom: Math.max(insets.bottom, 20), gap: 10, marginTop: 16 }}>
+            <View style={{ flexDirection: 'row', paddingHorizontal: 18, paddingBottom: 100, gap: 10, marginTop: 16 }}>
               <TouchableOpacity style={{ paddingVertical: 14, paddingHorizontal: 18, borderRadius: 10, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.white, alignItems: 'center', justifyContent: 'center' }} onPress={() => setMapPickTarget(null)}>
                 <Text style={{ fontSize: 14, fontWeight: '600', color: COLORS.mid }}>Cancel</Text>
               </TouchableOpacity>
