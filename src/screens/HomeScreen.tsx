@@ -52,12 +52,14 @@ const DEFAULT_AVATAR = require('../../assets/cargovan.png');
 const DUBLIN_REGION = { latitude: 53.3498, longitude: -6.2603, latitudeDelta: 0.05, longitudeDelta: 0.05 };
 const DUBLIN_PICK_REGION = { latitude: 53.3498, longitude: -6.2603, latitudeDelta: 0.005, longitudeDelta: 0.005 };
 
+// 🛡️ CRASH PREVENTION HELPER: Guarantees a strict Number for Maps
 const safeCoord = (val: any, fallback: number = 0) => {
   if (val === null || val === undefined || val === '') return fallback;
   const parsed = parseFloat(val);
   return isNaN(parsed) ? fallback : parsed;
 };
 
+// 🛡️ CRASH PREVENTION HELPER: Prevents NaN crashes on prices
 const safePrice = (val: any) => {
   const parsed = Number(val);
   return isNaN(parsed) ? 0 : parsed;
@@ -82,6 +84,7 @@ const COLORS = {
   purple: '#6B3FA0',
   purpleSoft: '#F0EAF8',
   
+  // TRACKING MODAL COLORS
   forest: '#1A7A4A',
   forestDark: '#145C38',
   lemon: '#C8F135',
@@ -99,10 +102,22 @@ const mapStyle = [
   { featureType: 'water', stylers: [{ color: '#c7d2fe' }] },
 ];
 
+// --- DATA: VEHICLES ---
+const VEHICLES = [
+  { id: 'large', name: 'Large Van', icon: 'v-large', note: 'Large Van — suitable for large parcels, furniture, appliances, catering and most deliveries up to 1,500 kg.' },
+  { id: 'cargo', name: 'Cargo Van', icon: 'v-cargo', note: 'Cargo Van — best for parcels, electronics, fragile items, medical equipment and food up to 800 kg.' },
+  { id: 'luton', name: 'Luton Van', icon: 'v-luton', note: 'Luton Van — ideal for house removals, large furniture and heavy loads up to 3,000 kg.' },
+];
+
 const CATEGORIES_SINGLE = [
   { id: 'collection', icon: 'cube-outline', name: 'Collection', desc: 'Pickups from homes, businesses & events' },
   { id: 'deliveries', icon: 'car-outline', name: 'Deliveries', desc: 'Same-day delivery across Ireland' },
   { id: 'removals', icon: 'trash-outline', name: 'Removals', desc: 'Clearances, moves & waste runs' },
+  { id: 'warehouse', icon: 'business-outline', name: 'Warehouse', desc: 'Pallet, depot & fulfilment runs' }
+];
+
+const CATEGORIES_MULTI = [
+  { id: 'deliveries', icon: 'car-outline', name: 'Deliveries', desc: 'Same-day delivery across Ireland' },
   { id: 'warehouse', icon: 'business-outline', name: 'Warehouse', desc: 'Pallet, depot & fulfilment runs' }
 ];
 
@@ -112,49 +127,49 @@ type Service = {
 
 const SERVICES_SINGLE: Record<string, Service[]> = {
   collection: [
-    { id: 'gen-c', name: 'General Collection', desc: 'Ad-hoc pickup — tell us what you need', price: 'Live Quote', base: 50, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-01', v: ['cargo','large','luton'], mode: 'desc' },
-    { id: 'ret-s', name: 'Returns Collection', desc: 'Online returns to stores or warehouses', price: 'Live Quote', base: 45, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-01', v: ['cargo','large','luton'], mode: 'items' },
-    { id: 'stk-s', name: 'Stock & Supply Pickup', desc: 'Goods from suppliers for shops, cafes, offices', price: 'Live Quote', base: 55, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-02', v: ['cargo','large','luton'], mode: 'items' },
-    { id: 'fur-s', name: 'Furniture Pickup', desc: 'Sofas, beds, appliances, office furniture', price: 'Live Quote', base: 75, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-14', v: ['cargo','large','luton'], mode: 'items' },
-    { id: 'evt-s', name: 'Event Equipment', desc: 'Gear from venues, bands, market stalls', price: 'Live Quote', base: 70, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-20', v: ['cargo','large','luton'], mode: 'items' }
+    { id: 'gen-c', name: 'General Collection', desc: 'Ad-hoc pickup — tell us what you need', price: 'From €50', base: 50, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-01', v: ['cargo','large','luton'], mode: 'desc' },
+    { id: 'ret-s', name: 'Returns Collection', desc: 'Online returns to stores or warehouses', price: 'From €45', base: 45, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-01', v: ['cargo','large','luton'], mode: 'items' },
+    { id: 'stk-s', name: 'Stock & Supply Pickup', desc: 'Goods from suppliers for shops, cafes, offices', price: 'From €55', base: 55, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-02', v: ['cargo','large','luton'], mode: 'items' },
+    { id: 'fur-s', name: 'Furniture Pickup', desc: 'Sofas, beds, appliances, office furniture', price: 'From €75', base: 75, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-14', v: ['cargo','large','luton'], mode: 'items' },
+    { id: 'evt-s', name: 'Event Equipment', desc: 'Gear from venues, bands, market stalls', price: 'From €70', base: 70, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-20', v: ['cargo','large','luton'], mode: 'items' }
   ],
   deliveries: [
-    { id: 'gen-d', name: 'General Delivery', desc: 'Ad-hoc delivery — tell us what you need', price: 'Live Quote', base: 50, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-01', v: ['cargo','large','luton'], mode: 'desc' },
-    { id: 'fur-d', name: 'Furniture Delivery', desc: 'Sofas, beds, appliances with inside drop-off', price: 'Live Quote', base: 85, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-14', v: ['cargo','large','luton'], mode: 'items' },
-    { id: 'sto-d', name: 'Store Transfer', desc: 'Stock between shop locations or warehouse', price: 'Live Quote', base: 65, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-16', v: ['cargo','large','luton'], mode: 'items' },
-    { id: 'spe-d', name: 'Specialist Delivery', desc: 'High-value or fragile, white-glove service', price: 'Live Quote', base: 120, svc: 0, badge: 'bp', btxt: 'Priority', ico: 'si-08', v: ['cargo','large','luton'], mode: 'items' },
-    { id: 'las-d', name: 'Last-Mile Delivery', desc: 'From a local hub to the end customer', price: 'Live Quote', base: 50, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-01', v: ['cargo','large','luton'], mode: 'items' }
+    { id: 'gen-d', name: 'General Delivery', desc: 'Ad-hoc delivery — tell us what you need', price: 'From €50', base: 50, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-01', v: ['cargo','large','luton'], mode: 'desc' },
+    { id: 'fur-d', name: 'Furniture Delivery', desc: 'Sofas, beds, appliances with inside drop-off', price: 'From €85', base: 85, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-14', v: ['cargo','large','luton'], mode: 'items' },
+    { id: 'sto-d', name: 'Store Transfer', desc: 'Stock between shop locations or warehouse', price: 'From €65', base: 65, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-16', v: ['cargo','large','luton'], mode: 'items' },
+    { id: 'spe-d', name: 'Specialist Delivery', desc: 'High-value or fragile, white-glove service', price: 'From €120', base: 120, svc: 0, badge: 'bp', btxt: 'Priority', ico: 'si-08', v: ['cargo','large','luton'], mode: 'items' },
+    { id: 'las-d', name: 'Last-Mile Delivery', desc: 'From a local hub to the end customer', price: 'From €50', base: 50, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-01', v: ['cargo','large','luton'], mode: 'items' }
   ],
   removals: [
-    { id: 'hse-r', name: 'House Clearance', desc: 'Full or partial clear-out, end of tenancy', price: 'Live Quote', base: 145, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-15', v: ['cargo','large','luton'], mode: 'desc' },
-    { id: 'off-r', name: 'Office Clearance', desc: 'Clearing furniture when businesses relocate', price: 'Live Quote', base: 165, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-18', v: ['cargo','large','luton'], mode: 'desc' },
-    { id: 'jnk-r', name: 'Junk & Waste Removal', desc: 'Household waste, old appliances, mattresses', price: 'Live Quote', base: 75, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-recycle', v: ['cargo','large','luton'], mode: 'desc' },
-    { id: 'bld-r', name: 'Building Waste', desc: 'Rubble, wood, debris from DIY or contractors', price: 'Live Quote', base: 95, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-13', v: ['cargo','large','luton'], mode: 'desc' },
-    { id: 'rec-r', name: 'Recycling Run', desc: 'Cardboard, metals, electronics, white goods', price: 'Live Quote', base: 70, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-recycle', v: ['cargo','large','luton'], mode: 'desc' },
-    { id: 'wst-r', name: 'Waste Disposal', desc: 'Waste to licensed tips and recycling centres', price: 'Live Quote', base: 80, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-recycle', v: ['cargo','large','luton'], mode: 'desc' }
+    { id: 'hse-r', name: 'House Clearance', desc: 'Full or partial clear-out, end of tenancy', price: 'From €145', base: 145, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-15', v: ['cargo','large','luton'], mode: 'desc' },
+    { id: 'off-r', name: 'Office Clearance', desc: 'Clearing furniture when businesses relocate', price: 'From €165', base: 165, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-18', v: ['cargo','large','luton'], mode: 'desc' },
+    { id: 'jnk-r', name: 'Junk & Waste Removal', desc: 'Household waste, old appliances, mattresses', price: 'From €75', base: 75, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-recycle', v: ['cargo','large','luton'], mode: 'desc' },
+    { id: 'bld-r', name: 'Building Waste', desc: 'Rubble, wood, debris from DIY or contractors', price: 'From €95', base: 95, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-13', v: ['cargo','large','luton'], mode: 'desc' },
+    { id: 'rec-r', name: 'Recycling Run', desc: 'Cardboard, metals, electronics, white goods', price: 'From €70', base: 70, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-recycle', v: ['cargo','large','luton'], mode: 'desc' },
+    { id: 'wst-r', name: 'Waste Disposal', desc: 'Waste to licensed tips and recycling centres', price: 'From €80', base: 80, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-recycle', v: ['cargo','large','luton'], mode: 'desc' }
   ],
   warehouse: [
-    { id: 'pal-w', name: 'Pallet Delivery', desc: 'Palletised goods to a single address', price: 'Live Quote', base: 110, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-pall', v: ['cargo','large','luton'], mode: 'items' },
-    { id: 'dep-w', name: 'Depot Transfer', desc: 'Stock between depots or warehouse sites', price: 'Live Quote', base: 120, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-13', v: ['cargo','large','luton'], mode: 'items' }
+    { id: 'pal-w', name: 'Pallet Delivery', desc: 'Palletised goods to a single address', price: 'From €110', base: 110, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-pall', v: ['cargo','large','luton'], mode: 'items' },
+    { id: 'dep-w', name: 'Depot Transfer', desc: 'Stock between depots or warehouse sites', price: 'From €120', base: 120, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-13', v: ['cargo','large','luton'], mode: 'items' }
   ]
 };
 
-const VEHICLES = [
-  { id: 'large', name: 'Large Van', icon: 'v-large', note: 'Large Van — suitable for large parcels, furniture, appliances, catering and most deliveries up to 1,500 kg.' },
-  { id: 'cargo', name: 'Cargo Van', icon: 'v-cargo', note: 'Cargo Van — best for parcels, electronics, fragile items, medical equipment and food up to 800 kg.' },
-  { id: 'luton', name: 'Luton Van', icon: 'v-luton', note: 'Luton Van — ideal for house removals, large furniture and heavy loads up to 3,000 kg.' },
-];
-
-const OP_DESC: Record<string, string> = {
-  courier: 'Parcels & city runs',
-  delivery: 'Careful handling · Furniture, appliances, electronics',
-  manvan: 'Hands-on · Removals, trade materials, market stock'
-};
-
-const OP_LABELS: Record<string, string> = {
-  courier: 'Courier',
-  delivery: 'Delivery Driver',
-  manvan: 'Man with a Van',
+const SERVICES_MULTI: Record<string, Service[]> = {
+  deliveries: [
+    { id: 'mul-d', name: 'Multi-Drop Delivery', desc: 'One pickup, multiple delivery addresses', price: 'From €65', base: 65, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-std', v: ['cargo','large','luton'], mode: 'items' },
+    { id: 'sch-d', name: 'Scheduled Delivery Run', desc: 'Regular runs for shops, cafes, pharmacies', price: 'From €75', base: 75, svc: 0, badge: 'bs', btxt: 'Scheduled', ico: 'si-rec', v: ['cargo','large','luton'], mode: 'items' },
+    { id: 'lmm-d', name: 'Last-Mile Multi-Drop', desc: 'Multiple end-customers from a local hub', price: 'From €70', base: 70, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-02', v: ['cargo','large','luton'], mode: 'items' },
+    { id: 'par-m', name: 'Parcel Pickup Run', desc: 'Collecting parcels across multiple locations', price: 'From €65', base: 65, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-01', v: ['cargo','large','luton'], mode: 'items' },
+    { id: 'ret-m', name: 'Returns Run', desc: 'Multi-address returns in one trip', price: 'From €70', base: 70, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-06', v: ['cargo','large','luton'], mode: 'items' },
+    { id: 'evt-m', name: 'Event Equipment Run', desc: 'Collecting from multiple venues or stalls', price: 'From €85', base: 85, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-20', v: ['cargo','large','luton'], mode: 'items' }
+  ],
+  warehouse: [
+    { id: 'plm-w', name: 'Pallet Delivery Run', desc: 'Pallets to multiple addresses in one booking', price: 'From €145', base: 145, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-pall', v: ['cargo','large','luton'], mode: 'items' },
+    { id: 'pkp-w', name: 'Pick & Pack Run', desc: 'Picking orders, delivering to multiple addresses', price: 'From €85', base: 85, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-01', v: ['cargo','large','luton'], mode: 'items' },
+    { id: 'dpm-w', name: 'Multi-Depot Transfer', desc: 'Stock across multiple depot or warehouse sites', price: 'From €145', base: 145, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-13', v: ['cargo','large','luton'], mode: 'items' },
+    { id: 'mac-r', name: 'Multi-Address Clearance', desc: 'Clearing multiple properties in one booking', price: 'From €185', base: 185, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-15', v: ['cargo','large','luton'], mode: 'desc' },
+    { id: 'mrc-r', name: 'Recycling Run', desc: 'Recyclables from multiple addresses', price: 'From €90', base: 90, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-recycle', v: ['cargo','large','luton'], mode: 'desc' }
+  ]
 };
 
 // --- HELPERS ---
@@ -181,6 +196,36 @@ function formatVehicleName(v?: string | null) {
   return String(v).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
+const SERVICE_NAMES: Record<string, string> = {
+  'p1': 'Standard Parcel Courier',
+  'pk1': 'Single Item (Furniture)',
+  'pk2': 'Multi-Item (Furniture)',
+  'pk3': 'Large Load / Pallet',
+  'pk4': 'Trade & Materials',
+  'd1': '1-Man Delivery',
+  'd2': '2-Man Delivery',
+  'd3': 'White Glove Delivery',
+  'd6': 'Store Collection',
+  'r1': 'Rubbish / Waste Removal',
+  'r4': 'House Removals',
+  'mf1': 'Multi-drop (1-Man)',
+  'mf2': 'Multi-drop (2-Man)',
+  'mf3': 'Multi-drop (Courier)',
+  'mx1': 'Complex Route (1-Man)',
+  'mx2': 'Complex Route (2-Man)',
+  'parcel_small': 'Small Parcel Delivery',
+  'furniture_items': 'Furniture & Large Items'
+};
+
+function formatJobType(v?: string | null) {
+  if (!v) return 'Standard Delivery';
+  const cleanId = String(v).trim().toLowerCase();
+  if (SERVICE_NAMES[cleanId]) {
+    return SERVICE_NAMES[cleanId];
+  }
+  return String(v).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
 function shortTime(v?: string | null) {
   if (!v) return '';
   try {
@@ -191,13 +236,8 @@ function shortTime(v?: string | null) {
   }
 }
 
-function formatJobType(v?: string | null) {
-  if (!v) return 'Standard Delivery';
-  return String(v).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-}
-
 // --- SUB-COMPONENTS ---
-function ChatSupportModal({ visible, onClose, user, activeBooking }: any) {
+function ChatSupportModal({ visible, onClose, user, activeBooking, sendSupportMessage, createSupportTicket }: any) {
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
   const scrollRef = useRef<ScrollView | null>(null);
@@ -280,6 +320,7 @@ function RatingModal({ visible, onClose, onSubmit, defaultRating = 0, proofUrl }
   );
 }
 
+// 🔥 ZERO-DEPENDENCY SWIPE-TO-DELETE COMPONENT
 export function SwipeToDeleteItem({ ride, onDelete, children }: any) {
   const pan = React.useRef(new Animated.Value(0)).current;
   
@@ -330,6 +371,7 @@ export function SwipeToDeleteItem({ ride, onDelete, children }: any) {
 
 const { height, width } = Dimensions.get('window');
 
+// 🚀 1. THE PULSING BUTTON COMPONENT
 export const PulsingQrButton = ({ onPress, isActive }: { onPress: () => void, isActive: boolean }) => {
   const pulse = useRef(new Animated.Value(1)).current;
 
@@ -363,6 +405,7 @@ export const PulsingQrButton = ({ onPress, isActive }: { onPress: () => void, is
   );
 };
 
+// 🚀 2. THE PREMIUM HOLOGRAPHIC MODAL
 export const PremiumQrModal = ({ visible, onClose, stopIndex, stopAddress, qrValue, isMulti }: any) => {
   const slideAnim = useRef(new Animated.Value(height)).current;
   const laserAnim = useRef(new Animated.Value(0)).current;
@@ -501,9 +544,13 @@ export default function HomeScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [expandedStopIdx, setExpandedStopIdx] = useState<number | null>(0);
+  const [selectedStopServices, setSelectedStopServices] = useState<Record<number, Service>>({});
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerMode, setDatePickerMode] = useState<'date' | 'time'>('date');
 
+  const [activeStopCategory, setActiveStopCategory] = useState<Record<number, string>>({});
+
+  // Tracking / App State
   const [trackingModalVisible, setTrackingModalVisible] = useState(false);
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const [ratingBookingContext, setRatingBookingContext] = useState<{ bookingId?: number; driverId?: number } | null>(null);
@@ -516,9 +563,12 @@ export default function HomeScreen() {
   const [activeQrStopIndex, setActiveQrStopIndex] = useState<number | null>(null);
   const completedBookingIds = useRef<number[]>([]);
   const mapMovedRef = useRef(false);
+  const modalMapRef = useRef<any>(null);
 
+  // 🚀 NEW: Tracker to clear the form out once a booking is successfully started
   const lastResetBookingId = useRef<number | null>(null);
 
+  // 🔥 AUTO-RESET FORM UNDERNEATH THE TRACKING MODAL
   useEffect(() => {
     if (activeBooking && activeBooking.id && activeBooking.id !== lastResetBookingId.current) {
       setStep(1);
@@ -526,6 +576,8 @@ export default function HomeScreen() {
       setOperatorType(null);
       setSelectedCategory(null);
       setSelectedService(null);
+      setSelectedStopServices({});
+      setActiveStopCategory({});
       setIsScheduled(false);
       setExpandedStopIdx(0);
       
@@ -541,10 +593,18 @@ export default function HomeScreen() {
     }
   }, [activeBooking?.id]);
 
+  // 🛡️ CRASH FIX 1: Ensure stops array is NEVER empty
   useEffect(() => {
     if (!Array.isArray(stops) || stops.length === 0) {
       const initialStop = {
-        address: '', recipient: '', phone: '', instructions: '', items: [{ description: '', qty: '1', weight: '', ref: '' }], weight: 45, lat: null, lon: null,
+        address: '',
+        recipient: '',
+        phone: '',
+        instructions: '',
+        items: [{ description: '', qty: '1', weight: '', ref: '' }],
+        weight: 45,
+        lat: null,
+        lon: null,
       };
       if (typeof setStops === 'function') {
         setStops([initialStop]);
@@ -554,6 +614,7 @@ export default function HomeScreen() {
     }
   }, [stops]);
 
+  // 🚀 THE SWIPEABLE WIDGET STATE
   const widgetPan = useRef(new Animated.Value(0)).current;
   const [widgetMinimized, setWidgetMinimized] = useState(false);
 
@@ -590,6 +651,7 @@ export default function HomeScreen() {
     })
   ).current;
 
+  // 🚀 THE UNIFIED ZERO-TOUCH AUTOMATION ENGINE
   const prevStatusRef = useRef(String(activeBooking?.status || ''));
   
   useEffect(() => {
@@ -598,15 +660,25 @@ export default function HomeScreen() {
     const prevStatus = prevStatusRef.current.toLowerCase();
     prevStatusRef.current = status;
     
+    const isMultiDrop = activeBooking.booking_mode === 'multi' || (activeBooking.stops && activeBooking.stops.length > 1);
+
     if (status === 'arrived_pickup') {
-        setActiveQrStopIndex(-1); 
+        if (isMultiDrop) setActiveQrStopIndex(-1); 
     } else if (status === 'arrived_dropoff') {
-        setActiveQrStopIndex(0); 
+        if (isMultiDrop) {
+            const nextStopIndex = activeBooking?.stops?.findIndex((s: any) => 
+                String(s.status).toLowerCase() !== 'completed'
+            );
+            if (nextStopIndex !== undefined && nextStopIndex !== -1) setActiveQrStopIndex(nextStopIndex);
+        } else {
+            setActiveQrStopIndex(0); 
+        }
     } else if ((status === 'in_transit' || status === 'picked_up') && prevStatus !== status) {
         setActiveQrStopIndex(null); 
     }
-  }, [activeBooking?.status]);
+  }, [activeBooking?.status, activeBooking?.stops, activeBooking?.booking_mode]);
 
+  // 🔥 QR SYNC GUARANTEE
   useEffect(() => {
     let syncTimer: NodeJS.Timeout;
     if (activeQrStopIndex !== null) {
@@ -758,17 +830,33 @@ export default function HomeScreen() {
     })
   ).current;
 
-  const activeCategories = CATEGORIES_SINGLE;
+  const isMulti = activeBooking 
+    ? (activeBooking.booking_mode === 'multi' || (activeBooking.stops && activeBooking.stops.length > 1))
+    : (bookingMode === 'multi');
 
-  const activeCatKey = sheetCategory;
+  const pendingStops = (activeBooking?.stops || []).filter((s: any) => s.status !== 'completed');
+  const stopPosition = activeBooking?.stops ? activeBooking.stops.length - pendingStops.length + 1 : 1;
+
+  const activeCategories = isMulti ? CATEGORIES_MULTI : CATEGORIES_SINGLE;
+  const activeServicesDict = isMulti ? SERVICES_MULTI : SERVICES_SINGLE;
+
+  const activeCatKey = sheetCategory?.startsWith('stop_') ? sheetCategory.split('_')[2] : sheetCategory;
+  
+  // 🔥 VEHICLE OVERRIDE: The sheet services filter has removed any dependency on 'localVanType'
   const visibleSheetServices = useMemo(() => {
     if (!activeCatKey) return [];
-    return SERVICES_SINGLE[activeCatKey] || [];
-  }, [activeCatKey]);
+    const sourceDict = sheetCategory?.startsWith('stop_') ? SERVICES_MULTI : activeServicesDict;
+    return sourceDict[activeCatKey] || [];
+  }, [activeCatKey, activeServicesDict, sheetCategory]);
 
-  // 🔥 IsServiceLocked logic simplified to purely depend on operatorType selection
   const isServiceLocked = !operatorType;
   const canContinue = !!selectedService && !!operatorType;
+
+  const handleModeChange = (mode: 'single' | 'multi') => {
+    setBookingMode(mode);
+    setSelectedService(null);
+    setSheetCategory(null);
+  };
 
   const handleOperatorSelect = (op: string) => {
     if (operatorType === op) {
@@ -785,10 +873,15 @@ export default function HomeScreen() {
   };
 
   const selectService = (svc: Service) => {
-    setSelectedService(svc);
-    if (svc.id === 'sch-d' || svc.btxt === 'Scheduled') {
-      setIsScheduled(true);
-      if (!scheduleTime) setScheduleTime(new Date());
+    if (sheetCategory?.startsWith('stop_')) {
+      const stopIdx = parseInt(sheetCategory.split('_')[1], 10);
+      setSelectedStopServices(prev => ({ ...prev, [stopIdx]: svc }));
+    } else {
+      setSelectedService(svc);
+      if (svc.id === 'sch-d' || svc.btxt === 'Scheduled') {
+        setIsScheduled(true);
+        if (!scheduleTime) setScheduleTime(new Date());
+      }
     }
     setSheetCategory(null);
   };
@@ -850,6 +943,29 @@ export default function HomeScreen() {
     const safeStops = Array.isArray(stops) ? stops : [];
     const current = Number(safeStops[stopIdx]?.weight || 0);
     handleUpdateStopSafe(stopIdx, 'weight', Math.max(0, current + amount));
+  };
+
+  const handleAddStop = () => {
+    const newStop = { address: '', recipient: '', phone: '', instructions: '', items: [{ description: '', qty: '1', weight: '', ref: '' }], weight: 45, lat: null, lon: null };
+    if (typeof setStops === 'function') { 
+      setStops((prev: any[]) => [...(Array.isArray(prev) ? prev : []), newStop]); 
+      setExpandedStopIdx((stops?.length || 0)); 
+    } else if (typeof addStop === 'function') { 
+      addStop(newStop); 
+      setExpandedStopIdx((stops?.length || 0)); 
+    } 
+  };
+
+  const handleRemoveStopSafe = (idx: number) => {
+    if (typeof setStops === 'function') { 
+      setStops((prev: any[]) => {
+        const updated = Array.isArray(prev) ? [...prev] : []; 
+        updated.splice(idx, 1); 
+        return updated;
+      }); 
+    } else if (typeof removeStop === 'function') {
+      removeStop(idx);
+    }
   };
 
   const renderItemsTable = (idx: number) => {
@@ -920,7 +1036,7 @@ export default function HomeScreen() {
         return; 
       }
       
-      const activeSvc = selectedService;
+      const activeSvc = isMulti ? Object.values(selectedStopServices).find(Boolean) : selectedService;
       if (!activeSvc) { Alert.alert('Missing Service', 'Please choose a service before continuing'); return; }
       
       // 🔥 THE FIX: hardcoded `van_type: 'large'` so the removed UI doesn't crash the payload
@@ -935,16 +1051,16 @@ export default function HomeScreen() {
         is_scheduled: isScheduled,
         scheduled_at: isScheduled && scheduleTime ? scheduleTime.toISOString() : null,
 
-        stops: validStops.map((s: any) => ({
+        stops: validStops.map((s: any, index: number) => ({
           ...s,
           lat: safeCoord(s.lat, DUBLIN_PICK_REGION.latitude),
           lon: safeCoord(s.lon, DUBLIN_PICK_REGION.longitude),
           job_description: String(s.jobDescription || ''),
-          service_id: activeSvc.id,
-          service_name: activeSvc.name
+          service_id: isMulti ? (selectedStopServices[index]?.id || activeSvc.id) : activeSvc.id,
+          service_name: isMulti ? (selectedStopServices[index]?.name || activeSvc.name) : activeSvc.name
         })),
         
-        booking_mode: 'single',
+        booking_mode: isMulti ? 'multi' : 'single',
         total_weight: validStops.reduce((sum: number, s: any) => sum + safePrice(s.weight), 0)
       };
 
@@ -1134,7 +1250,7 @@ export default function HomeScreen() {
                       <BookingIcon name="op-courier" size={24} />
                     </View>
                     <Text style={[styles.opBtnName, operatorType === 'courier' && { color: COLORS.primary }]}>Courier</Text>
-                    <Text style={styles.opBtnTag}>Parcel</Text>
+                    <Text style={styles.opBtnTag}>{isMulti ? 'Courier & Runs' : 'Parcel'}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity style={[styles.opBtn, operatorType === 'delivery' && styles.opBtnOn]} onPress={() => handleOperatorSelect('delivery')} activeOpacity={0.8}>
@@ -1143,17 +1259,19 @@ export default function HomeScreen() {
                       <BookingIcon name="op-delivery" size={24} />
                     </View>
                     <Text style={[styles.opBtnName, operatorType === 'delivery' && { color: COLORS.primary }]}>Delivery Driver</Text>
-                    <Text style={styles.opBtnTag}>Furniture & large</Text>
+                    <Text style={styles.opBtnTag}>Single & Multi</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={[styles.opBtn, operatorType === 'manvan' && styles.opBtnOn]} onPress={() => handleOperatorSelect('manvan')} activeOpacity={0.8}>
-                    {operatorType === 'manvan' && <View style={styles.opSelDot} />}
-                    <View style={[styles.opBtnIco, operatorType === 'manvan' && styles.opBtnIcoOn]}>
-                      <BookingIcon name="op-manvan" size={24} />
-                    </View>
-                    <Text style={[styles.opBtnName, operatorType === 'manvan' && { color: COLORS.primary }]}>Man with a Van</Text>
-                    <Text style={styles.opBtnTag}>Moves & trade</Text>
-                  </TouchableOpacity>
+                  {!isMulti && (
+                    <TouchableOpacity style={[styles.opBtn, operatorType === 'manvan' && styles.opBtnOn]} onPress={() => handleOperatorSelect('manvan')} activeOpacity={0.8}>
+                      {operatorType === 'manvan' && <View style={styles.opSelDot} />}
+                      <View style={[styles.opBtnIco, operatorType === 'manvan' && styles.opBtnIcoOn]}>
+                        <BookingIcon name="op-manvan" size={24} />
+                      </View>
+                      <Text style={[styles.opBtnName, operatorType === 'manvan' && { color: COLORS.primary }]}>Man with a Van</Text>
+                      <Text style={styles.opBtnTag}>Moves & trade</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
             </View>
@@ -1175,6 +1293,13 @@ export default function HomeScreen() {
                 
                 <View style={styles.grpGrid}>
                   {activeCategories.map((cat) => {
+                    let isHidden = false;
+                    const primaryCats = isMulti ? OP_MULTI[operatorType!] : OP_SINGLE[operatorType!];
+                    if (operatorType === 'courier') {
+                        isHidden = !primaryCats?.includes(cat.id);
+                    }
+                    if (isHidden) return null;
+
                     return (
                       <TouchableOpacity key={cat.id} style={[styles.grpCard, selectedService && selectedCategory === cat.id && styles.grpCardSel]} onPress={() => { setSelectedCategory(cat.id); openSheet(cat.id); }} activeOpacity={0.9} disabled={isServiceLocked}>
                         <View style={styles.gcIco}><Ionicons name={cat.icon as any} size={22} color={selectedService && selectedCategory === cat.id ? '#FFF' : COLORS.soft} /></View>
@@ -1226,7 +1351,7 @@ export default function HomeScreen() {
               <BookingIcon name={selectedService?.ico || 'si-01'} size={18} color="#fff" />
               <View style={{ flex: 1 }}>
                 <Text style={styles.serviceBannerName}>{selectedService?.name || 'Service'}</Text>
-                <Text style={styles.serviceBannerSub}>{operatorType ? OP_LABELS[operatorType] : 'Standard Delivery'} · Vehicle Auto-Assigned</Text>
+                <Text style={styles.serviceBannerSub}>Vehicle Auto-Assigned</Text>
               </View>
               <TouchableOpacity onPress={() => setStep(1)}><Text style={styles.serviceBannerChange}>Change</Text></TouchableOpacity>
             </View>
@@ -1249,10 +1374,19 @@ export default function HomeScreen() {
                         <View style={[styles.mapPinDotReal, styles.mapPinPickup]}><Text style={styles.mapPinLetter}>P</Text></View>
                         <Text style={styles.mapPinTag}>Pickup</Text>
                       </View>
-                      <View style={styles.mapPinGroup}>
-                        <View style={[styles.mapPinDotReal, styles.mapPinDropoff]}><Text style={styles.mapPinLetter}>D</Text></View>
-                        <Text style={styles.mapPinTag}>Drop-off</Text>
-                      </View>
+                      {isMulti ? (
+                        (stops || []).map((_: any, idx: number) => (
+                          <View key={idx} style={styles.mapPinGroup}>
+                            <View style={[styles.mapPinDotReal, styles.mapPinStop]}><Text style={styles.mapPinLetter}>{idx + 1}</Text></View>
+                            <Text style={styles.mapPinTag}>Stop {idx + 1}</Text>
+                          </View>
+                        ))
+                      ) : (
+                        <View style={styles.mapPinGroup}>
+                          <View style={[styles.mapPinDotReal, styles.mapPinDropoff]}><Text style={styles.mapPinLetter}>D</Text></View>
+                          <Text style={styles.mapPinTag}>Drop-off</Text>
+                        </View>
+                      )}
                     </View>
                   </View>
                   <View style={styles.mapEditBtn}><Ionicons name="map-outline" size={12} color={COLORS.primary} /><Text style={styles.mapEditText}>Edit map</Text></View>
@@ -1269,77 +1403,232 @@ export default function HomeScreen() {
                   </TouchableOpacity>
                 </View>
 
-                <View style={styles.connectorLine} />
+                {isMulti ? (
+                  <>
+                    <View style={styles.stopsWrap}>
+                      {(stops || []).map((stop: any, idx: number) => {
+                        const expanded = expandedStopIdx === idx;
+                        const itemsCount = stop.items?.length || 0;
+                        const chosenSvc = selectedStopServices[idx];
+                        const activeCat = activeStopCategory[idx];
 
-                <View style={{ zIndex: 1 }}>
-                  <TouchableOpacity style={styles.locRowDrop} onPress={() => handleMapPick(0)} activeOpacity={0.7}>
-                    <View style={styles.locDotR} />
-                    <View style={styles.locInfo}>
-                      <Text style={styles.locLblR}>Drop-off</Text>
-                      <View pointerEvents="none"><TextInput style={styles.locInput} placeholder="Tap to select drop-off location..." placeholderTextColor={COLORS.soft} value={String(currentStop.address || '')} editable={false} /></View>
+                        return (
+                          <View key={idx} style={[styles.stopCard, expanded && styles.stopCardExp]}>
+                            <TouchableOpacity style={styles.stopHdr} onPress={() => setExpandedStopIdx(expanded ? null : idx)}>
+                              <View style={[styles.stopNum, expanded && styles.stopNumActive]}><Text style={styles.stopNumText}>{idx + 1}</Text></View>
+                              <View style={styles.stopPrev}>
+                                <Text style={[styles.stopAddr, !stop.address && styles.stopAddrPh]} numberOfLines={1}>{String(stop.address || 'Enter delivery address...')}</Text>
+                                <Text style={styles.stopMeta}>{itemsCount} item{itemsCount !== 1 ? 's' : ''}{chosenSvc ? ` · ${chosenSvc.name}` : ' · no service selected'}</Text>
+                              </View>
+                              <View style={styles.stopRight}>
+                                {!stop.address && <Text style={styles.incBadge}>Incomplete</Text>}
+                                <TouchableOpacity style={styles.stopPinBtn} onPress={() => handleMapPick(idx)}><Ionicons name="location-outline" size={14} color={COLORS.primary} /></TouchableOpacity>
+                                {idx > 0 && (<TouchableOpacity style={styles.delBtn} onPress={() => handleRemoveStopSafe(idx)}><Ionicons name="close" size={16} color={COLORS.soft} /></TouchableOpacity>)}
+                                <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={COLORS.soft} />
+                              </View>
+                            </TouchableOpacity>
+
+                            {expanded && (
+                              <View style={styles.stopBody}>
+                                <View style={styles.row2}>
+                                  <View style={styles.fieldHalf}><Text style={styles.fieldLabel}>Recipient</Text><TextInput style={styles.fieldInput} placeholder="e.g. Client Ltd" value={String(stop.recipient || '')} onChangeText={(t) => handleUpdateStopSafe(idx, 'recipient', t)} /></View>
+                                  <View style={styles.fieldHalf}><Text style={styles.fieldLabel}>Phone</Text><TextInput style={styles.fieldInput} placeholder="+353..." keyboardType="phone-pad" value={String(stop.phone || '')} onChangeText={(t) => handleUpdateStopSafe(idx, 'phone', t)} /></View>
+                                </View>
+                                <View style={[styles.fieldFull, { marginTop: 12 }]}>
+                                  <Text style={styles.fieldLabel}>Address</Text>
+                                  <TouchableOpacity style={styles.addrWrap} onPress={() => handleMapPick(idx)} activeOpacity={0.8}>
+                                    <View pointerEvents="none"><TextInput style={[styles.fieldInput, { paddingRight: 36 }]} placeholder="Tap to search or pin on map..." value={String(stop.address || '')} editable={false} /></View>
+                                    <View style={styles.addrPin}><Ionicons name="location-outline" size={16} color={COLORS.primary} /></View>
+                                  </TouchableOpacity>
+                                </View>
+
+                                <View style={styles.row2}>
+                                  <View style={styles.fieldHalf}><Text style={styles.fieldLabel}>Order Number</Text><TextInput style={styles.fieldInput} placeholder="e.g. ORD-00142" value={String(stop.ref || '')} onChangeText={(t) => handleUpdateStopSafe(idx, 'ref', t)} /></View>
+                                  <View style={styles.fieldHalf}><Text style={styles.fieldLabel}>Instructions</Text><TextInput style={styles.fieldInput} placeholder="e.g. Loading bay" value={String(stop.instructions || '')} onChangeText={(t) => handleUpdateStopSafe(idx, 'instructions', t)} /></View>
+                                </View>
+
+                                {/* 🚀 MULTI-DROP INLINE SERVICE SELECTOR */}
+                                <View style={styles.stopSvcSel}>
+                                  <Text style={styles.stopSvcLbl}>Service for this stop</Text>
+                                  {chosenSvc ? (
+                                    <TouchableOpacity 
+                                      style={styles.stopSvcChosen} 
+                                      onPress={() => { 
+                                        const updated = { ...selectedStopServices }; 
+                                        delete updated[idx]; 
+                                        setSelectedStopServices(updated); 
+                                        setActiveStopCategory(prev => ({ ...prev, [idx]: '' })); 
+                                      }}
+                                    >
+                                      <BookingIcon name={chosenSvc.ico} size={18} color={COLORS.primary} />
+                                      <Text style={[styles.stopSvcChosenName, { fontWeight: '400' }]}>{chosenSvc.name}</Text>
+                                      <Text style={styles.stopSvcChosenChange}>Change</Text>
+                                    </TouchableOpacity>
+                                  ) : (
+                                    <View>
+                                      <View style={styles.stopCatsGrid}>
+                                        {CATEGORIES_MULTI.map((cat) => {
+                                          const compatible = (SERVICES_MULTI[cat.id] || []).length > 0;
+                                          const isActive = activeCat === cat.id;
+                                          return (
+                                            <TouchableOpacity 
+                                              key={cat.id} 
+                                              style={[styles.stopCatBtn, !compatible && styles.stopCatBtnDim, isActive && styles.stopCatBtnOn]} 
+                                              disabled={!compatible} 
+                                              onPress={() => setActiveStopCategory(prev => ({ ...prev, [idx]: cat.id }))}
+                                            >
+                                              <Text style={[styles.stopCatBtnText, isActive && styles.stopCatBtnTextOn]}>{cat.name.split(' ')[0]}</Text>
+                                            </TouchableOpacity>
+                                          );
+                                        })}
+                                      </View>
+                                      
+                                      {/* THE INLINE DROPDOWN LIST */}
+                                      {activeCat && (
+                                        <ScrollView style={styles.stopSvcScroll} nestedScrollEnabled={true}>
+                                          {(SERVICES_MULTI[activeCat] || []).map((svc) => (
+                                            <TouchableOpacity 
+                                              key={svc.id} 
+                                              style={styles.stopSvcItem} 
+                                              onPress={() => { 
+                                                setSelectedStopServices(prev => ({ ...prev, [idx]: svc }));
+                                                setActiveStopCategory(prev => ({ ...prev, [idx]: '' }));
+                                              }}
+                                              activeOpacity={0.7}
+                                            >
+                                              <View style={styles.stopSvcItemIco}><BookingIcon name={svc.ico} size={20} color={COLORS.soft} /></View>
+                                              <Text style={styles.stopSvcItemName}>{svc.name}</Text>
+                                            </TouchableOpacity>
+                                          ))}
+                                        </ScrollView>
+                                      )}
+                                    </View>
+                                  )}
+                                </View>
+
+                                {chosenSvc && chosenSvc.mode === 'desc' ? (
+                                  <View style={{ marginTop: 16 }}>
+                                    <Text style={styles.fieldLabel}>Job Description</Text>
+                                    <TextInput style={[styles.fieldInput, { minHeight: 120, textAlignVertical: 'top' }]} placeholder="Describe what you need done at this stop..." multiline value={String(stop.jobDescription || '')} onChangeText={(t) => handleUpdateStopSafe(idx, 'jobDescription', t)} />
+                                  </View>
+                                ) : (
+                                  <View style={styles.itemsSec}>
+                                    <View style={styles.sdivRow}><Text style={styles.sdivText}>Items for this stop</Text></View>
+                                    <View style={styles.table}>
+                                      <View style={styles.tableHdrRow}>
+                                        <Text style={[styles.th, { flex: 2 }]}>Description</Text>
+                                        <Text style={[styles.th, { width: 40, textAlign: 'center' }]}>Qty</Text>
+                                        <Text style={[styles.th, { flex: 1.2 }]}>Weight</Text>
+                                        <Text style={[styles.th, { flex: 1.5 }]}>PO/Ref</Text>
+                                        <View style={{ width: 24 }} />
+                                      </View>
+                                      {(Array.isArray(stop.items) && stop.items.length > 0 ? stop.items : [{ description: '', qty: '1', weight: '', ref: '' }]).map((item: any, i: number) => (
+                                        <View key={i} style={styles.tr}>
+                                          <TextInput style={[styles.tdInput, { flex: 2 }]} placeholder="Item description" value={String(item?.description || '')} onChangeText={(t) => updateStopItem(idx, i, 'description', t)} />
+                                          <TextInput style={[styles.tdInput, { width: 40, textAlign: 'center' }]} keyboardType="numeric" value={String(item?.qty || '')} onChangeText={(t) => updateStopItem(idx, i, 'qty', t)} />
+                                          <TextInput style={[styles.tdInput, { flex: 1.2 }]} placeholder="0 kg" value={String(item?.weight || '')} onChangeText={(t) => updateStopItem(idx, i, 'weight', t)} />
+                                          <TextInput style={[styles.tdInput, { flex: 1.5 }]} placeholder="Ref/PO" value={String(item?.ref || '')} onChangeText={(t) => updateStopItem(idx, i, 'ref', t)} />
+                                          <TouchableOpacity style={styles.tdDel} onPress={() => { const items = [...(stop.items || [])]; if (items.length > 1) { items.splice(i, 1); handleUpdateStopSafe(idx, 'items', items); } }}><Ionicons name="close" size={16} color={COLORS.soft} /></TouchableOpacity>
+                                        </View>
+                                      ))}
+                                    </View>
+                                    <TouchableOpacity style={styles.addItemBtn} onPress={() => { const items = [...(stop.items || [])]; items.push({ description: '', qty: '1', weight: '', ref: '' }); handleUpdateStopSafe(idx, 'items', items); }}>
+                                      <Ionicons name="add" size={12} color={COLORS.primary} />
+                                      <Text style={styles.addItemBtnText}>Add item</Text>
+                                    </TouchableOpacity>
+                                  </View>
+                                )}
+                              </View>
+                            )}
+                          </View>
+                        );
+                      })}
                     </View>
-                    <View style={styles.locPinBtnRed}><Ionicons name="location-outline" size={16} color={COLORS.danger} /></View>
-                  </TouchableOpacity>
-                </View>
+
+                    <TouchableOpacity style={styles.addStopBtn} onPress={handleAddStop}>
+                      <Ionicons name="add" size={16} color={COLORS.soft} />
+                      <Text style={styles.addStopBtnText}>Add another drop-off stop</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.connectorLine} />
+                    <View style={{ zIndex: 1 }}>
+                      <TouchableOpacity style={styles.locRowDrop} onPress={() => handleMapPick(0)} activeOpacity={0.7}>
+                        <View style={styles.locDotR} />
+                        <View style={styles.locInfo}>
+                          <Text style={styles.locLblR}>Drop-off</Text>
+                          <View pointerEvents="none"><TextInput style={styles.locInput} placeholder="Tap to select drop-off location..." placeholderTextColor={COLORS.soft} value={String(currentStop.address || '')} editable={false} /></View>
+                        </View>
+                        <View style={styles.locPinBtnRed}><Ionicons name="location-outline" size={16} color={COLORS.danger} /></View>
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                )}
               </View>
             </View>
 
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <View>
-                  <Text style={styles.cardTitle}>Recipient Details</Text>
-                  <Text style={styles.cardSub}>Who is receiving this delivery?</Text>
-                </View>
-              </View>
-              <View style={styles.cardBody}>
-                <View style={styles.row2}>
-                  <View style={styles.fieldHalf}><Text style={styles.fieldLabel}>Name</Text><TextInput style={styles.fieldInput} placeholder="Full name" value={String(currentStop.recipient || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'recipient', t)} /></View>
-                  <View style={styles.fieldHalf}><Text style={styles.fieldLabel}>Phone</Text><TextInput style={styles.fieldInput} placeholder="+353..." keyboardType="phone-pad" value={String(currentStop.phone || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'phone', t)} /></View>
-                </View>
+            {/* Recipient Details & Job Details for SINGLE DROP ONLY */}
+            {!isMulti && (
+              <>
+                <View style={styles.card}>
+                  <View style={styles.cardHeader}>
+                    <View>
+                      <Text style={styles.cardTitle}>Recipient Details</Text>
+                      <Text style={styles.cardSub}>Who is receiving this delivery?</Text>
+                    </View>
+                  </View>
+                  <View style={styles.cardBody}>
+                    <View style={styles.row2}>
+                      <View style={styles.fieldHalf}><Text style={styles.fieldLabel}>Name</Text><TextInput style={styles.fieldInput} placeholder="Full name" value={String(currentStop.recipient || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'recipient', t)} /></View>
+                      <View style={styles.fieldHalf}><Text style={styles.fieldLabel}>Phone</Text><TextInput style={styles.fieldInput} placeholder="+353..." keyboardType="phone-pad" value={String(currentStop.phone || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'phone', t)} /></View>
+                    </View>
 
-                <View style={[styles.fieldFull, { marginTop: 12 }]}>
-                  <Text style={styles.fieldLabel}>Order Number <Text style={{fontWeight: '400', color: COLORS.mute, fontSize: 10, textTransform: 'none'}}>(optional)</Text></Text>
-                  <TextInput style={styles.fieldInput} placeholder="e.g. 20481" value={String(currentStop.ref || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'ref', t)} />
-                </View>
-                <View style={[styles.fieldFull, { marginTop: 12 }]}>
-                  <Text style={styles.fieldLabel}>Delivery Instructions</Text>
-                  <TextInput style={[styles.fieldInput, { minHeight: 80, textAlignVertical: 'top' }]} placeholder="e.g. Leave at reception, call buzzer 3..." multiline value={String(currentStop.instructions || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'instructions', t)} />
-                </View>
-              </View>
-            </View>
-
-            {selectedService && (
-              <View style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <View>
-                    <Text style={styles.cardTitle}>Job Details</Text>
-                    <Text style={styles.cardSub}>{selectedService.mode === 'desc' ? 'Tell us about the job' : 'What are we moving?'}</Text>
+                    <View style={[styles.fieldFull, { marginTop: 12 }]}>
+                      <Text style={styles.fieldLabel}>Order Number <Text style={{fontWeight: '400', color: COLORS.mute, fontSize: 10, textTransform: 'none'}}>(optional)</Text></Text>
+                      <TextInput style={styles.fieldInput} placeholder="e.g. 20481" value={String(currentStop.ref || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'ref', t)} />
+                    </View>
+                    <View style={[styles.fieldFull, { marginTop: 12 }]}>
+                      <Text style={styles.fieldLabel}>Delivery Instructions</Text>
+                      <TextInput style={[styles.fieldInput, { minHeight: 80, textAlignVertical: 'top' }]} placeholder="e.g. Leave at reception, call buzzer 3..." multiline value={String(currentStop.instructions || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'instructions', t)} />
+                    </View>
                   </View>
                 </View>
-                <View style={styles.cardBody}>
-                  {selectedService.mode === 'desc' ? (
-                    <View style={{ marginBottom: 16 }}>
-                      <Text style={styles.fieldLabel}>Job Description</Text>
-                      <TextInput style={[styles.fieldInput, { minHeight: 120, textAlignVertical: 'top' }]} placeholder="Describe what you need done, e.g. clear a two-bedroom house..." multiline value={String(currentStop.jobDescription || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'jobDescription', t)} />
-                    </View>
-                  ) : (
-                    renderItemsTable(0)
-                  )}
 
-                  <View style={styles.sdivRow}><Text style={styles.sdivText}>Total Weight (Approx)</Text></View>
-                  <View style={styles.row2}>
-                    <View style={styles.fieldHalf}>
-                      <Text style={styles.fieldLabel}>Total Weight (kg)</Text>
-                      <View style={styles.weightStepperContainer}>
-                        <TouchableOpacity style={styles.stepperBtn} onPress={() => adjustWeight(0, -1)}><Ionicons name="remove" size={16} color={COLORS.ink} /></TouchableOpacity>
-                        <TextInput style={styles.weightStepperInput} keyboardType="numeric" value={String(currentStop.weight ?? 45)} onChangeText={(t) => handleUpdateStopSafe(0, 'weight', parseInt(t) || 0)} />
-                        <TouchableOpacity style={styles.stepperBtn} onPress={() => adjustWeight(0, 1)}><Ionicons name="add" size={16} color={COLORS.ink} /></TouchableOpacity>
+                {selectedService && (
+                  <View style={styles.card}>
+                    <View style={styles.cardHeader}>
+                      <View>
+                        <Text style={styles.cardTitle}>Job Details</Text>
+                        <Text style={styles.cardSub}>{selectedService.mode === 'desc' ? 'Tell us about the job' : 'What are we moving?'}</Text>
                       </View>
                     </View>
-                    <View style={[styles.fieldHalf, { justifyContent: 'flex-end', paddingBottom: 4 }]}><Text style={{ fontSize: 10, color: COLORS.soft, lineHeight: 14 }}>Approximate combined weight of all items in this delivery.</Text></View>
+                    <View style={styles.cardBody}>
+                      {selectedService.mode === 'desc' ? (
+                        <View style={{ marginBottom: 16 }}>
+                          <Text style={styles.fieldLabel}>Job Description</Text>
+                          <TextInput style={[styles.fieldInput, { minHeight: 120, textAlignVertical: 'top' }]} placeholder="Describe what you need done, e.g. clear a two-bedroom house..." multiline value={String(currentStop.jobDescription || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'jobDescription', t)} />
+                        </View>
+                      ) : (
+                        renderItemsTable(0)
+                      )}
+
+                      <View style={styles.sdivRow}><Text style={styles.sdivText}>Total Weight (Approx)</Text></View>
+                      <View style={styles.row2}>
+                        <View style={styles.fieldHalf}>
+                          <Text style={styles.fieldLabel}>Total Weight (kg)</Text>
+                          <View style={styles.weightStepperContainer}>
+                            <TouchableOpacity style={styles.stepperBtn} onPress={() => adjustWeight(0, -1)}><Ionicons name="remove" size={16} color={COLORS.ink} /></TouchableOpacity>
+                            <TextInput style={styles.weightStepperInput} keyboardType="numeric" value={String(currentStop.weight ?? 45)} onChangeText={(t) => handleUpdateStopSafe(0, 'weight', parseInt(t) || 0)} />
+                            <TouchableOpacity style={styles.stepperBtn} onPress={() => adjustWeight(0, 1)}><Ionicons name="add" size={16} color={COLORS.ink} /></TouchableOpacity>
+                          </View>
+                        </View>
+                        <View style={[styles.fieldHalf, { justifyContent: 'flex-end', paddingBottom: 4 }]}><Text style={{ fontSize: 10, color: COLORS.soft, lineHeight: 14 }}>Approximate combined weight of all items in this delivery.</Text></View>
+                      </View>
+                    </View>
                   </View>
-                </View>
-              </View>
+                )}
+              </>
             )}
 
             <View style={[styles.bottomCta, { paddingBottom: Math.max(insets.bottom, 20), marginBottom: 80 }]}>
@@ -1407,9 +1696,14 @@ export default function HomeScreen() {
                     <View style={{ paddingHorizontal: 22, paddingTop: 18 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         {['pending', 'accepted', 'assigned', 'arrived_pickup', 'in_transit', 'picked_up'].includes(String(activeBooking.status).toLowerCase()) && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.lemon, marginRight: 8 }} />}
-                        <Text style={{ fontSize: 19, fontWeight: '800', color: COLORS.ink }}>{['pending', 'accepted', 'assigned'].includes(String(activeBooking.status).toLowerCase()) ? 'Driver heading to pickup' : String(activeBooking.status).toLowerCase() === 'arrived_pickup' ? 'Driver is at pickup' : ['in_transit', 'picked_up'].includes(String(activeBooking.status).toLowerCase()) ? 'Your order is on its way' : String(activeBooking.status).toLowerCase() === 'arrived_dropoff' ? 'Driver is at drop-off' : 'Delivered'}</Text>
+                        <Text style={{ fontSize: 19, fontWeight: '800', color: COLORS.ink }}>{['pending', 'accepted', 'assigned'].includes(String(activeBooking.status).toLowerCase()) ? 'Driver heading to pickup' : String(activeBooking.status).toLowerCase() === 'arrived_pickup' ? 'Driver is at pickup' : ['in_transit', 'picked_up'].includes(String(activeBooking.status).toLowerCase()) ? (isMulti ? `En route to Stop ${stopPosition}` : 'Your order is on its way') : String(activeBooking.status).toLowerCase() === 'arrived_dropoff' ? 'Driver is at drop-off' : 'Delivered'}</Text>
                       </View>
-                      <Text style={{ fontSize: 14, fontWeight: '700', color: COLORS.forest, marginTop: 3 }}>{['delivered', 'completed', 'paid'].includes(String(activeBooking.status).toLowerCase()) ? 'Your order has arrived' : String(activeBooking.status).toLowerCase() === 'arrived_pickup' ? 'Driver is preparing to collect items' : String(activeBooking.status).toLowerCase() === 'arrived_dropoff' ? 'Please prepare your QR code for drop-off' : `Arriving in ${getLiveETA()}`}</Text>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: COLORS.forest, marginTop: 3 }}>{['delivered', 'completed', 'paid'].includes(String(activeBooking.status).toLowerCase()) ? 'Your order has arrived' : String(activeBooking.status).toLowerCase() === 'arrived_pickup' ? (isMulti ? 'Please prepare QR code for collection' : 'Driver is preparing to collect items') : String(activeBooking.status).toLowerCase() === 'arrived_dropoff' ? 'Please prepare your QR code for drop-off' : `Arriving in ${getLiveETA()}`}</Text>
+                      {isMulti && ['in_transit', 'picked_up', 'arrived_dropoff'].includes(String(activeBooking.status).toLowerCase()) && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, backgroundColor: '#FCF3DE', alignSelf: 'flex-start', borderWidth: 1, borderColor: `${COLORS.amber}55` }}>
+                          <Ionicons name="location" size={14} color={COLORS.amber} style={{ marginRight: 6 }} /><Text style={{ fontSize: 12, fontWeight: '700', color: '#7A5708' }}>Your delivery is stop {Math.min(stopPosition, activeBooking.stops?.length || 1)} of {activeBooking.stops?.length || 1} on this route</Text>
+                        </View>
+                      )}
                     </View>
                     <View style={{ paddingHorizontal: 22, paddingTop: 16 }}>
                       {(() => {
@@ -1443,7 +1737,7 @@ export default function HomeScreen() {
                             </View>
                             <View style={{ marginTop: 14, paddingHorizontal: 14, paddingVertical: 12, backgroundColor: COLORS.paper, borderRadius: 14, flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
                               <View style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: `${COLORS.forest}33`, borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4, marginRight: 10 }}><Text style={{ fontSize: 10.5, fontWeight: '700', color: COLORS.forestDark }}>{formatJobType(activeBooking.job_type)}</Text></View>
-                              <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: COLORS.ink }}>Single Drop</Text>
+                              <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: COLORS.ink }}>{(activeBooking?.booking_mode === 'multi' || (activeBooking?.stops?.length > 1)) ? `Multi-Drop · ${activeBooking.stops.length} Stops` : 'Single Drop'}</Text>
                               <Text style={{ fontSize: 11, fontWeight: '700', color: COLORS.textMuted }}>HNC-{String(activeBooking.id).padStart(4, '0')}</Text>
                             </View>
                             <View style={{ paddingBottom: 10 }}>
@@ -1466,28 +1760,65 @@ export default function HomeScreen() {
                       })()}
                     </View>
 
-                    <View style={{ paddingHorizontal: 22, paddingBottom: 16 }}>
-                      <View style={{ flexDirection: 'row', backgroundColor: COLORS.paper, borderRadius: 14, padding: 12 }}>
-                        <Ionicons name="cube" size={16} color={COLORS.forest} style={{ marginTop: 2, marginRight: 10 }} />
-                        <View style={{ flex: 1 }}><Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.ink }}>Drop-off Destination</Text><Text style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 1 }}>{activeBooking.dropoff_address || 'Provided during booking'}</Text></View>
+                    {isMulti ? (
+                      <View style={{ paddingHorizontal: 22, paddingBottom: 16 }}>
+                        <Text style={{ fontSize: 11.5, fontWeight: '700', color: COLORS.forestDark, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>Collection & Drop-offs</Text>
                         {(() => {
-                            const status = String(activeBooking.status || '').toLowerCase();
-                            const isDelivered = ['delivered', 'completed', 'paid', 'awaitingconfirmation'].includes(status.replace(/[-_ .]/g, ''));
-                            const isAtDropoff = status === 'arrived_dropoff';
-                            if (!isDelivered) return <View style={{ justifyContent: 'center', paddingLeft: 10 }}><PulsingQrButton isActive={isAtDropoff} onPress={() => setActiveQrStopIndex(0)} /></View>;
-                            return null;
+                           const status = String(activeBooking.status || '').toLowerCase();
+                           const hasCollected = ['picked_up', 'in_transit', 'arrived_dropoff', 'delivered', 'completed', 'paid'].includes(status);
+                           const isPrePickup = ['pending', 'accepted', 'assigned', 'arrived_pickup'].includes(status);
+                           return (
+                             <View style={{ flexDirection: 'row', backgroundColor: COLORS.paper, borderRadius: 14, padding: 12, marginBottom: 8, opacity: hasCollected ? 0.6 : 1 }}>
+                               <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: hasCollected ? COLORS.forest : COLORS.line, alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>{hasCollected ? <Ionicons name="checkmark" size={13} color="#fff" /> : <Text style={{ fontSize: 11, fontWeight: '700', color: COLORS.textMuted }}>P</Text>}</View>
+                               <View style={{ flex: 1 }}><Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.ink, textDecorationLine: hasCollected ? 'line-through' : 'none' }}>Pickup Location</Text><Text style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 1 }}>{activeBooking.pickup_address}</Text></View>
+                               {!hasCollected && <View style={{ justifyContent: 'center', paddingLeft: 10 }}><PulsingQrButton isActive={isPrePickup} onPress={() => setActiveQrStopIndex(-1)} /></View>}
+                             </View>
+                           );
                         })()}
+                        {(activeBooking.stops || []).map((s: any, idx: number) => {
+                           const isCompleted = s.status === 'completed';
+                           const activeStopIdx = (activeBooking.stops || []).findIndex((stop: any) => stop.status !== 'completed');
+                           const isCurrentActiveStop = idx === activeStopIdx;
+                           return (
+                             <View key={idx} style={{ flexDirection: 'row', backgroundColor: COLORS.paper, borderRadius: 14, padding: 12, marginBottom: 8, opacity: isCompleted ? 0.6 : 1 }}>
+                               <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: isCompleted ? COLORS.forest : COLORS.line, alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>{isCompleted ? <Ionicons name="checkmark" size={13} color="#fff" /> : <Text style={{ fontSize: 11, fontWeight: '700', color: COLORS.textMuted }}>{s.stop_order || idx + 1}</Text>}</View>
+                               <View style={{ flex: 1 }}><Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.ink, textDecorationLine: isCompleted ? 'line-through' : 'none' }}>{s.recipient || s.name || String(s.address || '').split(',')[0]}</Text><Text style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 1 }}>{s.address}</Text></View>
+                               {!isCompleted && <View style={{ justifyContent: 'center', paddingLeft: 10 }}><PulsingQrButton isActive={isCurrentActiveStop} onPress={() => setActiveQrStopIndex(idx)} /></View>}
+                             </View>
+                           );
+                        })}
                       </View>
-                    </View>
+                    ) : (
+                      <View style={{ paddingHorizontal: 22, paddingBottom: 16 }}>
+                        <View style={{ flexDirection: 'row', backgroundColor: COLORS.paper, borderRadius: 14, padding: 12 }}>
+                          <Ionicons name="cube" size={16} color={COLORS.forest} style={{ marginTop: 2, marginRight: 10 }} />
+                          <View style={{ flex: 1 }}><Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.ink }}>Drop-off Destination</Text><Text style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 1 }}>{activeBooking.dropoff_address || 'Provided during booking'}</Text></View>
+                          {(() => {
+                              const status = String(activeBooking.status || '').toLowerCase();
+                              const isDelivered = ['delivered', 'completed', 'paid', 'awaitingconfirmation'].includes(status.replace(/[-_ .]/g, ''));
+                              const isAtDropoff = status === 'arrived_dropoff';
+                              if (!isDelivered) return <View style={{ justifyContent: 'center', paddingLeft: 10 }}><PulsingQrButton isActive={isAtDropoff} onPress={() => setActiveQrStopIndex(0)} /></View>;
+                              return null;
+                          })()}
+                        </View>
+                      </View>
+                    )}
 
                     <View style={{ flexDirection: 'row', paddingHorizontal: 22, gap: 10 }}>
                       <TouchableOpacity onPress={() => setChatVisible(true)} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13, borderRadius: 14, borderWidth: 1.5, borderColor: COLORS.line, backgroundColor: '#fff' }}>
                         <Ionicons name="help-buoy-outline" size={16} color={COLORS.ink} style={{ marginRight: 7 }} />
                         <Text style={{ color: COLORS.ink, fontWeight: '700', fontSize: 13.5 }}>Support</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity onPress={() => setActiveQrStopIndex(0)} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 13, borderRadius: 14, backgroundColor: ['delivered', 'completed'].includes(String(activeBooking.status).toLowerCase()) ? COLORS.line : COLORS.forest }}>
+                      <TouchableOpacity onPress={() => {
+                          if (isMulti) {
+                            const status = String(activeBooking.status || '').toLowerCase();
+                            const isPrePickup = ['pending', 'accepted', 'assigned', 'arrived_pickup'].includes(status);
+                            if (isPrePickup) setActiveQrStopIndex(-1);
+                            else { const nextStopIndex = activeBooking.stops?.findIndex((s: any) => String(s.status).toLowerCase() !== 'completed'); if (nextStopIndex !== undefined && nextStopIndex !== -1) setActiveQrStopIndex(nextStopIndex); }
+                          } else { setActiveQrStopIndex(0); }
+                        }} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 13, borderRadius: 14, backgroundColor: ['delivered', 'completed'].includes(String(activeBooking.status).toLowerCase()) ? COLORS.line : COLORS.forest }}>
                         <Ionicons name="key-outline" size={16} color={['delivered', 'completed'].includes(String(activeBooking.status).toLowerCase()) ? COLORS.textMuted : '#fff'} style={{ marginRight: 8 }} />
-                        <Text style={{ color: ['delivered', 'completed'].includes(String(activeBooking.status).toLowerCase()) ? COLORS.textMuted : '#fff', fontWeight: '700', fontSize: 14.5 }}>{['delivered', 'completed'].includes(String(activeBooking.status).toLowerCase()) ? 'Delivered' : 'Show Delivery QR'}</Text>
+                        <Text style={{ color: ['delivered', 'completed'].includes(String(activeBooking.status).toLowerCase()) ? COLORS.textMuted : '#fff', fontWeight: '700', fontSize: 14.5 }}>{['delivered', 'completed'].includes(String(activeBooking.status).toLowerCase()) ? 'Delivered' : (isMulti ? 'Show Active QR' : 'Show Delivery QR')}</Text>
                       </TouchableOpacity>
                     </View>
                   </ScrollView>
@@ -1495,7 +1826,7 @@ export default function HomeScreen() {
               )}
             </View>
 
-            <PremiumQrModal visible={activeQrStopIndex !== null} onClose={() => setActiveQrStopIndex(null)} stopIndex={activeQrStopIndex !== null ? activeQrStopIndex : 0} isMulti={false} stopAddress={ activeQrStopIndex === -1 ? activeBooking?.pickup_address : activeBooking?.dropoff_address || ''} qrValue={(() => { if (activeQrStopIndex === -1) return encodeURIComponent(JSON.stringify({ type: 'PICKUP_CONFIRMATION', booking_id: activeBooking?.id })); else return encodeURIComponent(JSON.stringify({ type: 'DROPOFF_CONFIRMATION', booking_id: activeBooking?.id })); })()} />
+            <PremiumQrModal visible={activeQrStopIndex !== null} onClose={() => setActiveQrStopIndex(null)} stopIndex={activeQrStopIndex !== null ? activeQrStopIndex : 0} isMulti={isMulti} stopAddress={ activeQrStopIndex === -1 ? activeBooking?.pickup_address : isMulti ? activeBooking?.stops?.[activeQrStopIndex || 0]?.address || '' : activeBooking?.dropoff_address || ''} qrValue={(() => { if (activeQrStopIndex === -1) return encodeURIComponent(JSON.stringify({ type: 'PICKUP_CONFIRMATION', booking_id: activeBooking?.id })); else if (isMulti) return encodeURIComponent(JSON.stringify({ type: 'STOP_CONFIRMATION', booking_id: activeBooking?.id, stop_id: activeBooking?.stops?.[activeQrStopIndex || 0]?.id })); else return encodeURIComponent(JSON.stringify({ type: 'DROPOFF_CONFIRMATION', booking_id: activeBooking?.id })); })()} />
 
           </View>
         )}
@@ -1529,7 +1860,7 @@ export default function HomeScreen() {
       <ChatSupportModal visible={chatVisible} onClose={() => setChatVisible(false)} user={user} activeBooking={activeBooking} sendSupportMessage={sendSupportMessage} createSupportTicket={createSupportTicket} />
       
       {/* 🚀 THE BOTTOM SHEET MODAL (Single Drop Only) */}
-      <Modal visible={!!sheetCategory} animationType="slide" transparent onRequestClose={() => setSheetCategory(null)}>
+      <Modal visible={!!sheetCategory && !sheetCategory.startsWith('stop_')} animationType="slide" transparent onRequestClose={() => setSheetCategory(null)}>
         <View style={styles.sheetOverlay}>
           <TouchableOpacity style={{ flex: 1 }} onPress={() => setSheetCategory(null)} activeOpacity={1} />
           <View style={styles.bottomSheet}>
@@ -1564,7 +1895,7 @@ export default function HomeScreen() {
       {/* 🚀 THE NEW MAP MODAL WITH KEYBOARD SHIFT FIX */}
       <Modal visible={mapPickTarget !== null} animationType="slide" transparent onRequestClose={() => setMapPickTarget(null)}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: 'rgba(10,22,18,0.5)', justifyContent: 'flex-end' }}>
-          <View style={{ backgroundColor: COLORS.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: 'hidden', maxHeight: '90%', paddingBottom: Platform.OS === 'ios' ? 40 : 20 }}>
+          <View style={{ backgroundColor: COLORS.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: 'hidden', maxHeight: '90%', paddingBottom: Platform.OS === 'ios' ? 100 : 80 }}>
             
             {/* Modal Header */}
             <View style={{ padding: 16, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: COLORS.border }}>
@@ -1640,7 +1971,7 @@ export default function HomeScreen() {
             </View>
 
             {/* Buttons Footer */}
-            <View style={{ flexDirection: 'row', paddingHorizontal: 18, gap: 10, marginTop: 16 }}>
+            <View style={{ flexDirection: 'row', paddingHorizontal: 18, gap: 10, marginTop: 16, marginBottom: 20 }}>
               <TouchableOpacity style={{ paddingVertical: 14, paddingHorizontal: 18, borderRadius: 10, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.white, alignItems: 'center', justifyContent: 'center' }} onPress={() => setMapPickTarget(null)}>
                 <Text style={{ fontSize: 14, fontWeight: '600', color: COLORS.mid }}>Cancel</Text>
               </TouchableOpacity>
