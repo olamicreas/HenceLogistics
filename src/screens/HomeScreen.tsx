@@ -18,8 +18,7 @@ import {
   ActivityIndicator,
   Animated,
   PanResponder,
-  AppState,
-  Keyboard
+  AppState 
 } from 'react-native';
 import { Polyline } from 'react-native-maps';
 import QRCode from 'react-native-qrcode-svg';
@@ -122,24 +121,6 @@ const CATEGORIES_MULTI = [
   { id: 'deliveries', icon: 'car-outline', name: 'Deliveries', desc: 'Same-day delivery across Ireland' },
   { id: 'warehouse', icon: 'business-outline', name: 'Warehouse', desc: 'Pallet, depot & fulfilment runs' }
 ];
-
-const OP_DESC: Record<string, string> = {
-  courier: 'Fast parcel & small item delivery',
-  delivery: 'Standard multi-drop & larger deliveries',
-  manvan: 'Heavy lifting, removals & bulky items'
-};
-
-const OP_SINGLE: Record<string, string[]> = {
-  courier: ['collection', 'deliveries'],
-  delivery: ['collection', 'deliveries', 'warehouse'],
-  manvan: ['collection', 'deliveries', 'removals', 'warehouse']
-};
-
-const OP_MULTI: Record<string, string[]> = {
-  courier: ['deliveries'],
-  delivery: ['deliveries', 'warehouse'],
-  manvan: ['deliveries', 'warehouse']
-};
 
 type Service = {
   id: string; name: string; desc: string; price: string; base: number; svc: number; badge: string; btxt: string; ico: string; v: string[]; mode?: 'desc' | 'items';
@@ -396,21 +377,16 @@ export const PulsingQrButton = ({ onPress, isActive }: { onPress: () => void, is
   const pulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    let anim: Animated.CompositeAnimation | null = null;
     if (isActive) {
-      anim = Animated.loop(
+      Animated.loop(
         Animated.sequence([
           Animated.timing(pulse, { toValue: 1.15, duration: 800, useNativeDriver: true }),
           Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: true }),
         ])
-      );
-      anim.start();
+      ).start();
     } else {
       pulse.setValue(1);
     }
-    return () => {
-      if (anim) anim.stop();
-    };
   }, [isActive]);
 
   return (
@@ -437,9 +413,6 @@ export const PremiumQrModal = ({ visible, onClose, stopIndex, stopAddress, qrVal
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    let loop1: Animated.CompositeAnimation | null = null;
-    let loop2: Animated.CompositeAnimation | null = null;
-
     if (visible) {
       Animated.spring(slideAnim, {
         toValue: 0,
@@ -447,21 +420,19 @@ export const PremiumQrModal = ({ visible, onClose, stopIndex, stopAddress, qrVal
         bounciness: 8,
       }).start();
 
-      loop1 = Animated.loop(
+      Animated.loop(
         Animated.sequence([
           Animated.timing(laserAnim, { toValue: 200, duration: 1500, useNativeDriver: true }),
           Animated.timing(laserAnim, { toValue: 0, duration: 1500, useNativeDriver: true }),
         ])
-      );
-      loop1.start();
+      ).start();
 
-      loop2 = Animated.loop(
+      Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, { toValue: 1.1, duration: 1000, useNativeDriver: true }),
           Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
         ])
-      );
-      loop2.start();
+      ).start();
     } else {
       Animated.timing(slideAnim, {
         toValue: height,
@@ -469,11 +440,6 @@ export const PremiumQrModal = ({ visible, onClose, stopIndex, stopAddress, qrVal
         useNativeDriver: true,
       }).start();
     }
-
-    return () => {
-      if (loop1) loop1.stop();
-      if (loop2) loop2.stop();
-    };
   }, [visible]);
 
   if (!visible && slideAnim === height) return null;
@@ -573,9 +539,7 @@ export default function HomeScreen() {
   const [step, setStep] = useState<number>(1);
   const [hiddenHistoryIds, setHiddenHistoryIds] = useState<number[]>([]);
   const [sheetCategory, setSheetCategory] = useState<string | null>(null);
-  
-  const [localVanType, setLocalVanType] = useState<string>(''); 
-  const [operatorType, setOperatorType] = useState<string | null>(null);
+  const [localVanType, setLocalVanType] = useState<string>('large');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [expandedStopIdx, setExpandedStopIdx] = useState<number | null>(0);
@@ -607,8 +571,7 @@ export default function HomeScreen() {
   useEffect(() => {
     if (activeBooking && activeBooking.id && activeBooking.id !== lastResetBookingId.current) {
       setStep(1);
-      setLocalVanType('');
-      setOperatorType(null);
+      setLocalVanType('large');
       setSelectedCategory(null);
       setSelectedService(null);
       setSelectedStopServices({});
@@ -761,6 +724,7 @@ export default function HomeScreen() {
     })();
     const notifSub = Notifications.addNotificationReceivedListener(notification => {
       if (typeof fetchRideHistory === 'function') fetchRideHistory().catch(() => {});
+      Alert.alert(notification.request.content.title || "Booking Update", notification.request.content.body || "Your delivery status has changed.");
     });
     const respSub = Notifications.addNotificationResponseReceivedListener(response => {
       if (typeof fetchRideHistory === 'function') fetchRideHistory().catch(() => {});
@@ -875,17 +839,16 @@ export default function HomeScreen() {
   const activeCategories = isMulti ? CATEGORIES_MULTI : CATEGORIES_SINGLE;
   const activeServicesDict = isMulti ? SERVICES_MULTI : SERVICES_SINGLE;
 
-  const activeCatKey = sheetCategory?.startsWith('stop_') ? sheetCategory.split('_')[2] : sheetCategory;
-  
-  // 🔥 VEHICLE OVERRIDE: The sheet services filter has removed any dependency on 'localVanType'
-  const visibleSheetServices = useMemo(() => {
-    if (!activeCatKey) return [];
-    const sourceDict = sheetCategory?.startsWith('stop_') ? SERVICES_MULTI : activeServicesDict;
-    return sourceDict[activeCatKey] || [];
-  }, [activeCatKey, activeServicesDict, sheetCategory]);
+  const selectedVehicle = VEHICLES.find(v => v.id === localVanType);
 
-  const isServiceLocked = !operatorType;
-  const canContinue = !!selectedService && !!operatorType;
+  const activeCatKey = sheetCategory?.startsWith('stop_') ? sheetCategory.split('_')[2] : sheetCategory;
+  const visibleSheetServices = useMemo(() => {
+    if (!activeCatKey || !selectedVehicle) return [];
+    const sourceDict = sheetCategory?.startsWith('stop_') ? SERVICES_MULTI : activeServicesDict;
+    return (sourceDict[activeCatKey] || []).filter(s => s.v.includes(localVanType));
+  }, [activeCatKey, localVanType, activeServicesDict, selectedVehicle, sheetCategory]);
+
+  const canContinue = !!selectedService && !!localVanType;
 
   const handleModeChange = (mode: 'single' | 'multi') => {
     setBookingMode(mode);
@@ -893,17 +856,11 @@ export default function HomeScreen() {
     setSheetCategory(null);
   };
 
-  const handleOperatorSelect = (op: string) => {
-    if (operatorType === op) {
-      setOperatorType(null);
-    } else {
-      setOperatorType(op);
-    }
-    setSelectedCategory(null);
-    setSelectedService(null);
-  };
-
   const openSheet = (catId: string) => {
+    if (!localVanType) {
+      Alert.alert("Select Vehicle", "Please select a vehicle type first to see available services.");
+      return;
+    }
     setSheetCategory(catId);
   };
 
@@ -932,6 +889,14 @@ export default function HomeScreen() {
     }
   };
 
+  const selectVehicle = (id: string) => {
+    setLocalVanType(id);
+    setVanType?.(id);
+    setSelectedCategory(null);
+    setSelectedService(null);
+  };
+
+  // 🛡️ CRASH FIX 2: Immutable array updates ensuring stops[idx] exists
   const handleUpdateStopSafe = (idx: number, field: string, value: any) => {
     if (typeof setStops === 'function') {
       setStops((prevStops: any[]) => {
@@ -939,7 +904,10 @@ export default function HomeScreen() {
         while (list.length <= idx) {
           list.push({ address: '', recipient: '', phone: '', instructions: '', items: [{ description: '', qty: '1', weight: '', ref: '' }], weight: 45, lat: null, lon: null });
         }
-        list[idx] = { ...list[idx], [field]: value };
+        list[idx] = {
+          ...list[idx],
+          [field]: value
+        };
         return list;
       });
     } else if (typeof updateStop === 'function') {
@@ -1003,6 +971,7 @@ export default function HomeScreen() {
     }
   };
 
+  // 🛡️ CRASH FIX 3: Fully isolated string-only text input tables
   const renderItemsTable = (idx: number) => {
     const safeStops = Array.isArray(stops) ? stops : [];
     const stop = safeStops[idx] || {};
@@ -1074,9 +1043,8 @@ export default function HomeScreen() {
       const activeSvc = isMulti ? Object.values(selectedStopServices).find(Boolean) : selectedService;
       if (!activeSvc) { Alert.alert('Missing Service', 'Please choose a service before continuing'); return; }
       
-      // 🔥 THE FIX: hardcoded `van_type: 'large'` so the removed UI doesn't crash the payload
       const quotePayload = { 
-        van_type: 'large', 
+        van_type: localVanType, 
         job_type: activeSvc.id, 
         service: activeSvc,
         pickup_address: pickupAddr,
@@ -1104,9 +1072,7 @@ export default function HomeScreen() {
     } catch (e: any) { Alert.alert('Error', e?.message || 'Could not prepare quote request'); }
   };
 
-  // 🔥 KEYBOARD DISMISS FIX INJECTED HERE
   const handleMapPick = (index: number) => { 
-    Keyboard.dismiss();
     setMapPickTarget(index); 
     setTempAddress(''); 
     setTempCoord(null);
@@ -1158,6 +1124,9 @@ export default function HomeScreen() {
     setActiveSearchIndex(null);
   };
 
+ 
+
+  
   if (bottomTab === 'account') {
     const { currentScreen } = useAppContext();
     if (currentScreen === 'profile') return <ProfileScreen />;    
@@ -1226,7 +1195,7 @@ export default function HomeScreen() {
       <View style={styles.steps}>
         <View style={step === 1 ? styles.stepActive : styles.stepDone}>
           <Text style={styles.stepCircle}>{step === 1 ? '1' : '✓'}</Text>
-          <Text style={styles.stepLabel}>Service</Text>
+          <Text style={styles.stepLabel}>Vehicle & Service</Text>
         </View>
         <View style={step === 1 ? styles.stepLinePending : styles.stepLineDone} />
         <View style={step === 2 ? styles.stepActive : styles.stepPending}>
@@ -1238,7 +1207,18 @@ export default function HomeScreen() {
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {step === 1 && (
           <>
-            {/* 🚀 OUR VEHICLES CARD (INFO ONLY) */}
+            {/* 🚀 TEMPORARILY DISABLED MULTI-DROP FOR NOW
+            <View style={styles.modeToggleRow}>
+              <TouchableOpacity style={[styles.modeToggleBtn, !isMulti && styles.modeToggleBtnOn]} onPress={() => handleModeChange('single')}>
+                <Text style={[styles.modeToggleText, !isMulti && styles.modeToggleTextOn]}>Single Drop</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modeToggleBtn, isMulti && styles.modeToggleBtnOn]} onPress={() => handleModeChange('multi')}>
+                <Text style={[styles.modeToggleText, isMulti && styles.modeToggleTextOn]}>Multi Drop</Text>
+              </TouchableOpacity>
+            </View>
+            */}
+
+          {/* 🚀 ADDED MTD: marginTop to push it down cleanly */}
             <View style={[styles.card, { marginTop: 16 }]}>
               <View style={styles.cardHeader}>
                 <View style={{ flex: 1, paddingRight: 10 }}>
@@ -1252,97 +1232,36 @@ export default function HomeScreen() {
                   {VEHICLES.map((v) => (
                     <TouchableOpacity 
                       key={v.id} 
-                      style={[styles.vehicleChip, localVanType === v.id && styles.vehicleChipOn]}
+                      style={styles.vehicleChip}
                       onPress={() => setLocalVanType(v.id)}
                       activeOpacity={0.6}
                     >
-                      <BookingIcon name={v.icon} size={38} color={localVanType === v.id ? COLORS.primary : COLORS.soft} />
-                      <Text style={[styles.vehicleName, localVanType === v.id && styles.vehicleNameOn, { fontSize: 10, marginTop: 6 }]} numberOfLines={1}>{v.name}</Text>
+                      <BookingIcon name={v.icon} size={42} color={COLORS.soft} />
+                      <Text style={[styles.vehicleName, { fontSize: 11, marginTop: 6 }]} numberOfLines={1}>{v.name}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
-                {localVanType && VEHICLES.find(v => v.id === localVanType) && (
-                  <View style={styles.noteBox}>
-                    <Text style={styles.noteText}>{VEHICLES.find(v => v.id === localVanType)?.note}</Text>
-                  </View>
-                )}
+                {selectedVehicle && <View style={styles.noteBox}><Text style={styles.noteText}>{selectedVehicle.note}</Text></View>}
               </View>
             </View>
 
-            {/* OPERATOR TYPE CARD */}
             <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.cardTitle}>Driver Type</Text>
-                  <Text style={styles.cardSub}>{operatorType ? OP_DESC[operatorType] : 'Who should handle this delivery?'}</Text>
-                </View>
-              </View>
-              <View style={[styles.cardBody, { padding: 10 }]}>
-                <View style={styles.opRow}>
-                  <TouchableOpacity style={[styles.opBtn, operatorType === 'courier' && styles.opBtnOn]} onPress={() => handleOperatorSelect('courier')} activeOpacity={0.8}>
-                    {operatorType === 'courier' && <View style={styles.opSelDot} />}
-                    <View style={[styles.opBtnIco, operatorType === 'courier' && styles.opBtnIcoOn]}>
-                      <BookingIcon name="op-courier" size={24} />
-                    </View>
-                    <Text style={[styles.opBtnName, operatorType === 'courier' && { color: COLORS.primary }]}>Courier</Text>
-                    <Text style={styles.opBtnTag}>{isMulti ? 'Courier & Runs' : 'Parcel'}</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity style={[styles.opBtn, operatorType === 'delivery' && styles.opBtnOn]} onPress={() => handleOperatorSelect('delivery')} activeOpacity={0.8}>
-                    {operatorType === 'delivery' && <View style={styles.opSelDot} />}
-                    <View style={[styles.opBtnIco, operatorType === 'delivery' && styles.opBtnIcoOn]}>
-                      <BookingIcon name="op-delivery" size={24} />
-                    </View>
-                    <Text style={[styles.opBtnName, operatorType === 'delivery' && { color: COLORS.primary }]}>Delivery Driver</Text>
-                    <Text style={styles.opBtnTag}>Single & Multi</Text>
-                  </TouchableOpacity>
-
-                  {!isMulti && (
-                    <TouchableOpacity style={[styles.opBtn, operatorType === 'manvan' && styles.opBtnOn]} onPress={() => handleOperatorSelect('manvan')} activeOpacity={0.8}>
-                      {operatorType === 'manvan' && <View style={styles.opSelDot} />}
-                      <View style={[styles.opBtnIco, operatorType === 'manvan' && styles.opBtnIcoOn]}>
-                        <BookingIcon name="op-manvan" size={24} />
-                      </View>
-                      <Text style={[styles.opBtnName, operatorType === 'manvan' && { color: COLORS.primary }]}>Man with a Van</Text>
-                      <Text style={styles.opBtnTag}>Moves & trade</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-            </View>
-
-            <View style={[styles.card, isServiceLocked && styles.cardLocked]}>
               <View style={styles.cardHeader}>
                 <View>
                   <Text style={styles.cardTitle}>Select a Service</Text>
-                  <Text style={styles.cardSub}>{isServiceLocked ? 'Select a driver type first' : 'Select a category'}</Text>
+                  <Text style={styles.cardSub}>Tap a category to see services</Text>
                 </View>
-                {isServiceLocked && (
-                   <View style={styles.lockedBadge}>
-                     <Ionicons name="lock-closed" size={10} color={COLORS.mute} style={{ marginRight: 2 }}/>
-                     <Text style={styles.lockedBadgeText}>LOCKED</Text>
-                   </View>
-                )}
               </View>
               <View style={[styles.cardBody, { padding: 10 }]}>
                 
                 <View style={styles.grpGrid}>
-                  {activeCategories.map((cat) => {
-                    let isHidden = false;
-                    const primaryCats = isMulti ? OP_MULTI[operatorType!] : OP_SINGLE[operatorType!];
-                    if (operatorType === 'courier') {
-                        isHidden = !primaryCats?.includes(cat.id);
-                    }
-                    if (isHidden) return null;
-
-                    return (
-                      <TouchableOpacity key={cat.id} style={[styles.grpCard, selectedService && selectedCategory === cat.id && styles.grpCardSel]} onPress={() => { setSelectedCategory(cat.id); openSheet(cat.id); }} activeOpacity={0.9} disabled={isServiceLocked}>
-                        <View style={styles.gcIco}><Ionicons name={cat.icon as any} size={22} color={selectedService && selectedCategory === cat.id ? '#FFF' : COLORS.soft} /></View>
-                        <Text style={[styles.gcName, { fontWeight: '500' }, selectedService && selectedCategory === cat.id && { color: COLORS.primary }]}>{cat.name}</Text>
-                        <View style={styles.gcArrow}><Ionicons name="chevron-forward" size={14} color={COLORS.ink} /></View>
-                      </TouchableOpacity>
-                    );
-                  })}
+                  {activeCategories.map((cat) => (
+                    <TouchableOpacity key={cat.id} style={[styles.grpCard, selectedService && selectedCategory === cat.id && styles.grpCardSel]} onPress={() => { setSelectedCategory(cat.id); openSheet(cat.id); }} activeOpacity={0.9}>
+                      <View style={styles.gcIco}><Ionicons name={cat.icon as any} size={22} color={selectedService && selectedCategory === cat.id ? '#FFF' : COLORS.soft} /></View>
+                      <Text style={[styles.gcName, { fontWeight: '500' }, selectedService && selectedCategory === cat.id && { color: COLORS.primary }]}>{cat.name}</Text>
+                      <View style={styles.gcArrow}><Ionicons name="chevron-forward" size={14} color={COLORS.ink} /></View>
+                    </TouchableOpacity>
+                  ))}
                 </View>
 
                 {selectedService && (
@@ -1361,8 +1280,8 @@ export default function HomeScreen() {
             <View style={styles.priceBanner}>
               <View style={styles.priceBannerIco}><Ionicons name="checkmark-circle-outline" size={24} color={COLORS.primary} /></View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.priceBannerTitle}>Price calculated after booking</Text>
-                <Text style={styles.priceBannerSub}>Your exact price is mathematically generated using active admin rates.</Text>
+                <Text style={styles.priceBannerTitle}>Price confirmed after booking</Text>
+                <Text style={styles.priceBannerSub}>Your price will be shown once you complete your booking details.</Text>
               </View>
             </View>
 
@@ -1386,60 +1305,221 @@ export default function HomeScreen() {
               <BookingIcon name={selectedService?.ico || 'si-01'} size={18} color="#fff" />
               <View style={{ flex: 1 }}>
                 <Text style={styles.serviceBannerName}>{selectedService?.name || 'Service'}</Text>
-                <Text style={styles.serviceBannerSub}>Vehicle Auto-Assigned</Text>
+                <Text style={styles.serviceBannerSub}>{selectedVehicle?.name || 'Van'} · Standard Delivery</Text>
               </View>
               <TouchableOpacity onPress={() => setStep(1)}><Text style={styles.serviceBannerChange}>Change</Text></TouchableOpacity>
             </View>
 
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <View>
-                  <Text style={styles.cardTitle}>Pickup & Drop-off</Text>
-                  <Text style={styles.cardSub}><Ionicons name="location" size={10} color={COLORS.soft} /> Tap to pin exact location</Text>
+            {/* 🚀 TEMPORARILY DISABLED SCHEDULING
+            <View style={styles.schedToggle}>
+              <TouchableOpacity style={[styles.schedBtn, !isScheduled && styles.schedBtnOn]} onPress={() => setIsScheduled(false)}>
+                <Text style={[styles.schedText, !isScheduled && styles.schedTextOn]}>Pick up now</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.schedBtn, isScheduled && styles.schedBtnOn]} onPress={() => { setIsScheduled(true); }}>
+                <BookingIcon name="ic-clock" size={14} color={isScheduled ? '#FFF' : COLORS.soft} />
+                <Text style={[styles.schedText, isScheduled && styles.schedTextOn]}>Schedule for later</Text>
+              </TouchableOpacity>
+            </View>
+            */}
+
+            {isScheduled && (
+              <View style={styles.card}>
+                <View style={[styles.cardBody, { padding: 10 }]}>
+                  <View style={styles.row2}>
+                    <TouchableOpacity style={styles.fieldHalf} onPress={() => { setDatePickerMode('date'); setShowDatePicker(true); }}>
+                      <Text style={styles.fieldLabel}>Date</Text>
+                      <View style={styles.fieldInput}>
+                        <Text style={{ fontSize: 13, color: COLORS.ink, paddingVertical: 2 }}>{scheduleTime ? scheduleTime.toLocaleDateString() : 'Select Date'}</Text>
+                      </View>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.fieldHalf} onPress={() => { setDatePickerMode('time'); setShowDatePicker(true); }}>
+                      <Text style={styles.fieldLabel}>Time</Text>
+                      <View style={styles.fieldInput}>
+                        <Text style={{ fontSize: 13, color: COLORS.ink, paddingVertical: 2 }}>{scheduleTime ? scheduleTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Select Time'}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
-              <View style={styles.cardBody}>
-                {/* 🔥 AUTO-SWITCHING EDIT MAP BUTTON */}
-                <TouchableOpacity style={styles.mapStrip} onPress={() => handleMapPick(pickupAddr ? 0 : -1)} activeOpacity={0.9}>
-                  <View style={styles.mapBgReal}>
-                    <View style={styles.mapRoadMain} />
-                    <View style={styles.mapRouteLine} />
-                    <View style={styles.mapPinsWrap}>
-                      <View style={styles.mapPinGroup}>
-                        <View style={[styles.mapPinDotReal, styles.mapPinPickup]}><Text style={styles.mapPinLetter}>P</Text></View>
-                        <Text style={styles.mapPinTag}>Pickup</Text>
-                      </View>
-                      {isMulti ? (
-                        (stops || []).map((_: any, idx: number) => (
-                          <View key={idx} style={styles.mapPinGroup}>
-                            <View style={[styles.mapPinDotReal, styles.mapPinStop]}><Text style={styles.mapPinLetter}>{idx + 1}</Text></View>
-                            <Text style={styles.mapPinTag}>Stop {idx + 1}</Text>
-                          </View>
-                        ))
-                      ) : (
-                        <View style={styles.mapPinGroup}>
-                          <View style={[styles.mapPinDotReal, styles.mapPinDropoff]}><Text style={styles.mapPinLetter}>D</Text></View>
-                          <Text style={styles.mapPinTag}>Drop-off</Text>
-                        </View>
-                      )}
+            )}
+
+            {isScheduled && showDatePicker && (
+              <View style={styles.datePickerCard}>
+                <DateTimePicker 
+                  value={scheduleTime || new Date()} 
+                  mode={datePickerMode} 
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'} 
+                  onChange={handleDateChange} 
+                  textColor={COLORS.ink} 
+                  themeVariant="light" 
+                />
+                {Platform.OS === 'ios' && (
+                  <TouchableOpacity style={styles.dateConfirmBtn} onPress={() => setShowDatePicker(false)}>
+                    <Text style={styles.dateConfirmText}>Confirm Time</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
+            {!isMulti ? (
+              <>
+                <View style={styles.card}>
+                  <View style={styles.cardHeader}>
+                    <View>
+                      <Text style={styles.cardTitle}>Pickup & Drop-off</Text>
+                      <Text style={styles.cardSub}><Ionicons name="location" size={10} color={COLORS.soft} /> Tap to pin exact location</Text>
                     </View>
                   </View>
-                  <View style={styles.mapEditBtn}><Ionicons name="map-outline" size={12} color={COLORS.primary} /><Text style={styles.mapEditText}>Edit map</Text></View>
-                </TouchableOpacity>
+                  <View style={styles.cardBody}>
+                    <TouchableOpacity style={styles.mapStrip} onPress={() => handleMapPick(-1)} activeOpacity={0.9}>
+                      <View style={styles.mapBgReal}>
+                        <View style={styles.mapRoadMain} />
+                        <View style={styles.mapRouteLine} />
+                        <View style={styles.mapPinsWrap}>
+                          <View style={styles.mapPinGroup}>
+                            <View style={[styles.mapPinDotReal, styles.mapPinPickup]}><Text style={styles.mapPinLetter}>P</Text></View>
+                            <Text style={styles.mapPinTag}>Pickup</Text>
+                          </View>
+                          <View style={styles.mapPinGroup}>
+                            <View style={[styles.mapPinDotReal, styles.mapPinDropoff]}><Text style={styles.mapPinLetter}>D</Text></View>
+                            <Text style={styles.mapPinTag}>Drop-off</Text>
+                          </View>
+                        </View>
+                      </View>
+                      <View style={styles.mapEditBtn}><Ionicons name="map-outline" size={12} color={COLORS.primary} /><Text style={styles.mapEditText}>Edit map</Text></View>
+                    </TouchableOpacity>
 
-                <View style={{ zIndex: 1 }}>
-                  <TouchableOpacity style={styles.locRowPick} onPress={() => handleMapPick(-1)} activeOpacity={0.7}>
-                    <View style={styles.locDotG} />
-                    <View style={styles.locInfo}>
-                      <Text style={styles.locLblG}>Collection</Text>
-                      <View pointerEvents="none"><TextInput style={styles.locInput} placeholder="Tap to select collection location..." placeholderTextColor={COLORS.soft} value={String(pickupAddr || '')} editable={false} /></View>
+                    <View style={{ zIndex: 1 }}>
+                      <TouchableOpacity style={styles.locRowPick} onPress={() => handleMapPick(-1)} activeOpacity={0.7}>
+                        <View style={styles.locDotG} />
+                        <View style={styles.locInfo}>
+                          <Text style={styles.locLblG}>Pickup</Text>
+                          <View pointerEvents="none"><TextInput style={styles.locInput} placeholder="Tap to select pickup location..." placeholderTextColor={COLORS.soft} value={String(pickupAddr || '')} editable={false} /></View>
+                        </View>
+                        <View style={styles.locPinBtn}><Ionicons name="location-outline" size={16} color={COLORS.primary} /></View>
+                      </TouchableOpacity>
                     </View>
-                    <View style={styles.locPinBtn}><Ionicons name="location-outline" size={16} color={COLORS.primary} /></View>
-                  </TouchableOpacity>
+
+                    <View style={styles.connectorLine} />
+
+                    <View style={{ zIndex: 1 }}>
+                      <TouchableOpacity style={styles.locRowDrop} onPress={() => handleMapPick(0)} activeOpacity={0.7}>
+                        <View style={styles.locDotR} />
+                        <View style={styles.locInfo}>
+                          <Text style={styles.locLblR}>Drop-off</Text>
+                          <View pointerEvents="none"><TextInput style={styles.locInput} placeholder="Tap to select drop-off location..." placeholderTextColor={COLORS.soft} value={String(currentStop.address || '')} editable={false} /></View>
+                        </View>
+                        <View style={styles.locPinBtnRed}><Ionicons name="location-outline" size={16} color={COLORS.danger} /></View>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 </View>
 
-                {isMulti ? (
-                  <>
+                <View style={styles.card}>
+                  <View style={styles.cardHeader}>
+                    <View>
+                      <Text style={styles.cardTitle}>Recipient Details</Text>
+                      <Text style={styles.cardSub}>Who is receiving this delivery?</Text>
+                    </View>
+                  </View>
+                  <View style={styles.cardBody}>
+                    <View style={styles.row2}>
+                      <View style={styles.fieldHalf}><Text style={styles.fieldLabel}>Name</Text><TextInput style={styles.fieldInput} placeholder="Full name" value={String(currentStop.recipient || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'recipient', t)} /></View>
+                      <View style={styles.fieldHalf}><Text style={styles.fieldLabel}>Phone</Text><TextInput style={styles.fieldInput} placeholder="+353..." keyboardType="phone-pad" value={String(currentStop.phone || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'phone', t)} /></View>
+                    </View>
+
+                    <View style={[styles.fieldFull, { marginTop: 12 }]}>
+                      <Text style={styles.fieldLabel}>Order Number <Text style={{fontWeight: '400', color: COLORS.mute, fontSize: 10, textTransform: 'none'}}>(optional)</Text></Text>
+                      <TextInput style={styles.fieldInput} placeholder="e.g. 20481" value={String(currentStop.ref || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'ref', t)} />
+                    </View>
+                    <View style={[styles.fieldFull, { marginTop: 12 }]}>
+                      <Text style={styles.fieldLabel}>Delivery Instructions</Text>
+                      <TextInput style={[styles.fieldInput, { minHeight: 80, textAlignVertical: 'top' }]} placeholder="e.g. Leave at reception, call buzzer 3..." multiline value={String(currentStop.instructions || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'instructions', t)} />
+                    </View>
+                  </View>
+                </View>
+
+                {/* 🚀 JOB DETAILS CARD */}
+                {selectedService && (
+                  <View style={styles.card}>
+                    <View style={styles.cardHeader}>
+                      <View>
+                        <Text style={styles.cardTitle}>Job Details</Text>
+                        <Text style={styles.cardSub}>{selectedService.mode === 'desc' ? 'Tell us about the job' : 'What are we moving?'}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.cardBody}>
+                      {selectedService.mode === 'desc' ? (
+                        <View style={{ marginBottom: 16 }}>
+                          <Text style={styles.fieldLabel}>Job Description</Text>
+                          <TextInput style={[styles.fieldInput, { minHeight: 120, textAlignVertical: 'top' }]} placeholder="Describe what you need done, e.g. clear a two-bedroom house..." multiline value={String(currentStop.jobDescription || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'jobDescription', t)} />
+                        </View>
+                      ) : (
+                        renderItemsTable(0)
+                      )}
+
+                      <View style={styles.sdivRow}><Text style={styles.sdivText}>Total Weight (Approx)</Text></View>
+                      <View style={styles.row2}>
+                        <View style={styles.fieldHalf}>
+                          <Text style={styles.fieldLabel}>Total Weight (kg)</Text>
+                          <View style={styles.weightStepperContainer}>
+                            <TouchableOpacity style={styles.stepperBtn} onPress={() => adjustWeight(0, -1)}><Ionicons name="remove" size={16} color={COLORS.ink} /></TouchableOpacity>
+                            <TextInput style={styles.weightStepperInput} keyboardType="numeric" value={String(currentStop.weight ?? 45)} onChangeText={(t) => handleUpdateStopSafe(0, 'weight', parseInt(t) || 0)} />
+                            <TouchableOpacity style={styles.stepperBtn} onPress={() => adjustWeight(0, 1)}><Ionicons name="add" size={16} color={COLORS.ink} /></TouchableOpacity>
+                          </View>
+                        </View>
+                        <View style={[styles.fieldHalf, { justifyContent: 'flex-end', paddingBottom: 4 }]}><Text style={{ fontSize: 10, color: COLORS.soft, lineHeight: 14 }}>Approximate combined weight of all items in this delivery.</Text></View>
+                      </View>
+                    </View>
+                  </View>
+                )}
+              </>
+            ) : (
+              <>
+                <View style={styles.card}>
+                  <View style={styles.cardHeader}>
+                    <View>
+                      <Text style={styles.cardTitle}>Stops</Text>
+                      <Text style={styles.cardSub}>Each stop can have different items and services</Text>
+                    </View>
+                    <Text style={styles.stopCount}>{(stops || []).length} stops</Text>
+                  </View>
+                  <View style={styles.cardBody}>
+                    <TouchableOpacity style={styles.mapStrip} onPress={() => handleMapPick(-1)} activeOpacity={0.9}>
+                      <View style={styles.mapBgReal}>
+                        <View style={styles.mapRoadMain} />
+                        <View style={styles.mapRouteLine} />
+                        <View style={styles.mapPinsWrap}>
+                          <View style={styles.mapPinGroup}>
+                            <View style={[styles.mapPinDotReal, styles.mapPinPickup]}><Text style={styles.mapPinLetter}>P</Text></View>
+                            <Text style={styles.mapPinTag}>Pickup</Text>
+                          </View>
+                          {(stops || []).map((_: any, idx: number) => (
+                            <View key={idx} style={styles.mapPinGroup}>
+                              <View style={[styles.mapPinDotReal, styles.mapPinStop]}><Text style={styles.mapPinLetter}>{idx + 1}</Text></View>
+                              <Text style={styles.mapPinTag}>Stop {idx + 1}</Text>
+                            </View>
+                          ))}
+                          <View style={styles.mapPinGroup}>
+                            <View style={[styles.mapPinDotReal, styles.mapPinDropoff]}><Text style={styles.mapPinLetter}>D</Text></View>
+                            <Text style={styles.mapPinTag}>Drop-off</Text>
+                          </View>
+                        </View>
+                      </View>
+                      <View style={styles.mapEditBtn}><Ionicons name="map-outline" size={12} color={COLORS.primary} /><Text style={styles.mapEditText}>Edit map</Text></View>
+                    </TouchableOpacity>
+
+                    <View style={{ zIndex: 1 }}>
+                      <TouchableOpacity style={styles.locRowPick} onPress={() => handleMapPick(-1)} activeOpacity={0.7}>
+                        <View style={styles.locDotG} />
+                        <View style={styles.locInfo}>
+                          <Text style={styles.locLblG}>Collection</Text>
+                          <View pointerEvents="none"><TextInput style={styles.locInput} placeholder="Tap to select collection location..." placeholderTextColor={COLORS.soft} value={String(pickupAddr || '')} editable={false} /></View>
+                        </View>
+                        <View style={styles.locPinBtn}><Ionicons name="location-outline" size={16} color={COLORS.primary} /></View>
+                      </TouchableOpacity>
+                    </View>
+
                     <View style={styles.stopsWrap}>
                       {(stops || []).map((stop: any, idx: number) => {
                         const expanded = expandedStopIdx === idx;
@@ -1503,7 +1583,7 @@ export default function HomeScreen() {
                                     <View>
                                       <View style={styles.stopCatsGrid}>
                                         {CATEGORIES_MULTI.map((cat) => {
-                                          const compatible = (SERVICES_MULTI[cat.id] || []).length > 0;
+                                          const compatible = (SERVICES_MULTI[cat.id] || []).some(s => s.v.includes(localVanType));
                                           const isActive = activeCat === cat.id;
                                           return (
                                             <TouchableOpacity 
@@ -1521,7 +1601,7 @@ export default function HomeScreen() {
                                       {/* THE INLINE DROPDOWN LIST */}
                                       {activeCat && (
                                         <ScrollView style={styles.stopSvcScroll} nestedScrollEnabled={true}>
-                                          {(SERVICES_MULTI[activeCat] || []).map((svc) => (
+                                          {(SERVICES_MULTI[activeCat] || []).filter(s => s.v.includes(localVanType)).map((svc) => (
                                             <TouchableOpacity 
                                               key={svc.id} 
                                               style={styles.stopSvcItem} 
@@ -1584,85 +1664,8 @@ export default function HomeScreen() {
                       <Ionicons name="add" size={16} color={COLORS.soft} />
                       <Text style={styles.addStopBtnText}>Add another drop-off stop</Text>
                     </TouchableOpacity>
-                  </>
-                ) : (
-                  <>
-                    <View style={styles.connectorLine} />
-                    <View style={{ zIndex: 1 }}>
-                      <TouchableOpacity style={styles.locRowDrop} onPress={() => handleMapPick(0)} activeOpacity={0.7}>
-                        <View style={styles.locDotR} />
-                        <View style={styles.locInfo}>
-                          <Text style={styles.locLblR}>Drop-off</Text>
-                          <View pointerEvents="none"><TextInput style={styles.locInput} placeholder="Tap to select drop-off location..." placeholderTextColor={COLORS.soft} value={String(currentStop.address || '')} editable={false} /></View>
-                        </View>
-                        <View style={styles.locPinBtnRed}><Ionicons name="location-outline" size={16} color={COLORS.danger} /></View>
-                      </TouchableOpacity>
-                    </View>
-                  </>
-                )}
-              </View>
-            </View>
-
-            {/* Recipient Details & Job Details for SINGLE DROP ONLY */}
-            {!isMulti && (
-              <>
-                <View style={styles.card}>
-                  <View style={styles.cardHeader}>
-                    <View>
-                      <Text style={styles.cardTitle}>Recipient Details</Text>
-                      <Text style={styles.cardSub}>Who is receiving this delivery?</Text>
-                    </View>
-                  </View>
-                  <View style={styles.cardBody}>
-                    <View style={styles.row2}>
-                      <View style={styles.fieldHalf}><Text style={styles.fieldLabel}>Name</Text><TextInput style={styles.fieldInput} placeholder="Full name" value={String(currentStop.recipient || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'recipient', t)} /></View>
-                      <View style={styles.fieldHalf}><Text style={styles.fieldLabel}>Phone</Text><TextInput style={styles.fieldInput} placeholder="+353..." keyboardType="phone-pad" value={String(currentStop.phone || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'phone', t)} /></View>
-                    </View>
-
-                    <View style={[styles.fieldFull, { marginTop: 12 }]}>
-                      <Text style={styles.fieldLabel}>Order Number <Text style={{fontWeight: '400', color: COLORS.mute, fontSize: 10, textTransform: 'none'}}>(optional)</Text></Text>
-                      <TextInput style={styles.fieldInput} placeholder="e.g. 20481" value={String(currentStop.ref || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'ref', t)} />
-                    </View>
-                    <View style={[styles.fieldFull, { marginTop: 12 }]}>
-                      <Text style={styles.fieldLabel}>Delivery Instructions</Text>
-                      <TextInput style={[styles.fieldInput, { minHeight: 80, textAlignVertical: 'top' }]} placeholder="e.g. Leave at reception, call buzzer 3..." multiline value={String(currentStop.instructions || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'instructions', t)} />
-                    </View>
                   </View>
                 </View>
-
-                {selectedService && (
-                  <View style={styles.card}>
-                    <View style={styles.cardHeader}>
-                      <View>
-                        <Text style={styles.cardTitle}>Job Details</Text>
-                        <Text style={styles.cardSub}>{selectedService.mode === 'desc' ? 'Tell us about the job' : 'What are we moving?'}</Text>
-                      </View>
-                    </View>
-                    <View style={styles.cardBody}>
-                      {selectedService.mode === 'desc' ? (
-                        <View style={{ marginBottom: 16 }}>
-                          <Text style={styles.fieldLabel}>Job Description</Text>
-                          <TextInput style={[styles.fieldInput, { minHeight: 120, textAlignVertical: 'top' }]} placeholder="Describe what you need done, e.g. clear a two-bedroom house..." multiline value={String(currentStop.jobDescription || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'jobDescription', t)} />
-                        </View>
-                      ) : (
-                        renderItemsTable(0)
-                      )}
-
-                      <View style={styles.sdivRow}><Text style={styles.sdivText}>Total Weight (Approx)</Text></View>
-                      <View style={styles.row2}>
-                        <View style={styles.fieldHalf}>
-                          <Text style={styles.fieldLabel}>Total Weight (kg)</Text>
-                          <View style={styles.weightStepperContainer}>
-                            <TouchableOpacity style={styles.stepperBtn} onPress={() => adjustWeight(0, -1)}><Ionicons name="remove" size={16} color={COLORS.ink} /></TouchableOpacity>
-                            <TextInput style={styles.weightStepperInput} keyboardType="numeric" value={String(currentStop.weight ?? 45)} onChangeText={(t) => handleUpdateStopSafe(0, 'weight', parseInt(t) || 0)} />
-                            <TouchableOpacity style={styles.stepperBtn} onPress={() => adjustWeight(0, 1)}><Ionicons name="add" size={16} color={COLORS.ink} /></TouchableOpacity>
-                          </View>
-                        </View>
-                        <View style={[styles.fieldHalf, { justifyContent: 'flex-end', paddingBottom: 4 }]}><Text style={{ fontSize: 10, color: COLORS.soft, lineHeight: 14 }}>Approximate combined weight of all items in this delivery.</Text></View>
-                      </View>
-                    </View>
-                  </View>
-                )}
               </>
             )}
 
@@ -1695,8 +1698,8 @@ export default function HomeScreen() {
                     <Text style={{ fontSize: 38, fontWeight: '900', color: COLORS.forest, marginVertical: 16, letterSpacing: 6 }}>{activeBooking.delivery_pin || activeBooking.pin || "0000"}</Text>
                     <Text style={{ fontSize: 16, color: COLORS.textMuted, textAlign: 'center', marginTop: 10 }}>Read this PIN to your driver, or simply tap below to confirm you have received your items.</Text>
                   </View>
-                  <TouchableOpacity style={[globalStyles.btn, { backgroundColor: COLORS.success, marginBottom: 12 }]} onPress={handleConfirmDelivery}><Text style={globalStyles.btnText}>Yes, I received my items</Text></TouchableOpacity>
-                  <TouchableOpacity style={[globalStyles.btn, { backgroundColor: COLORS.dangerSoft, borderWidth: 1, borderColor: COLORS.danger }]} onPress={() => Alert.alert("Report Issue", "Support has been notified.")}><Text style={[globalStyles.btnText, { color: COLORS.danger }]}>No, I don't have them</Text></TouchableOpacity>
+                  <TouchableOpacity style={[globalStyles.primaryButton, { backgroundColor: COLORS.success, marginBottom: 12 }]} onPress={handleConfirmDelivery}><Text style={globalStyles.buttonText}>Yes, I received my items</Text></TouchableOpacity>
+                  <TouchableOpacity style={[globalStyles.primaryButton, { backgroundColor: COLORS.dangerSoft, borderWidth: 1, borderColor: COLORS.danger }]} onPress={() => Alert.alert("Report Issue", "Support has been notified.")}><Text style={[globalStyles.buttonText, { color: COLORS.danger }]}>No, I don't have them</Text></TouchableOpacity>
                 </View>
               ) : (
                 <>
@@ -1875,6 +1878,7 @@ export default function HomeScreen() {
             {quoteData ? (
               <>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}><Text style={{ color: COLORS.soft, fontSize: 15 }}>Total Distance:</Text><Text style={{ fontWeight: '700', fontSize: 15 }}>{safePrice(quoteData.distance_km || quoteData.distance).toFixed(2)} km</Text></View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}><Text style={{ color: COLORS.soft, fontSize: 15 }}>Van Type:</Text><Text style={{ fontWeight: '700', fontSize: 15, textTransform: 'capitalize' }}>{quoteData.van_type}</Text></View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}><Text style={{ color: COLORS.soft, fontSize: 15 }}>Est. Time:</Text><Text style={{ fontWeight: '700', fontSize: 15 }}>{quoteData.duration_min} mins</Text></View>
                 <View style={{ borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 16, marginBottom: 24, alignItems: 'center' }}><Text style={{ fontSize: 32, fontWeight: '800', color: COLORS.ink, textAlign: 'center' }}>€{safePrice(quoteData.final_price ?? quoteData.price).toFixed(2)}</Text><Text style={{ textAlign: 'center', color: COLORS.soft, fontSize: 13, marginTop: 4 }}>Includes taxes & fees</Text></View>
                 <TouchableOpacity style={[globalStyles.primaryButton, { backgroundColor: COLORS.primary }]} onPress={confirmAndPayAndCreateBooking} disabled={creatingBooking}>{creatingBooking ? <ActivityIndicator color="#fff" /> : <Text style={globalStyles.buttonText}>Pay & Book Now</Text>}</TouchableOpacity>
@@ -1892,6 +1896,7 @@ export default function HomeScreen() {
 
       {/* 8. LIVE CHAT TRIGGER & MODAL */}
       <TouchableOpacity onPress={() => setChatVisible(true)} style={{ position: 'absolute', right: 18, bottom: 90, width: 60, height: 60, borderRadius: 30, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', elevation: 8, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8 }}><Ionicons name="chatbubbles" size={26} color="#fff" /></TouchableOpacity>
+
       <ChatSupportModal visible={chatVisible} onClose={() => setChatVisible(false)} user={user} activeBooking={activeBooking} sendSupportMessage={sendSupportMessage} createSupportTicket={createSupportTicket} />
       
       {/* 🚀 THE BOTTOM SHEET MODAL (Single Drop Only) */}
@@ -1906,7 +1911,7 @@ export default function HomeScreen() {
             </View>
             <ScrollView style={{ maxHeight: SCREEN_HEIGHT * 0.6 }}>
               {visibleSheetServices.length === 0 ? (
-                <Text style={styles.emptyText}>No matching services available.</Text>
+                <Text style={styles.emptyText}>No matching services for this van type.</Text>
               ) : (
                 visibleSheetServices.map((svc) => (
                   <TouchableOpacity key={svc.id} style={[styles.sheetItem, selectedService?.id === svc.id && styles.sheetItemSel]} onPress={() => selectService(svc)} activeOpacity={0.7}>
@@ -1916,7 +1921,6 @@ export default function HomeScreen() {
                       <Text style={styles.shiDesc}>{svc.desc}</Text>
                     </View>
                     <View style={styles.shiRight}>
-                      <Text style={styles.shiPrice}>{svc.price}</Text>
                       <View style={[styles.shiRadio, selectedService?.id === svc.id && styles.shiRadioSel]}>{selectedService?.id === svc.id && <View style={styles.shiRadioDot} />}</View>
                     </View>
                   </TouchableOpacity>
@@ -1927,10 +1931,10 @@ export default function HomeScreen() {
         </View>
       </Modal>
 
-      {/* 🚀 THE NEW MAP MODAL WITH KEYBOARD SHIFT FIX */}
+      {/* 🚀 THE NEW MAP MODAL */}
       <Modal visible={mapPickTarget !== null} animationType="slide" transparent onRequestClose={() => setMapPickTarget(null)}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: 'rgba(10,22,18,0.5)', justifyContent: 'flex-end' }}>
-          <View style={{ backgroundColor: COLORS.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: 'hidden', maxHeight: '90%', paddingBottom: Platform.OS === 'ios' ? 100 : 80 }}>
+          <View style={{ backgroundColor: COLORS.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: 'hidden', maxHeight: '90%' }}>
             
             {/* Modal Header */}
             <View style={{ padding: 16, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: COLORS.border }}>
@@ -1979,6 +1983,8 @@ export default function HomeScreen() {
                     keyboardShouldPersistTaps="handled"
                     style={[styles.suggestionBox, { position: 'absolute', top: 50, left: 0, right: 0, zIndex: 999, maxHeight: 220 }]}
                   >
+                    {/* 🚀 FIXED: Changed to ScrollView, added maxHeight, and handled taps over keyboard */}
+
                     {((mapPickTarget === -1 ? pickupSuggestions : dropoffSuggestions) || []).map((item: any, i: number) => {
                       const displayTitle = item?.display_name || item?.formatted || item?.description || item?.name || (typeof item === 'string' ? item : '');
                       return (
@@ -2005,8 +2011,9 @@ export default function HomeScreen() {
               </View>
             </View>
 
+
             {/* Buttons Footer */}
-            <View style={{ flexDirection: 'row', paddingHorizontal: 18, gap: 10, marginTop: 16, marginBottom: 20 }}>
+            <View style={{ flexDirection: 'row', paddingHorizontal: 18, paddingBottom: Math.max(insets.bottom, 20), gap: 10, marginTop: 16 }}>
               <TouchableOpacity style={{ paddingVertical: 14, paddingHorizontal: 18, borderRadius: 10, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.white, alignItems: 'center', justifyContent: 'center' }} onPress={() => setMapPickTarget(null)}>
                 <Text style={{ fontSize: 14, fontWeight: '600', color: COLORS.mid }}>Cancel</Text>
               </TouchableOpacity>
@@ -2081,7 +2088,6 @@ const styles = StyleSheet.create({
   lockedBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border, paddingVertical: 2, paddingHorizontal: 8, borderRadius: 10 },
   lockedBadgeText: { fontSize: 9, fontWeight: '700', color: COLORS.mute, letterSpacing: 0.5 },
 
-  // Operator UI
   opRow: { flexDirection: 'row', gap: 6, marginBottom: 0 },
   opBtn: { flex: 1, alignItems: 'center', gap: 5, paddingVertical: 9, paddingHorizontal: 6, borderWidth: 1.5, borderColor: COLORS.border, borderRadius: 10, backgroundColor: COLORS.white, position: 'relative' },
   opBtnOn: { borderColor: COLORS.primary, backgroundColor: COLORS.primarySoft },
@@ -2159,7 +2165,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, 
     borderBottomColor: COLORS.border, 
     paddingVertical: 6, 
-    paddingHorizontal: 8 
+    paddingHorizontal: 8
   },
   tdInput: { fontSize: 12, color: COLORS.ink, paddingVertical: 8, paddingHorizontal: 8 },
   tdDel: { width: 22, height: 22, alignItems: 'center', justifyContent: 'center', borderRadius: 4 },
@@ -2271,7 +2277,7 @@ const styles = StyleSheet.create({
   mapPinDropoff: { backgroundColor: COLORS.danger },
   mapPinLetter: { color: COLORS.white, fontSize: 7, fontWeight: '700', transform: [{ rotate: '45deg' }] },
   mapPinTag: { fontSize: 8, fontWeight: '600', color: COLORS.ink, backgroundColor: COLORS.white, paddingHorizontal: 4, paddingVertical: 1, borderRadius: 3, overflow: 'hidden', marginTop: 3 },
-  
+
   grpGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 4 },
   grpCard: { width: '48%', backgroundColor: COLORS.bg, borderWidth: 1.5, borderColor: COLORS.border, borderRadius: 14, paddingVertical: 16, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', gap: 8, position: 'relative' },
   grpCardSel: { borderColor: COLORS.primary, backgroundColor: COLORS.primarySoft, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.14, shadowRadius: 10, elevation: 4 },
