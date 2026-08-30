@@ -1935,8 +1935,8 @@ export default function HomeScreen() {
 
       {/* 🚀 THE NEW MAP MODAL */}
       <Modal visible={mapPickTarget !== null} animationType="slide" transparent onRequestClose={() => setMapPickTarget(null)}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: 'rgba(10,22,18,0.5)', justifyContent: 'flex-end' }}>
-          <View style={{ backgroundColor: COLORS.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: 'hidden', maxHeight: '90%' }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0} style={{ flex: 1, backgroundColor: 'rgba(10,22,18,0.5)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: COLORS.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: 'hidden', maxHeight: '85%' }}>
             
             {/* Modal Header */}
             <View style={{ padding: 16, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: COLORS.border }}>
@@ -1953,7 +1953,7 @@ export default function HomeScreen() {
             </View>
 
             {/* Map View Box */}
-            <View style={{ height: 260, position: 'relative' }}>
+            <View style={{ height: 200, position: 'relative' }}>
               <MapView 
                 style={{ flex: 1 }} 
                 initialRegion={DUBLIN_PICK_REGION} 
@@ -2015,7 +2015,7 @@ export default function HomeScreen() {
 
 
             {/* Buttons Footer */}
-            <View style={{ flexDirection: 'row', paddingHorizontal: 18, paddingBottom: 100, gap: 10, marginTop: 16 }}>
+            <View style={{ flexDirection: 'row', paddingHorizontal: 18, paddingBottom: Math.max(insets.bottom, 24), gap: 10, marginTop: 16 }}>
               <TouchableOpacity style={{ paddingVertical: 14, paddingHorizontal: 18, borderRadius: 10, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.white, alignItems: 'center', justifyContent: 'center' }} onPress={() => setMapPickTarget(null)}>
                 <Text style={{ fontSize: 14, fontWeight: '600', color: COLORS.mid }}>Cancel</Text>
               </TouchableOpacity>
