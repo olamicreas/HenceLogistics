@@ -376,16 +376,21 @@ export const PulsingQrButton = ({ onPress, isActive }: { onPress: () => void, is
   const pulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    let anim: Animated.CompositeAnimation | null = null;
     if (isActive) {
-      Animated.loop(
+      anim = Animated.loop(
         Animated.sequence([
           Animated.timing(pulse, { toValue: 1.15, duration: 800, useNativeDriver: true }),
           Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: true }),
         ])
-      ).start();
+      );
+      anim.start();
     } else {
       pulse.setValue(1);
     }
+    return () => {
+      if (anim) anim.stop();
+    };
   }, [isActive]);
 
   return (
@@ -412,6 +417,9 @@ export const PremiumQrModal = ({ visible, onClose, stopIndex, stopAddress, qrVal
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    let loop1: Animated.CompositeAnimation | null = null;
+    let loop2: Animated.CompositeAnimation | null = null;
+
     if (visible) {
       Animated.spring(slideAnim, {
         toValue: 0,
@@ -419,19 +427,21 @@ export const PremiumQrModal = ({ visible, onClose, stopIndex, stopAddress, qrVal
         bounciness: 8,
       }).start();
 
-      Animated.loop(
+      loop1 = Animated.loop(
         Animated.sequence([
           Animated.timing(laserAnim, { toValue: 200, duration: 1500, useNativeDriver: true }),
           Animated.timing(laserAnim, { toValue: 0, duration: 1500, useNativeDriver: true }),
         ])
-      ).start();
+      );
+      loop1.start();
 
-      Animated.loop(
+      loop2 = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, { toValue: 1.1, duration: 1000, useNativeDriver: true }),
           Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
         ])
-      ).start();
+      );
+      loop2.start();
     } else {
       Animated.timing(slideAnim, {
         toValue: height,
@@ -439,6 +449,11 @@ export const PremiumQrModal = ({ visible, onClose, stopIndex, stopAddress, qrVal
         useNativeDriver: true,
       }).start();
     }
+
+    return () => {
+      if (loop1) loop1.stop();
+      if (loop2) loop2.stop();
+    };
   }, [visible]);
 
   if (!visible && slideAnim === height) return null;
