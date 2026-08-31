@@ -1080,6 +1080,7 @@ export default function HomeScreen() {
 
   const handleMapPick = (index: number) => { 
     Keyboard.dismiss();
+    setActiveSearchIndex(null);
     setMapPickTarget(index); 
     setTempAddress(''); 
     setTempCoord(null);
@@ -1378,24 +1379,6 @@ export default function HomeScreen() {
                     </View>
                   </View>
                   <View style={styles.cardBody}>
-                    <TouchableOpacity style={styles.mapStrip} onPress={() => handleMapPick(pickupAddr ? 0 : -1)} activeOpacity={0.9}>
-                      <View style={styles.mapBgReal}>
-                        <View style={styles.mapRoadMain} />
-                        <View style={styles.mapRouteLine} />
-                        <View style={styles.mapPinsWrap}>
-                          <View style={styles.mapPinGroup}>
-                            <View style={[styles.mapPinDotReal, styles.mapPinPickup]}><Text style={styles.mapPinLetter}>P</Text></View>
-                            <Text style={styles.mapPinTag}>Pickup</Text>
-                          </View>
-                          <View style={styles.mapPinGroup}>
-                            <View style={[styles.mapPinDotReal, styles.mapPinDropoff]}><Text style={styles.mapPinLetter}>D</Text></View>
-                            <Text style={styles.mapPinTag}>Drop-off</Text>
-                          </View>
-                        </View>
-                      </View>
-                      <View style={styles.mapEditBtn}><Ionicons name="map-outline" size={12} color={COLORS.primary} /><Text style={styles.mapEditText}>Edit map</Text></View>
-                    </TouchableOpacity>
-
                     <View style={{ zIndex: 1 }}>
                       <TouchableOpacity style={styles.locRowPick} onPress={() => handleMapPick(-1)} activeOpacity={0.7}>
                         <View style={styles.locDotG} />
@@ -1492,30 +1475,6 @@ export default function HomeScreen() {
                     <Text style={styles.stopCount}>{(stops || []).length} stops</Text>
                   </View>
                   <View style={styles.cardBody}>
-                    <TouchableOpacity style={styles.mapStrip} onPress={() => handleMapPick(pickupAddr ? 0 : -1)} activeOpacity={0.9}>
-                      <View style={styles.mapBgReal}>
-                        <View style={styles.mapRoadMain} />
-                        <View style={styles.mapRouteLine} />
-                        <View style={styles.mapPinsWrap}>
-                          <View style={styles.mapPinGroup}>
-                            <View style={[styles.mapPinDotReal, styles.mapPinPickup]}><Text style={styles.mapPinLetter}>P</Text></View>
-                            <Text style={styles.mapPinTag}>Pickup</Text>
-                          </View>
-                          {(stops || []).map((_: any, idx: number) => (
-                            <View key={idx} style={styles.mapPinGroup}>
-                              <View style={[styles.mapPinDotReal, styles.mapPinStop]}><Text style={styles.mapPinLetter}>{idx + 1}</Text></View>
-                              <Text style={styles.mapPinTag}>Stop {idx + 1}</Text>
-                            </View>
-                          ))}
-                          <View style={styles.mapPinGroup}>
-                            <View style={[styles.mapPinDotReal, styles.mapPinDropoff]}><Text style={styles.mapPinLetter}>D</Text></View>
-                            <Text style={styles.mapPinTag}>Drop-off</Text>
-                          </View>
-                        </View>
-                      </View>
-                      <View style={styles.mapEditBtn}><Ionicons name="map-outline" size={12} color={COLORS.primary} /><Text style={styles.mapEditText}>Edit map</Text></View>
-                    </TouchableOpacity>
-
                     <View style={{ zIndex: 1 }}>
                       <TouchableOpacity style={styles.locRowPick} onPress={() => handleMapPick(-1)} activeOpacity={0.7}>
                         <View style={styles.locDotG} />
@@ -1940,8 +1899,8 @@ export default function HomeScreen() {
 
       {/* 🚀 THE NEW MAP MODAL */}
       <Modal visible={mapPickTarget !== null} animationType="slide" transparent onRequestClose={() => setMapPickTarget(null)}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0} style={{ flex: 1, backgroundColor: 'rgba(10,22,18,0.5)', justifyContent: 'flex-end' }}>
-          <View style={{ backgroundColor: COLORS.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: 'hidden', maxHeight: '85%' }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0} style={{ flex: 1, backgroundColor: 'rgba(10,22,18,0.5)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: COLORS.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: 'hidden', flexShrink: 1, maxHeight: '90%' }}>
             
             {/* Modal Header */}
             <View style={{ padding: 16, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: COLORS.border }}>
@@ -1958,7 +1917,7 @@ export default function HomeScreen() {
             </View>
 
             {/* Map View Box */}
-            <View style={{ height: activeSearchIndex === mapPickTarget ? 0 : 200, overflow: 'hidden', position: 'relative' }}>
+            <View style={{ flexShrink: 1, flexGrow: activeSearchIndex === mapPickTarget ? 0 : 1, height: activeSearchIndex === mapPickTarget ? 0 : undefined, maxHeight: 260, minHeight: activeSearchIndex === mapPickTarget ? 0 : 120, overflow: 'hidden', position: 'relative' }}>
               <MapView 
                 style={{ flex: 1 }} 
                 initialRegion={DUBLIN_PICK_REGION} 
