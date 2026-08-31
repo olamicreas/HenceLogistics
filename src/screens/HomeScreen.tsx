@@ -749,7 +749,12 @@ export default function HomeScreen() {
         if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
         const rawData = await response.json();
         const currentJob = activeBookingRef.current;
-        const data = (rawData || []).filter((j: any) => !['escalated', 'cancelled', 'failed'].includes(String(j.status).toLowerCase()));
+        const data = (rawData || []).filter((j: any) => {
+          const s = String(j.status).toLowerCase().replace(/[-_ .]/g, '');
+          if (['escalated', 'cancelled', 'failed'].includes(s)) return false;
+          if (['completed', 'delivered', 'paid', 'awaitingconfirmation'].includes(s) && (!currentJob || currentJob.id !== j.id)) return false;
+          return true;
+        });
         if (data && data.length > 0) {
           let liveJob = data[0];
           if (currentJob) {
@@ -1953,7 +1958,7 @@ export default function HomeScreen() {
             </View>
 
             {/* Map View Box */}
-            <View style={{ height: 200, position: 'relative' }}>
+            <View style={{ height: activeSearchIndex === mapPickTarget ? 0 : 200, overflow: 'hidden', position: 'relative' }}>
               <MapView 
                 style={{ flex: 1 }} 
                 initialRegion={DUBLIN_PICK_REGION} 
@@ -1983,7 +1988,7 @@ export default function HomeScreen() {
                 {activeSearchIndex === mapPickTarget && (
                   <ScrollView 
                     keyboardShouldPersistTaps="handled"
-                    style={[styles.suggestionBox, { position: 'absolute', top: 50, left: 0, right: 0, zIndex: 999, maxHeight: 220 }]}
+                    style={[styles.suggestionBox, { position: 'absolute', top: 50, left: 0, right: 0, zIndex: 999, maxHeight: 400 }]}
                   >
                     {/* 🚀 FIXED: Changed to ScrollView, added maxHeight, and handled taps over keyboard */}
 
