@@ -80,7 +80,7 @@ function SupportScreen({ onBack }: { onBack: () => void }) {
   );
 }
 
-function SettingsScreen({ onBack }: { onBack: () => void }) {
+function SettingsScreen({ logout, onBack }: { logout: () => void; onBack: () => void }) {
   const [push, setPush] = useState(true);
   const [email, setEmail] = useState(true);
   const [sms, setSms] = useState(false);
@@ -218,7 +218,7 @@ export default function AppRoot() {
           {token && currentScreen === 'account-hub' && <AccountHubScreen />}
           {token && currentScreen === 'profile' && <ProfileScreen />}
           {token && currentScreen === 'support' && <SupportScreen onBack={() => setCurrentScreen('account-hub')} />}
-          {token && currentScreen === 'settings' && <SettingsScreen onBack={() => setCurrentScreen('account-hub')} />}
+          {token && currentScreen === 'settings' && <SettingsScreen logout={logout} onBack={() => setCurrentScreen('account-hub')} />}
           {token && currentScreen === 'delete' && <DeleteScreen logout={logout} onBack={() => setCurrentScreen('account-hub')} />}
           {token && currentScreen === 'subscription' && <SubscriptionScreen />}
 
