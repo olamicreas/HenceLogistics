@@ -99,37 +99,30 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
             <Switch value={push} onValueChange={setPush} trackColor={{ true: '#1A7A4A', false: '#D4E2DA' }} />
           </View>
 
-          <View style={localStyles.setRow}>
+          <View style={[localStyles.setRow, { borderBottomWidth: 0 }]}>
             <View style={localStyles.supInfo}>
               <Text style={localStyles.supTitle}>Email Updates</Text>
               <Text style={localStyles.supSub}>Receipts and account notices</Text>
             </View>
             <Switch value={email} onValueChange={setEmail} trackColor={{ true: '#1A7A4A', false: '#D4E2DA' }} />
           </View>
-
-          <View style={[localStyles.setRow, { borderBottomWidth: 0 }]}>
-            <View style={localStyles.supInfo}>
-              <Text style={localStyles.supTitle}>SMS Updates</Text>
-              <Text style={localStyles.supSub}>Text alerts for delivery ETA</Text>
-            </View>
-            <Switch value={sms} onValueChange={setSms} trackColor={{ true: '#1A7A4A', false: '#D4E2DA' }} />
-          </View>
         </View>
 
-        <Text style={localStyles.sdiv}>Legal</Text>
+        <Text style={localStyles.sdiv}>Support & Legal</Text>
         <View style={localStyles.card}>
-          {/* 🔥 FIXED: Added Linking to external website so users do not get stuck */}
-          <TouchableOpacity style={localStyles.supRow} onPress={() => Linking.openURL('https://hence.com/privacy')}>
-            <Text style={[localStyles.supTitle, { flex: 1 }]}>Privacy Policy</Text>
-            <Ionicons name="chevron-forward" size={16} color="#B8CEC3" />
+          <TouchableOpacity style={localStyles.setRow} onPress={() => Linking.openURL('https://hencedelivery.com/help')}>
+            <Text style={localStyles.supTitle}>Help Center</Text>
+            <Ionicons name="chevron-forward" size={20} color="#7A9080" />
           </TouchableOpacity>
-          <TouchableOpacity style={[localStyles.supRow, { borderBottomWidth: 0 }]} onPress={() => Linking.openURL('https://hence.com/terms')}>
-            <Text style={[localStyles.supTitle, { flex: 1 }]}>Terms of Service</Text>
-            <Ionicons name="chevron-forward" size={16} color="#B8CEC3" />
+          <TouchableOpacity style={[localStyles.setRow, { borderBottomWidth: 0 }]} onPress={() => Linking.openURL('https://hencedelivery.com/privacy')}>
+            <Text style={localStyles.supTitle}>Privacy Policy</Text>
+            <Ionicons name="chevron-forward" size={20} color="#7A9080" />
           </TouchableOpacity>
         </View>
 
-        <Text style={{ textAlign: 'center', fontSize: 11, color: '#B8CEC3', marginVertical: 16 }}>Hence Delivery · App Version 1.0.0</Text>
+        <TouchableOpacity style={localStyles.loBtn} onPress={logout}>
+          <Text style={localStyles.loTx}>Log Out</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
