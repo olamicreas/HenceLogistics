@@ -1163,6 +1163,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         stop_count: validStops.length,
         total_weight: totalWeight,
         priority: 'standard', 
+        
+        final_price: quote.final_price || quote.price,
+        amount_cents: quote.price_cents || (quote.final_price ? Math.round(quote.final_price * 100) : undefined),
       };
       
 
