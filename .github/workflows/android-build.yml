@@ -1,0 +1,46 @@
+name: Build Android App
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Setup Node"
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: 'npm'
+
+      - name: "Setup Java"
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: "Setup Android SDK"
+        uses: android-actions/setup-android@v3
+
+      - name: "Install Project Dependencies"
+        run: |
+          npm install
+          npx expo install react-native-webview
+          npm install -g eas-cli
+
+      - name: "Build Android Locally on Free Cloud Worker"
+        run: EAS_NO_VCS=1 eas build --platform android --local --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: "Save the .apk / .aab File"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: HenceLogistics-Android
+          path: '*.aab
+*.apk'
