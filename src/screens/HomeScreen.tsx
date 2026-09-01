@@ -1731,14 +1731,24 @@ export default function HomeScreen() {
                                 </React.Fragment>
                               ))}
                             </View>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderTopWidth: 1, borderBottomWidth: 1, borderColor: COLORS.line }}>
-                              <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: '#CFF0E0', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}><Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.forestDark }}>{initials(activeBooking.driver?.full_name || activeBooking.driver_name || 'Driver')}</Text></View>
-                              <View style={{ flex: 1 }}>
-                                <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.ink }}>{activeBooking.driver?.full_name || activeBooking.driver_name || 'Driver Assigned'}</Text>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}><Text style={{ fontSize: 12.5, color: COLORS.textMuted }}>{formatVehicleName(activeBooking.van_type)}</Text><Text style={{ fontSize: 12.5, color: COLORS.textMuted, marginHorizontal: 5 }}>·</Text><Ionicons name="star" size={12} color={COLORS.amber} /><Text style={{ fontSize: 12.5, color: COLORS.textMuted, fontWeight: '600', marginLeft: 3 }}>{activeBooking.driver?.rating_avg ? Number(activeBooking.driver.rating_avg).toFixed(1) : '5.0'}</Text></View>
+                            {isAssigned ? (
+                              <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderTopWidth: 1, borderBottomWidth: 1, borderColor: COLORS.line }}>
+                                <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: '#CFF0E0', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}><Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.forestDark }}>{initials(activeBooking.driver?.full_name || activeBooking.driver_name || 'Driver')}</Text></View>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.ink }}>{activeBooking.driver?.full_name || activeBooking.driver_name || 'Driver'}</Text>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}><Text style={{ fontSize: 12.5, color: COLORS.textMuted }}>{formatVehicleName(activeBooking.van_type)}</Text><Text style={{ fontSize: 12.5, color: COLORS.textMuted, marginHorizontal: 5 }}>·</Text><Ionicons name="star" size={12} color={COLORS.amber} /><Text style={{ fontSize: 12.5, color: COLORS.textMuted, fontWeight: '600', marginLeft: 3 }}>{activeBooking.driver?.rating_avg ? Number(activeBooking.driver.rating_avg).toFixed(1) : '5.0'}</Text></View>
+                                </View>
+                                <TouchableOpacity onPress={() => Linking.openURL(`tel:${activeBooking.driver_phone || activeBooking.driver?.phone}`)} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#E9F7EE', alignItems: 'center', justifyContent: 'center' }}><Ionicons name="call" size={17} color={COLORS.forest} /></TouchableOpacity>
                               </View>
-                              <TouchableOpacity onPress={() => Linking.openURL(`tel:${activeBooking.driver_phone || activeBooking.driver?.phone}`)} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#E9F7EE', alignItems: 'center', justifyContent: 'center' }}><Ionicons name="call" size={17} color={COLORS.forest} /></TouchableOpacity>
-                            </View>
+                            ) : (
+                              <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderTopWidth: 1, borderBottomWidth: 1, borderColor: COLORS.line }}>
+                                <ActivityIndicator size="small" color={COLORS.forest} style={{ marginRight: 12 }} />
+                                <View style={{ flex: 1 }}>
+                                  <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.ink }}>Finding a driver...</Text>
+                                  <Text style={{ fontSize: 12.5, color: COLORS.textMuted, marginTop: 2 }}>Broadcasting to nearby vehicles</Text>
+                                </View>
+                              </View>
+                            )}
                             <View style={{ marginTop: 14, paddingHorizontal: 14, paddingVertical: 12, backgroundColor: COLORS.paper, borderRadius: 14, flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
                               <View style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: `${COLORS.forest}33`, borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4, marginRight: 10 }}><Text style={{ fontSize: 10.5, fontWeight: '700', color: COLORS.forestDark }}>{formatJobType(activeBooking.job_type)}</Text></View>
                               <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: COLORS.ink }}>{(activeBooking?.booking_mode === 'multi' || (activeBooking?.stops?.length > 1)) ? `Multi-Drop · ${activeBooking.stops.length} Stops` : 'Single Drop'}</Text>
