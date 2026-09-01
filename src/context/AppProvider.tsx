@@ -46,7 +46,7 @@ const ENDPOINTS = {
   DRIVER_PROOF_JOB: (jobId: number) => `/driver/jobs/${jobId}/proof`,
   DRIVER_OFFERS: '/driver/offers',
   DRIVER_LOCATION: '/driver/location',
-  DRIVER_RATE: (driverId: number) => `/drivers/${driverId}/rate`,
+  DRIVER_RATE: (driverId: number) => `/driver/${driverId}/rate`,
   DRIVER_PROFILE: (driverId: number) => `/drivers/${driverId}`,
 
   USER_PROFILE_BY_ID: (userId: number) => `/users/${userId}`,
