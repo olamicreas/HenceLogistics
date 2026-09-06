@@ -1641,6 +1641,7 @@ export default function DriverDashboard() {
   const openSmartNav = (lat: number, lon: number) => {
     const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}&travelmode=driving`;
     const appleMapsUrl = `http://maps.apple.com/?daddr=${lat},${lon}&dirflg=d`;
+    const wazeUrl = `https://waze.com/ul?ll=${lat},${lon}&navigate=yes`;
 
     if (Platform.OS === 'ios') {
       Alert.alert(
@@ -1656,6 +1657,10 @@ export default function DriverDashboard() {
             onPress: () => Linking.openURL(googleMapsUrl).catch(() => Alert.alert("Error", "Could not open Google Maps."))
           },
           {
+            text: "Waze",
+            onPress: () => Linking.openURL(wazeUrl).catch(() => Alert.alert("Error", "Could not open Waze."))
+          },
+          {
             text: "Cancel",
             style: "cancel"
           }
@@ -1663,8 +1668,26 @@ export default function DriverDashboard() {
         { cancelable: true }
       );
     } else {
-      // Android defaults directly to Google Maps
-      Linking.openURL(googleMapsUrl).catch(() => Alert.alert("Error", "Could not open map application."));
+      // Android
+      Alert.alert(
+        "Choose Navigation App",
+        "Which map application would you like to use?",
+        [
+          {
+            text: "Google Maps",
+            onPress: () => Linking.openURL(googleMapsUrl).catch(() => Alert.alert("Error", "Could not open Google Maps."))
+          },
+          {
+            text: "Waze",
+            onPress: () => Linking.openURL(wazeUrl).catch(() => Alert.alert("Error", "Could not open Waze."))
+          },
+          {
+            text: "Cancel",
+            style: "cancel"
+          }
+        ],
+        { cancelable: true }
+      );
     }
   };
 
