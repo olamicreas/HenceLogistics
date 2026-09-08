@@ -33,7 +33,7 @@ jobs:
           npm install -g eas-cli
 
       - name: "Build Android Locally on Free Cloud Worker"
-        run: EAS_NO_VCS=1 eas build --platform android --local --non-interactive
+        run: EAS_NO_VCS=1 eas build --platform android --profile preview --local --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
