@@ -42,5 +42,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: HenceLogistics-Android
-          path: '*.aab
-*.apk'
+          path: |
+            *.aab
+            *.apk
