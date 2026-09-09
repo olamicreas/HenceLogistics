@@ -2033,7 +2033,7 @@ export default function DriverDashboard() {
         <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
           
           <View style={{ height: 180, overflow: 'hidden', position: 'relative' }}>
-            {pickup && Platform.OS !== 'android' ? (
+            {pickup ? (
               <MapView
                 ref={mapRef}
                 style={{ flex: 1 }}
@@ -2053,7 +2053,7 @@ export default function DriverDashboard() {
                 {driverLocation && <Marker coordinate={{ latitude: driverLocation.lat, longitude: driverLocation.lon }}><View style={styles.driverPin}><Ionicons name="car" size={16} color="#fff" /></View></Marker>}
                 <Polyline coordinates={routeCoords as any} strokeWidth={4} strokeColor={H_COLORS.forest} lineCap="round" lineJoin="round" />
               </MapView>
-            ) : <View style={{ flex: 1, backgroundColor: '#DCE9DD', alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: '#4a4a4a', fontSize: 12 }}>Map disabled (Missing Google Maps API Key)</Text></View>}
+            ) : <View style={{ flex: 1, backgroundColor: '#DCE9DD' }} />}
 
             <View style={{ position: 'absolute', right: 14, top: 14, backgroundColor: 'rgba(15,31,23,0.85)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}>
               <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700', letterSpacing: 0.5 }}>HNC-{String(activeJob.id).padStart(4, '0')}</Text>
