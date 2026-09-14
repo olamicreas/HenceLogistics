@@ -1447,19 +1447,6 @@ export default function HomeScreen() {
                       ) : (
                         renderItemsTable(0)
                       )}
-
-                      <View style={styles.sdivRow}><Text style={styles.sdivText}>Total Weight (Approx)</Text></View>
-                      <View style={styles.row2}>
-                        <View style={styles.fieldHalf}>
-                          <Text style={styles.fieldLabel}>Total Weight (kg)</Text>
-                          <View style={styles.weightStepperContainer}>
-                            <TouchableOpacity style={styles.stepperBtn} onPress={() => adjustWeight(0, -1)}><Ionicons name="remove" size={16} color={COLORS.ink} /></TouchableOpacity>
-                            <TextInput style={styles.weightStepperInput} keyboardType="numeric" value={String(currentStop.weight ?? 45)} onChangeText={(t) => handleUpdateStopSafe(0, 'weight', parseInt(t) || 0)} />
-                            <TouchableOpacity style={styles.stepperBtn} onPress={() => adjustWeight(0, 1)}><Ionicons name="add" size={16} color={COLORS.ink} /></TouchableOpacity>
-                          </View>
-                        </View>
-                        <View style={[styles.fieldHalf, { justifyContent: 'flex-end', paddingBottom: 4 }]}><Text style={{ fontSize: 10, color: COLORS.soft, lineHeight: 14 }}>Approximate combined weight of all items in this delivery.</Text></View>
-                      </View>
                     </View>
                   </View>
                 )}
