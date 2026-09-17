@@ -1706,6 +1706,7 @@ export default function HomeScreen() {
                         const hasCollected = cleanStatus.includes('pick') || !!activeBooking.picked_up_at || hasEnRoute || hasDelivered;
                         const hasArrivedPickup = cleanStatus.includes('arrivedpickup') || hasCollected;
                         const isAssigned = ['accepted', 'assigned'].includes(cleanStatus) || !!activeBooking.driver_id || hasArrivedPickup;
+                        const isEscalated = cleanStatus.includes('escalated') || cleanStatus.includes('unassigned');
                         const horizSteps = [ { label: 'Collected', icon: 'cube', active: hasCollected }, { label: 'En Route', icon: 'navigate', active: hasEnRoute }, { label: 'Delivered', icon: 'checkmark-circle', active: hasDelivered } ];
                         const vertSteps = [ { label: 'Order Placed', time: shortTime(activeBooking.created_at), done: true }, { label: 'Driver Assigned', time: shortTime(activeBooking.accepted_at), done: isAssigned }, { label: 'Items Collected', time: shortTime(activeBooking.picked_up_at), done: hasCollected }, { label: 'En Route to Drop-off', time: null, done: hasEnRoute }, { label: 'Delivered', time: shortTime(activeBooking.delivered_at), done: hasDelivered }, ];
                         return (
@@ -1718,7 +1719,15 @@ export default function HomeScreen() {
                                 </React.Fragment>
                               ))}
                             </View>
-                            {isAssigned ? (
+                            {isEscalated ? (
+                              <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderTopWidth: 1, borderBottomWidth: 1, borderColor: COLORS.line }}>
+                                <Ionicons name="warning" size={32} color={COLORS.amber} style={{ marginRight: 12 }} />
+                                <View style={{ flex: 1 }}>
+                                  <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.ink }}>High Demand — Pending Review</Text>
+                                  <Text style={{ fontSize: 12.5, color: COLORS.textMuted, marginTop: 2 }}>All drivers are currently busy. Dispatch is reviewing your request.</Text>
+                                </View>
+                              </View>
+                            ) : isAssigned ? (
                               <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderTopWidth: 1, borderBottomWidth: 1, borderColor: COLORS.line }}>
                                 <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: '#CFF0E0', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}><Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.forestDark }}>{initials(activeBooking.driver?.full_name || activeBooking.driver_name || 'Driver')}</Text></View>
                                 <View style={{ flex: 1 }}>

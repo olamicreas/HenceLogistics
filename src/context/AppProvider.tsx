@@ -1430,6 +1430,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
   const logout = async () => {
     try {
+      // Unlink push token on backend before removing local token
+      if (token) {
+        try {
+          await axios.post(`${BASE_URL}/auth/users/me/push-token`, { expo_push_token: "" }, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        } catch (e) {
+          console.log("Failed to clear push token on logout", e);
+        }
+      }
+      
       await AsyncStorage.removeItem('token');
       await AsyncStorage.removeItem('userData'); 
       await AsyncStorage.removeItem('current_booking_id');
