@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppContext } from '../context/AppProvider';
 import { styles } from '../styles';
 
@@ -12,10 +11,8 @@ const COLORS = {
 
 export default function BottomNav() {
   const { bottomTab, setBottomTab, setCurrentScreen } = useAppContext();
-  const insets = useSafeAreaInsets();
-  
-  // Calculate padding based on Android/iOS insets
-  const pb = Platform.OS === 'android' ? Math.max(insets.bottom, 12) : insets.bottom;
+  // Use fixed padding for Android to avoid iOS hook side-effects
+  const pb = Platform.OS === 'android' ? 20 : 0;
 
   const renderItem = (tab: string, label: string, icon: any) => {
     const isActive = bottomTab === tab;
@@ -50,7 +47,7 @@ export default function BottomNav() {
   };
 
   return (
-    <View style={[styles.bottomNav, { paddingBottom: pb }]}>
+    <View style={[styles.bottomNav, Platform.OS === 'android' ? { paddingBottom: pb } : {}]}>
       {renderItem('home', 'Home', 'home-outline')}
       {renderItem('rides', 'Orders', 'car-outline')}
       {/* 🚀 Changed to "Menu" to act as a hub */}

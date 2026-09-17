@@ -38,6 +38,7 @@
     "expo-speech": "~57.0.1",
     "expo-status-bar": "~57.0.1",
     "expo-task-manager": "~57.0.10",
+    "expo-updates": "~57.0.22",
     "react": "19.2.3",
     "react-native": "0.86.2",
     "react-native-chart-kit": "^6.12.0",
