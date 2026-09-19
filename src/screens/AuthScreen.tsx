@@ -125,7 +125,7 @@ function DriverOnboarding({ onExit }: { onExit: () => void }) {
       {/* HEADER */}
       {step < 6 && (
         <View style={obStyles.header}>
-          <View style={[obStyles.topBar, { paddingTop: Platform.OS === 'android' ? Math.max(insets.top, 20) : 0 }]}>
+          <View style={[obStyles.topBar, { paddingTop: Math.max(insets.top, 20) }]}>
             {step > 0 ? (
               <TouchableOpacity style={obStyles.backBtn} onPress={() => setStep(step - 1)}>
                 <Ionicons name="arrow-back" size={18} color="#fff" />

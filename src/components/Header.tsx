@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Modal, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppContext } from '../context/AppProvider';
 import { styles } from '../styles';
 
@@ -20,6 +21,7 @@ export default function Header() {
   if (!token) return null;
 
   const isDriver = user?.role === 'driver';
+  const insets = useSafeAreaInsets();
 
   return (
     <>
@@ -29,7 +31,7 @@ export default function Header() {
           styles.header, 
           { 
             backgroundColor: '#0F1A14', 
-            paddingVertical: 12, 
+            paddingBottom: 12, paddingTop: Math.max(insets.top, 10), 
             borderBottomWidth: 0,
             borderBottomColor: '#E4EBE7', 
           }
@@ -138,7 +140,7 @@ export default function Header() {
 }
 
 const ddStyles = StyleSheet.create({
-  item: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 12, borderRadius: 9 },
+  item: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingBottom: 12, paddingTop: Math.max(insets.top, 10), borderRadius: 9 },
   icon: { marginRight: 11 },
   text: { fontSize: 13, fontWeight: '700', color: '#0F1A14' },
   divider: { height: 1, backgroundColor: '#D4E2DA', marginVertical: 4, marginHorizontal: 4 }

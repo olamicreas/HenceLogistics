@@ -197,7 +197,7 @@ export default function AppRoot() {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.container} edges={['bottom']}>
         
         <StatusBar barStyle="light-content" backgroundColor="#0F1A14" />
         
