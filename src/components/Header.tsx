@@ -140,7 +140,7 @@ export default function Header() {
 }
 
 const ddStyles = StyleSheet.create({
-  item: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingBottom: 12, paddingTop: Math.max(insets.top, 10), borderRadius: 9 },
+  item: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 12, borderRadius: 9 },
   icon: { marginRight: 11 },
   text: { fontSize: 13, fontWeight: '700', color: '#0F1A14' },
   divider: { height: 1, backgroundColor: '#D4E2DA', marginVertical: 4, marginHorizontal: 4 }
