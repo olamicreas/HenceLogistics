@@ -390,150 +390,16 @@ export default function ProfileScreen() {
                   />
                 </InputGroup>
 
-                <InputGroup label="Bio">
-                  <TextInput
-                    style={[getInputStyle(isEditing), localStyles.textArea]}
-                    value={profileDraft?.bio}
-                    editable={isEditing}
-                    onChangeText={(v) => setProfileDraft({ ...profileDraft, bio: v })}
-                    multiline
-                    placeholder="Tell us a bit about yourself..."
-                    placeholderTextColor="#9CA3AF"
-                  />
-                </InputGroup>
+                
               </View>
             </>
           )}
 
-          {/* DRIVER VERIFICATION SUMMARY */}
-          {isDriver && (
-            <>
-              <SectionHeader title="Verification" icon="shield-check-outline" />
-              <View style={localStyles.card}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text style={localStyles.statusText}>Account Status:</Text>
-                  <View style={[localStyles.statusBadge, profileDraft?.driver_verified ? localStyles.statusBadgeVerified : localStyles.statusBadgePending]}>
-                    <Text style={[localStyles.statusBadgeText, profileDraft?.driver_verified ? localStyles.statusTextVerified : localStyles.statusTextPending]}>
-                      {profileDraft?.driver_verified ? 'VERIFIED' : profileDraft?.verification_docs ? 'PENDING REVIEW' : 'NOT SUBMITTED'}
-                    </Text>
-                  </View>
-                </View>
+          
 
-                <Text style={localStyles.statusSubtext}>
-                  {profileDraft?.driver_verified
-                    ? 'Your documents have been successfully verified.'
-                    : 'Upload required documents from the Driver Dashboard to start verification.'}
-                </Text>
+          
 
-                {/* 🚀 FIX: Displaying Full URLs for Thumbnails */}
-                <View style={localStyles.docsRow}>
-                  {profileDraft?.verification_docs?.reg && (
-                    <TouchableOpacity style={localStyles.docItem} onPress={() => Linking.openURL(getFullUrl(profileDraft.verification_docs.reg)!)}>
-                      <Image source={{ uri: getFullUrl(profileDraft.verification_docs.reg)! }} style={localStyles.docImage} />
-                      <Text style={localStyles.docLabel}>Registration</Text>
-                    </TouchableOpacity>
-                  )}
-
-                  {profileDraft?.verification_docs?.insurance && (
-                    <TouchableOpacity style={localStyles.docItem} onPress={() => Linking.openURL(getFullUrl(profileDraft.verification_docs.insurance)!)}>
-                      <Image source={{ uri: getFullUrl(profileDraft.verification_docs.insurance)! }} style={localStyles.docImage} />
-                      <Text style={localStyles.docLabel}>Insurance</Text>
-                    </TouchableOpacity>
-                  )}
-
-                  {profileDraft?.verification_docs?.id && (
-                    <TouchableOpacity style={localStyles.docItem} onPress={() => Linking.openURL(getFullUrl(profileDraft.verification_docs.id)!)}>
-                      <Image source={{ uri: getFullUrl(profileDraft.verification_docs.id)! }} style={localStyles.docImage} />
-                      <Text style={localStyles.docLabel}>ID</Text>
-                    </TouchableOpacity>
-                  )}
-
-                  {profileDraft?.verification_docs?.license && (
-                    <TouchableOpacity style={localStyles.docItem} onPress={() => Linking.openURL(getFullUrl(profileDraft.verification_docs.license)!)}>
-                      <Image source={{ uri: getFullUrl(profileDraft.verification_docs.license)! }} style={localStyles.docImage} />
-                      <Text style={localStyles.docLabel}>License</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-            </>
-          )}
-
-          {/* EMERGENCY CONTACT */}
-          <SectionHeader title="Emergency Contact" icon="alert-circle-outline" />
-          <View style={localStyles.card}>
-            <View style={localStyles.row}>
-              <View style={localStyles.col}>
-                <InputGroup label="Contact Name">
-                  <TextInput
-                    style={getInputStyle(isEditing)}
-                    value={profileDraft?.emergency_contact_name}
-                    editable={isEditing}
-                    onChangeText={(v) => setProfileDraft({ ...profileDraft, emergency_contact_name: v })}
-                    placeholder="Full Name"
-                    placeholderTextColor="#9CA3AF"
-                  />
-                </InputGroup>
-              </View>
-
-              <View style={localStyles.col}>
-                <InputGroup label="Contact Phone">
-                  <TextInput
-                    style={getInputStyle(isEditing)}
-                    value={profileDraft?.emergency_contact_phone}
-                    editable={isEditing}
-                    onChangeText={(v) => setProfileDraft({ ...profileDraft, emergency_contact_phone: v })}
-                    placeholder="+353..."
-                    keyboardType="phone-pad"
-                    placeholderTextColor="#9CA3AF"
-                  />
-                </InputGroup>
-              </View>
-            </View>
-          </View>
-
-          {/* SUBSCRIPTION - ONLY VISIBLE IN READ MODE */}
-          {isDriver && !isEditing && (
-            <>
-              <SectionHeader title="Subscription" icon="card-account-details-outline" />
-              <View style={localStyles.card}>
-                <View style={localStyles.subscriptionRow}>
-                  <View style={localStyles.subscriptionInfo}>
-                    <Text style={localStyles.subscriptionTitle}>
-                      {isPremium ? 'Premium Plan' : 'Standard Plan'}
-                    </Text>
-                    <Text style={localStyles.subscriptionSubtitle}>
-                      {isPremium ? 'Active and recurring' : 'Basic features only'}
-                    </Text>
-                  </View>
-
-                  <TouchableOpacity
-                    onPress={() => {
-                      if (isPremium) Alert.alert('Premium', 'Subscription active.');
-                      else setCurrentScreen('subscription');
-                    }}
-                    disabled={subscriptionLoading}
-                    style={[
-                      localStyles.smallBtn,
-                      isPremium ? localStyles.smallBtnActive : localStyles.smallBtnUpgrade,
-                    ]}
-                  >
-                    {subscriptionLoading ? (
-                      <ActivityIndicator size="small" color={isPremium ? '#1A7A4A' : '#fff'} />
-                    ) : (
-                      <Text style={[localStyles.smallBtnText, isPremium ? localStyles.smallBtnTextActive : localStyles.smallBtnTextUpgrade]}>
-                        {isPremium ? 'Active' : 'Upgrade'}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
-
-                <TouchableOpacity onPress={() => checkSubscriptionStatus().catch(() => {})}>
-                  <Text style={localStyles.checkStatusText}>Check subscription status</Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
+          
 
           {/* ACTIONS */}
           <View style={localStyles.actionsWrap}>

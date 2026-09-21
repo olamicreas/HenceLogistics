@@ -155,6 +155,35 @@ function formatVehicleName(v?: string | null) {
 }
 
 const SERVICE_NAMES: Record<string, string> = {
+  'gen-c': 'General Collection',
+  'ret-s': 'Returns Collection',
+  'stk-s': 'Stock & Supply Pickup',
+  'fur-s': 'Furniture Pickup',
+  'evt-s': 'Event Equipment',
+  'gen-d': 'General Delivery',
+  'fur-d': 'Furniture Delivery',
+  'sto-d': 'Store Transfer',
+  'spe-d': 'Specialist Delivery',
+  'las-d': 'Last-Mile Delivery',
+  'hse-r': 'House Clearance',
+  'off-r': 'Office Clearance',
+  'jnk-r': 'Junk & Waste Removal',
+  'bld-r': 'Building Waste',
+  'rec-r': 'Recycling Run',
+  'wst-r': 'Waste Disposal',
+  'pal-w': 'Pallet Delivery',
+  'dep-w': 'Depot Transfer',
+  'mul-d': 'Multi-Drop Delivery',
+  'sch-d': 'Scheduled Delivery Run',
+  'lmm-d': 'Last-Mile Multi-Drop',
+  'par-m': 'Parcel Pickup Run',
+  'ret-m': 'Returns Run',
+  'evt-m': 'Event Equipment Run',
+  'plm-w': 'Pallet Delivery Run',
+  'pkp-w': 'Pick & Pack Run',
+  'dpm-w': 'Multi-Depot Transfer',
+  'mac-r': 'Multi-Address Clearance',
+  'mrc-r': 'Recycling Run',
   'p1': 'Standard Parcel Courier',
   'pk1': 'Single Item (Furniture)',
   'pk2': 'Multi-Item (Furniture)',
@@ -1090,8 +1119,8 @@ export default function DriverDashboard() {
   
   // 🔥 SEPARATION FIX: Safely pull drop-off from stops[0] if it's a single drop
   const activeDropoff = activeJob ? { 
-    latitude: Number(activeJob.dropoff_lat || activeJob.stops?.[activeJob.stops.length - 1]?.lat || 0), 
-    longitude: Number(activeJob.dropoff_lon || activeJob.stops?.[activeJob.stops.length - 1]?.lon || 0) 
+    latitude: Number(activeJob.stops?.[0]?.lat || activeJob.dropoff_lat || 0), 
+    longitude: Number(activeJob.stops?.[0]?.lon || activeJob.dropoff_lon || 0) 
   } : null;
 
   // 🔥 SEPARATION FIX: It is ONLY multi-drop if explicitly flagged, or if there are 2+ stops!
@@ -1775,7 +1804,7 @@ export default function DriverDashboard() {
                 {(nextAvailableJob.pickup_address || 'Pickup')} → {(nextAvailableJob.dropoff_address || 'Drop-off')}
               </Text>
               <Text style={styles.jcardMeta}>
-                {formatVehicleName(nextAvailableJob.van_type)} · {formatJobType(nextAvailableJob.job_type)} · {Number(nextAvailableJob.distance_km || 0).toFixed(1)} km
+                {formatJobType(nextAvailableJob.job_type)} · {Number(nextAvailableJob.distance_km || 0).toFixed(1)} km
               </Text>
             </View>
 
@@ -2102,7 +2131,7 @@ export default function DriverDashboard() {
                   <Text style={{ fontSize: 11, fontWeight: '700', color: '#7A5708' }}>HNC-{String(activeJob.id).padStart(4, '0')}</Text>
                 </View>
                 <Text style={{ fontSize: 12, color: '#8A6A1E', marginTop: 4 }}>
-                  {formatJobType(activeJob.job_type)} · {formatVehicleName(activeJob.van_type)}
+                  {formatJobType(activeJob.job_type)} 
                 </Text>
               </View>
             </View>
