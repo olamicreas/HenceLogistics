@@ -298,13 +298,22 @@ function ChatSupportModal({ visible, onClose, user, activeBooking, sendSupportMe
 function RatingModal({ visible, onClose, onSubmit, defaultRating = 0, proofUrl }: any) {
   const [rating, setRating] = useState<number>(defaultRating);
   const [note, setNote] = useState<string>('');
-  useEffect(() => { if (visible) { setRating(defaultRating); setNote(''); } }, [visible, defaultRating]);
+  const [submitting, setSubmitting] = useState(false);
+  useEffect(() => { if (visible) { setRating(defaultRating); setNote(''); setSubmitting(false); } }, [visible, defaultRating]);
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    await onSubmit(rating, note);
+    setSubmitting(false);
+  };
+
   return (
     <Modal visible={visible} transparent animationType="slide">
       <TouchableWithoutFeedback onPress={onClose}><View style={modalStyles.backdrop} /></TouchableWithoutFeedback>
       <View style={[modalStyles.container, { top: '15%' }]}>
         <View style={ratingStyles.card}>
           <Text style={ratingStyles.title}>Rate your driver</Text>
+          <Text style={{ fontSize: 12, color: COLORS.textMuted, textAlign: 'center', marginHorizontal: 10, marginTop: 4 }}>Star ratings directly impact driver priority for future jobs. Written notes are kept private for our internal admin review.</Text>
           {proofUrl && <View style={{ alignItems: 'center', marginVertical: 12 }}><Image source={{ uri: proofUrl }} style={{ width: 220, height: 140, borderRadius: 8, resizeMode: 'cover' }} /></View>}
           <View style={{ flexDirection: 'row', justifyContent: 'center', marginVertical: 12 }}>
             {[1, 2, 3, 4, 5].map((s) => (
@@ -313,8 +322,10 @@ function RatingModal({ visible, onClose, onSubmit, defaultRating = 0, proofUrl }
           </View>
           <TextInput placeholder="Leave a note..." value={String(note || '')} onChangeText={setNote} multiline style={ratingStyles.textInput} />
           <View style={{ flexDirection: 'row', marginTop: 12 }}>
-            <TouchableOpacity style={[modalStyles.btn, { backgroundColor: '#e5e7eb', flex: 1, marginRight: 8 }]} onPress={onClose}><Text style={[modalStyles.btnText, { color: '#111827' }]}>Cancel</Text></TouchableOpacity>
-            <TouchableOpacity style={[modalStyles.btn, { backgroundColor: COLORS.primary, flex: 1 }]} onPress={() => onSubmit(rating, note)}><Text style={modalStyles.btnText}>Submit</Text></TouchableOpacity>
+            <TouchableOpacity style={[modalStyles.btn, { backgroundColor: '#e5e7eb', flex: 1, marginRight: 8 }]} onPress={onClose} disabled={submitting}><Text style={[modalStyles.btnText, { color: '#111827' }]}>Cancel</Text></TouchableOpacity>
+            <TouchableOpacity style={[modalStyles.btn, { backgroundColor: COLORS.primary, flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }]} onPress={handleSubmit} disabled={submitting}>
+              {submitting ? <ActivityIndicator size="small" color="#fff" /> : <Text style={modalStyles.btnText}>Submit</Text>}
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -1405,30 +1416,6 @@ export default function HomeScreen() {
                   </View>
                 </View>
 
-                <View style={styles.card}>
-                  <View style={styles.cardHeader}>
-                    <View>
-                      <Text style={styles.cardTitle}>Recipient Details</Text>
-                      <Text style={styles.cardSub}>Who is receiving this delivery?</Text>
-                    </View>
-                  </View>
-                  <View style={styles.cardBody}>
-                    <View style={styles.row2}>
-                      <View style={styles.fieldHalf}><Text style={styles.fieldLabel}>Name</Text><TextInput style={styles.fieldInput} placeholder="Full name" value={String(currentStop.recipient || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'recipient', t)} /></View>
-                      <View style={styles.fieldHalf}><Text style={styles.fieldLabel}>Phone</Text><TextInput style={styles.fieldInput} placeholder="+353..." keyboardType="phone-pad" value={String(currentStop.phone || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'phone', t)} /></View>
-                    </View>
-
-                    <View style={[styles.fieldFull, { marginTop: 12 }]}>
-                      <Text style={styles.fieldLabel}>Order Number <Text style={{fontWeight: '400', color: COLORS.mute, fontSize: 10, textTransform: 'none'}}>(optional)</Text></Text>
-                      <TextInput style={styles.fieldInput} placeholder="e.g. 20481" value={String(currentStop.ref || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'ref', t)} />
-                    </View>
-                    <View style={[styles.fieldFull, { marginTop: 12 }]}>
-                      <Text style={styles.fieldLabel}>Delivery Instructions</Text>
-                      <TextInput style={[styles.fieldInput, { minHeight: 80, textAlignVertical: 'top' }]} placeholder="e.g. Leave at reception, call buzzer 3..." multiline value={String(currentStop.instructions || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'instructions', t)} />
-                    </View>
-                  </View>
-                </View>
-
                 {/* 🚀 JOB DETAILS CARD */}
                 {selectedService && (
                   <View style={styles.card}>
@@ -1450,6 +1437,30 @@ export default function HomeScreen() {
                     </View>
                   </View>
                 )}
+
+                <View style={styles.card}>
+                  <View style={styles.cardHeader}>
+                    <View>
+                      <Text style={styles.cardTitle}>Recipient Details</Text>
+                      <Text style={styles.cardSub}>Who is receiving this delivery?</Text>
+                    </View>
+                  </View>
+                  <View style={styles.cardBody}>
+                    <View style={styles.row2}>
+                      <View style={styles.fieldHalf}><Text style={styles.fieldLabel}>Name</Text><TextInput style={styles.fieldInput} placeholder="Full name" value={String(currentStop.recipient || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'recipient', t)} /></View>
+                      <View style={styles.fieldHalf}><Text style={styles.fieldLabel}>Phone</Text><TextInput style={styles.fieldInput} placeholder="+353..." keyboardType="phone-pad" value={String(currentStop.phone || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'phone', t)} /></View>
+                    </View>
+
+                    <View style={[styles.fieldFull, { marginTop: 12 }]}>
+                      <Text style={styles.fieldLabel}>Order Number <Text style={{fontWeight: '400', color: COLORS.mute, fontSize: 10, textTransform: 'none'}}>(optional)</Text></Text>
+                      <TextInput style={styles.fieldInput} placeholder="e.g. 20481" value={String(currentStop.ref || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'ref', t)} />
+                    </View>
+                    <View style={[styles.fieldFull, { marginTop: 12 }]}>
+                      <Text style={styles.fieldLabel}>Extra Instructions</Text>
+                      <TextInput style={[styles.fieldInput, { minHeight: 80, textAlignVertical: 'top' }]} placeholder="e.g. Leave at reception, call buzzer 3..." multiline value={String(currentStop.instructions || '')} onChangeText={(t) => handleUpdateStopSafe(0, 'instructions', t)} />
+                    </View>
+                  </View>
+                </View>
               </>
             ) : (
               <>
@@ -1953,7 +1964,7 @@ export default function HomeScreen() {
                 {activeSearchIndex === mapPickTarget && (
                   <ScrollView 
                     keyboardShouldPersistTaps="handled"
-                    style={[styles.suggestionBox, { position: 'absolute', top: 50, left: 0, right: 0, zIndex: 999, maxHeight: 400 }]}
+                    style={[styles.suggestionBox, { position: 'absolute', bottom: 60, left: 0, right: 0, zIndex: 999, maxHeight: 400 }]}
                   >
                     {/* 🚀 FIXED: Changed to ScrollView, added maxHeight, and handled taps over keyboard */}
 

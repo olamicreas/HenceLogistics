@@ -598,7 +598,7 @@ export default function DriverDashboard() {
   const getTrueDistance = (job: any) => {
     if (!job) return "0.0";
     const backendDist = Number(job.distance_km || job.distance || job.total_distance || 0);
-    if (backendDist > 2.0) return backendDist.toFixed(1);
+    if (backendDist > 0) return backendDist.toFixed(1);
 
     const lat1 = Number(job.pickup_lat);
     const lon1 = Number(job.pickup_lon);
@@ -2058,16 +2058,7 @@ export default function DriverDashboard() {
             <View style={{ position: 'absolute', right: 14, top: 14, backgroundColor: 'rgba(15,31,23,0.85)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}>
               <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700', letterSpacing: 0.5 }}>HNC-{String(activeJob.id).padStart(4, '0')}</Text>
             </View>
-            <View style={{ position: 'absolute', left: 16, bottom: 14, backgroundColor: H_COLORS.ink, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, flexDirection: 'row', alignItems: 'center' }}>
-              <Ionicons name="navigate" size={14} color="#fff" style={{ marginRight: 6 }} />
-              <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>
-                {stage === 0 
-                  ? `Navigating to Pickup · ETA ${getDriverLiveETA()}` 
-                  : stage === 1 
-                    ? (isMulti ? `En Route to Stop ${stopIndex + 1} · ETA ${getDriverLiveETA()}` : `En Route to Drop-off · ETA ${getDriverLiveETA()}`) 
-                    : 'Delivered'}
-              </Text>
-            </View>
+            
           </View>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16 }}>
@@ -2559,7 +2550,7 @@ export default function DriverDashboard() {
     return (
       <>
         <View style={styles.filterRow}>
-          {['All', 'Completed', 'Disputed', 'Cancelled', 'This Week'].map((f) => (
+          {['All', 'Completed', 'Cancelled', 'This Week'].map((f) => (
             <TouchableOpacity
               key={f}
               style={[styles.ftag, selectedHistoryFilter === f && styles.ftagOn]}

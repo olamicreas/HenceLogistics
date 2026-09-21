@@ -545,15 +545,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const normalizeProfile = (raw: any) => {
     if (!raw) return null;
+    const capitalize = (str: string) => {
+      if (!str) return null;
+      return String(str).split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+    };
+
     return {
       id: raw.id ?? raw.user_id ?? raw.driver_id ?? null,
-      full_name:
+      full_name: capitalize(
         raw.full_name ||
         raw.name ||
         raw.display_name ||
         raw.username ||
         raw.driver_name ||
-        null,
+        null
+      ),
       avatar_url:
         normalizeUrl(
           raw.avatar_url ||

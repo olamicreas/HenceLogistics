@@ -221,7 +221,7 @@ export default function ProfileScreen() {
                   isDriver ? localStyles.roleTextDriver : localStyles.roleTextUser,
                 ]}
               >
-                {isDriver ? 'Driver Account' : 'Individual Account'}
+                {isDriver ? 'Driver Account' : ''}
               </Text>
             </View>
 
