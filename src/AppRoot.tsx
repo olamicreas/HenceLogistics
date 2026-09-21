@@ -193,7 +193,7 @@ export default function AppRoot() {
   const isDriver = user?.role === 'driver' || user?.role?.value === 'driver';
   
   // 🔥 FIXED: Added 'account-hub' to the allowed list so the BottomNav stays visible
-  const showBottomNav = token && !isDriver && (currentScreen === 'home' || currentScreen === 'create-job' || currentScreen === 'account-hub');
+  const showBottomNav = token && ((!isDriver && (currentScreen === 'home' || currentScreen === 'create-job' || currentScreen === 'account-hub')) || (isDriver && (currentScreen === 'home' || currentScreen === 'account-hub')));
 
   return (
     <SafeAreaProvider>

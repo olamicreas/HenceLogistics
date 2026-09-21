@@ -2864,22 +2864,7 @@ return (
         {screenIndex === 7 && renderSupport()}
       </View>
 
-      <View style={styles.tabbar}>
-        {TABS.map((tab) => (
-          <TouchableOpacity key={tab.label} style={styles.tab} onPress={() => setScreenIndex(tab.target)}>
-            <View style={styles.tabIcoWrap}>
-              <DriverIcon
-                name={tab.icon}
-                size={18}
-                color={screenIndex === tab.target ? COLORS.primary : COLORS.mute}
-              />
-            </View>
-            <Text style={[styles.tabLbl, screenIndex === tab.target && styles.tabLblOn]}>
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      
 
       <Modal visible={docModalVisible} animationType="fade" transparent>
         <View style={styles.modalShade}>
