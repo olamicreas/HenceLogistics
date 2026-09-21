@@ -63,7 +63,7 @@ export default function BottomNav() {
   }
 
   // CUSTOMER BOTTOM NAV
-  const renderItem = (tab: string, label: string, icon: any) => {
+  const renderItem = (tab: any, label: string, icon: any) => {
     const isActive = bottomTab === tab;
 
     return (

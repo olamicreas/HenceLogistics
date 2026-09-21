@@ -84,7 +84,7 @@ Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
     shouldPlaySound: true,
-    shouldSetBadge: true,
+    shouldSetBadge: false,
   }),
 });
 
@@ -143,6 +143,8 @@ export interface RouteStop {
 }
 
 interface AppContextType {
+  driverScreenIndex: number;
+  setDriverScreenIndex: (i: number) => void;
   token: string | null;
   setToken: (t: string | null) => void;
 
