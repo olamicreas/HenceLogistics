@@ -33,6 +33,8 @@ jobs:
         run: EAS_NO_VCS=1 eas build --platform android --profile preview --local --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m"
+          _JAVA_OPTIONS: "-Xmx2048m -XX:MaxMetaspaceSize=512m" 
 
       - name: "Save the .apk / .aab File"
         if: always()
