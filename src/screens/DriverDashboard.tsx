@@ -580,7 +580,22 @@ export default function DriverDashboard() {
   const mapRef = useRef<MapView>(null);
   const screenIndex = driverScreenIndex || 0;
   const setScreenIndex = setDriverScreenIndex;
+
+  useEffect(() => {
+    if (!token) return;
+    const fetchRealMetrics = async () => {
+      try {
+        const ms = await axios.get(`${BASE_URL}/driver/metrics`, { headers: { Authorization: `Bearer ${token}` } });
+        setRealMetrics(ms.data);
+      } catch (err) {
+        console.log("Metrics fetch error", err);
+      }
+    };
+    fetchRealMetrics();
+  }, [token, rideHistory]);
+
   const [isOnline, setIsOnline] = useState(true);
+  const [realMetrics, setRealMetrics] = useState<any>(null);
   const [expoPushToken, setExpoPushToken] = useState('');
   const notificationListener = useRef<any>(null);
   const responseListener = useRef<any>(null);
@@ -957,11 +972,7 @@ export default function DriverDashboard() {
     }).length;
   }, [completedRides]);
 
-  const averageRating = useMemo(() => {
-    const fromUser = Number((user as any)?.rating_avg ?? (profileDraft as any)?.rating_avg ?? 0);
-    if (fromUser > 0) return fromUser;
-    return 5.0;
-  }, [user, profileDraft]);
+  const averageRating = realMetrics?.average_rating ?? 5.0;
 
   const earningsByWindow = useMemo(() => {
     const now = new Date();
@@ -1029,18 +1040,9 @@ export default function DriverDashboard() {
     };
   }, [completedRides]);
 
-  const acceptanceRate = useMemo(() => {
-    const accepted = activeJobs.length + completedRides.length + disputedRides.length + cancelledRides.length;
-    const offered = accepted + availableJobs.length;
-    if (offered <= 0) return 100;
-    return Math.max(0, Math.min(100, Math.round((accepted / offered) * 100)));
-  }, [activeJobs.length, completedRides.length, disputedRides.length, cancelledRides.length, availableJobs.length]);
+  const acceptanceRate = realMetrics?.acceptance_rate ?? 100;
 
-  const completionRate = useMemo(() => {
-    const handled = completedRides.length + cancelledRides.length + disputedRides.length;
-    if (handled <= 0) return 100;
-    return Math.max(0, Math.min(100, Math.round((completedRides.length / handled) * 100)));
-  }, [completedRides.length, cancelledRides.length, disputedRides.length]);
+  const completionRate = realMetrics?.completion_rate ?? 100;
 
   const onTimeRate = useMemo(() => {
     const onTimeCount = completedRides.filter((r: any) => {
@@ -1052,30 +1054,11 @@ export default function DriverDashboard() {
     return Math.max(0, Math.min(100, Math.round((onTimeCount / completedRides.length) * 100)));
   }, [completedRides]);
 
-  const disputeRate = useMemo(() => {
-    const handled = completedRides.length + disputedRides.length;
-    if (handled <= 0) return 0;
-    return Math.max(0, Math.min(100, Math.round((disputedRides.length / handled) * 100)));
-  }, [completedRides.length, disputedRides.length]);
+  const disputeRate = realMetrics?.dispute_rate ?? 0;
 
-  const trustScore = useMemo(() => {
-    const ratingScore = Math.min(100, Math.round((averageRating / 5) * 100));
-    const score = Math.round(
-      acceptanceRate * 0.2 +
-        completionRate * 0.3 +
-        ratingScore * 0.25 +
-        onTimeRate * 0.2 +
-        Math.max(0, 100 - disputeRate * 10) * 0.05
-    );
-    return Math.max(1, Math.min(100, score));
-  }, [averageRating, acceptanceRate, completionRate, onTimeRate, disputeRate]);
+  const trustScore = realMetrics?.trust_score ?? 100;
 
-  const trustBand = useMemo(() => {
-    if (trustScore >= 85) return 'Excellent Driver';
-    if (trustScore >= 70) return 'Strong Driver';
-    if (trustScore >= 55) return 'Good Driver';
-    return 'Needs Improvement';
-  }, [trustScore]);
+  const trustBand = realMetrics?.trust_band ?? 'Excellent Driver';
 
   const filteredHistory = useMemo(() => {
     const base = rideHistory || [];
@@ -3403,7 +3386,7 @@ const styles = StyleSheet.create({
   alertWrap: { flex: 1, overflow: 'hidden' },
   alertMap: { height: 190, flexShrink: 0 },
   amBg: { flex: 1, backgroundColor: '#b8d8c4', position: 'relative' },
-  amGrid: { ...StyleSheet.absoluteFillObject, backgroundColor: 'transparent', opacity: 0.35 },
+  amGrid: { ...StyleSheet.absoluteFill, backgroundColor: 'transparent', opacity: 0.35 },
   amRoad: {
     position: 'absolute',
     top: '45%',
