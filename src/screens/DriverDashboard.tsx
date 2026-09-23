@@ -2495,7 +2495,7 @@ export default function DriverDashboard() {
         <View style={styles.card}>
           <View style={styles.ch}>
             <Text style={styles.ct}>Score Breakdown</Text>
-            <Text style={styles.cs}>IDP ranking factors</Text>
+            
           </View>
 
           <View style={{ paddingHorizontal: 14 }}>
