@@ -2605,6 +2605,18 @@ export default function DriverDashboard() {
                   <View style={styles.hrInfo}>
                     <Text style={styles.hrRoute}>{(r.pickup_address || 'Route')} → {(r.dropoff_address || 'Destination')}</Text>
                     <Text style={styles.hrMeta}>{r.created_at ? shortDateTime(r.created_at) : ''} · {formatVehicleName(r.van_type)}</Text>
+                    
+                    {r.customer_rating ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Ionicons key={i} name={i < r.customer_rating ? "star" : "star-outline"} size={14} color={"#FADB14"} style={{ marginRight: 2 }} />
+                        ))}
+                      </View>
+                    ) : null}
+
+                    {r.customer_note ? (
+                      <Text style={{ fontSize: 12, color: COLORS.soft, marginTop: 4, fontStyle: 'italic' }}>"{r.customer_note}"</Text>
+                    ) : null}
                   </View>
 
                   <View style={styles.hrRight}>
