@@ -1964,7 +1964,7 @@ export default function HomeScreen() {
                 {activeSearchIndex === mapPickTarget && (
                   <ScrollView 
                     keyboardShouldPersistTaps="handled"
-                    style={[styles.suggestionBox, { position: 'absolute', bottom: 60, left: 0, right: 0, zIndex: 999, maxHeight: 400 }]}
+                    style={[styles.suggestionBox, { position: 'absolute', top: 50, left: 0, right: 0, zIndex: 999, maxHeight: 400 }]}
                   >
                     {/* 🚀 FIXED: Changed to ScrollView, added maxHeight, and handled taps over keyboard */}
 
