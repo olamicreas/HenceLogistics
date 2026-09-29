@@ -2981,7 +2981,44 @@ return (
         </View>
       </Modal>
 
-      <Modal visible={supportVisible} animationType="fade" transparent>
+      
+      {/* ORDER DETAILS MODAL */}
+      <Modal visible={orderDetailsVisible} transparent animationType="slide">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, minHeight: 300 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <Text style={{ fontSize: 20, fontWeight: '700', color: '#0F1F17' }}>Order Details</Text>
+              <TouchableOpacity onPress={() => setOrderDetailsVisible(false)} style={{ padding: 8, backgroundColor: '#F6F8F6', borderRadius: 20 }}>
+                <Ionicons name="close" size={24} color="#0F1F17" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={{ backgroundColor: '#F6F8F6', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#6B7670', marginBottom: 6 }}>JOB DESCRIPTION</Text>
+              <Text style={{ fontSize: 16, color: '#0F1F17', lineHeight: 24 }}>
+                {nextStop?.job_description || activeJob?.job_description || 'No specific description provided.'}
+              </Text>
+            </View>
+
+            <View style={{ backgroundColor: '#FCF3DE', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#F2DFB3' }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#7A5708', marginBottom: 6 }}>EXTRA INSTRUCTIONS</Text>
+              <Text style={{ fontSize: 16, color: '#8A6A1E', lineHeight: 24 }}>
+                {nextStop?.instructions || activeJob?.notes || 'No extra instructions provided.'}
+              </Text>
+            </View>
+            
+            <TouchableOpacity 
+              style={{ backgroundColor: COLORS.primary, padding: 18, borderRadius: 14, alignItems: 'center', marginTop: 24 }}
+              onPress={() => setOrderDetailsVisible(false)}
+            >
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Close Details</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={supportVisible}
+ animationType="fade" transparent>
         <View style={styles.modalShade}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Contact Support</Text>
