@@ -600,6 +600,7 @@ export default function DriverDashboard() {
   const notificationListener = useRef<any>(null);
   const responseListener = useRef<any>(null);
   const [scannerVisible, setScannerVisible] = useState(false);
+  const [orderDetailsVisible, setOrderDetailsVisible] = useState(false);
   const [scanned, setScanned] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [jobDriverProfile, setJobDriverProfile] = useState<any | null>(null);
@@ -2169,7 +2170,7 @@ export default function DriverDashboard() {
                 { icon: 'camera', label: 'Photo Proof', action: () => handleUploadProof(activeJob.id), disabled: !canUploadProof },
                 { icon: 'map', label: 'Smart Nav', action: () => openSmartNav(Number(nextStop?.lat || activeJob.dropoff_lat), Number(nextStop?.lon || activeJob.dropoff_lon)) },
                 { icon: 'qr-code', label: 'Scan QR', action: openScanner },
-                { icon: 'card', label: 'Order Details', action: () => Alert.alert('Instructions', nextStop?.instructions || activeJob?.notes || 'No special notes.') }
+                { icon: 'card', label: 'Order Details', action: () => setOrderDetailsVisible(true) }
               ].map((btn, i) => (
                 <TouchableOpacity 
                   key={i} 
