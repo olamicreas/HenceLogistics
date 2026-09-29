@@ -1165,6 +1165,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           ref: s.ref || '',
           jobType: s.jobType || null,
           categoryId: s.categoryId || null,
+          jobDescription: s.jobDescription || '',
           itemPhotos: s.itemPhotos || [],
         })),
         van_type: vanType,
@@ -1172,7 +1173,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           draft?.service?.id || draft?.jobType || jobType || validStops[0]?.jobType || '',
         man_service: manService,
         follow_driver: followDriver,
-        notes: 'Booking via App',
+        notes: validStops[0]?.jobDescription || 'Booking via App',
         distance: quote.distance_km || 0,
         when:
           isScheduled && scheduleTime

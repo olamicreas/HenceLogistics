@@ -2997,14 +2997,14 @@ return (
             <View style={{ backgroundColor: '#F6F8F6', borderRadius: 12, padding: 16, marginBottom: 16 }}>
               <Text style={{ fontSize: 13, fontWeight: '600', color: '#6B7670', marginBottom: 6 }}>JOB DESCRIPTION</Text>
               <Text style={{ fontSize: 16, color: '#0F1F17', lineHeight: 24 }}>
-                {nextStop?.job_description || activeJob?.job_description || 'No specific description provided.'}
+                {activeJob?.notes || 'No specific description provided.'}
               </Text>
             </View>
 
             <View style={{ backgroundColor: '#FCF3DE', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#F2DFB3' }}>
               <Text style={{ fontSize: 13, fontWeight: '600', color: '#7A5708', marginBottom: 6 }}>EXTRA INSTRUCTIONS</Text>
               <Text style={{ fontSize: 16, color: '#8A6A1E', lineHeight: 24 }}>
-                {nextStop?.instructions || activeJob?.notes || 'No extra instructions provided.'}
+                {nextStop?.instructions || 'No extra instructions provided.'}
               </Text>
             </View>
             
