@@ -534,6 +534,7 @@ export const PremiumQrModal = ({ visible, onClose, stopIndex, stopAddress, qrVal
 
 // --- MAIN HOME COMPONENT ---
 export default function HomeScreen() {
+  const GOOGLE_MAPS_API_KEY = 'AIzaSyCnt02Uotcj2lXun70USSQ2hRsOcDXrZLY';
   const {
     user, token, bottomTab, setCurrentScreen,
     pickupAddr, setPickupAddr, pickupCoord, setPickupCoord, stops, setStops, addStop, removeStop, updateStop,
@@ -1964,7 +1965,7 @@ export default function HomeScreen() {
                 {activeSearchIndex === mapPickTarget && (
                   <ScrollView 
                     keyboardShouldPersistTaps="handled"
-                    style={[styles.suggestionBox, { position: 'absolute', top: 50, left: 0, right: 0, zIndex: 999, maxHeight: 400 }]}
+                    style={[styles.suggestionBox, { marginTop: 8, zIndex: 999, maxHeight: 220 }]}
                   >
                     {/* 🚀 FIXED: Changed to ScrollView, added maxHeight, and handled taps over keyboard */}
 
@@ -1975,13 +1976,29 @@ export default function HomeScreen() {
                           key={i} 
                           style={styles.suggestionItem} 
                           activeOpacity={0.7} 
-                          onPress={() => { 
-                            const parsedLat = safeCoord(item.lat || item.latitude, DUBLIN_PICK_REGION.latitude);
-                            const parsedLon = safeCoord(item.lon || item.longitude, DUBLIN_PICK_REGION.longitude);
-                            setTempAddress(displayTitle); 
+                          onPress={async () => { 
+                            setActiveSearchIndex(null);
+                            let parsedLat = item.lat || item.latitude;
+                            let parsedLon = item.lon || item.longitude;
+                            
+                            if (!parsedLat && item.place_id) {
+                              try {
+                                const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?place_id=${item.place_id}&key=${GOOGLE_MAPS_API_KEY}`);
+                                const data = await res.json();
+                                if (data.status === 'OK') {
+                                  parsedLat = data.results[0].geometry.location.lat;
+                                  parsedLon = data.results[0].geometry.location.lng;
+                                }
+                              } catch (e) {}
+                            }
+                            
+                            parsedLat = safeCoord(parsedLat, DUBLIN_PICK_REGION.latitude);
+                            parsedLon = safeCoord(parsedLon, DUBLIN_PICK_REGION.longitude);
+                            
+                            setTempAddress(displayTitle.replace('📍 Eircode Match: ', '')); 
                             setTempCoord({ lat: parsedLat, lon: parsedLon }); 
-                            setActiveSearchIndex(null); 
                             mapMovedRef.current = false;
+                            Keyboard.dismiss();
                           }}
                         >
                           <Ionicons name="location-outline" size={18} color={COLORS.primary} />
