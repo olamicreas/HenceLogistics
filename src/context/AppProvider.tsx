@@ -991,13 +991,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       ];
       
       try {
-        const coordsStr = waypoints.map(w => `${w.lon},${w.lat}`).join(';');
+        const coordsStr = waypoints.map(w => `${Number(w.lon)},${Number(w.lat)}`).join(';');
         const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=false`;
-        const resp = await fetch(osrmUrl);
+        const resp = await fetch(osrmUrl, {
+            headers: {
+                'User-Agent': 'HenceLogistics/1.0 (Mobile App)',
+                'Accept': 'application/json'
+            }
+        });
         const data = await resp.json();
         if (data && data.routes && data.routes.length > 0) {
-          totalKm = data.routes[0].distance / 1000;
-          totalDur = data.routes[0].duration / 60;
+          totalKm = Number(data.routes[0].distance) / 1000;
+          totalDur = Number(data.routes[0].duration) / 60;
         }
       } catch (err) {
         console.warn('OSRM error, falling back to Haversine', err);
@@ -1005,7 +1010,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       
       if (!totalKm || isNaN(totalKm) || totalKm <= 0) {
         for (let i = 0; i < waypoints.length - 1; i++) {
-          totalKm += haversineDistanceKm(waypoints[i].lat, waypoints[i].lon, waypoints[i+1].lat, waypoints[i+1].lon);
+          totalKm += haversineDistanceKm(Number(waypoints[i].lat), Number(waypoints[i].lon), Number(waypoints[i+1].lat), Number(waypoints[i+1].lon));
         }
         totalKm = totalKm * 1.3; // tortuosity factor fallback
       }
@@ -1024,6 +1029,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         dropoff_lon: last.lon,
         dropoff_address: last.address,
         distance: totalKm,
+        duration_min: totalDur,
         van_type: resolvedVanType,
         job_type: resolvedJobType,
         man_service: manService,
