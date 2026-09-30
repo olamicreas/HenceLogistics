@@ -1920,7 +1920,7 @@ export default function HomeScreen() {
 
       {/* 🚀 THE NEW MAP MODAL */}
       <Modal visible={mapPickTarget !== null} animationType="slide" transparent onRequestClose={() => setMapPickTarget(null)}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0} style={{ flex: 1, backgroundColor: 'rgba(10,22,18,0.5)', justifyContent: 'flex-end' }}>
+        <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0} style={{ flex: 1, backgroundColor: 'rgba(10,22,18,0.5)', justifyContent: 'flex-end' }}>
           <View style={{ backgroundColor: COLORS.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: 'hidden', flexShrink: 1, maxHeight: '90%' }}>
             
             {/* Modal Header */}
