@@ -1,5 +1,6 @@
 // App.tsx (root)
 import React from 'react';
+import { LogBox } from 'react-native';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context'; // ← 1. Import this
 import { AppProvider } from './src/context/AppProvider.tsx';
