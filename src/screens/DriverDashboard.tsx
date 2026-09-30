@@ -39,6 +39,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -675,7 +677,8 @@ export default function DriverDashboard() {
       try {
         const { status } = await Notifications.requestPermissionsAsync();
         if (status === 'granted') {
-          const tokenData = (await Notifications.getExpoPushTokenAsync()).data;
+          const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+          const tokenData = (await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : {})).data;
           
           if (token && tokenData) {
             setExpoPushToken(tokenData);
