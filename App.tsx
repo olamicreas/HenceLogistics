@@ -8,6 +8,8 @@ import AppRoot from './src/AppRoot.tsx';
 const STRIPE_PUBLISHABLE_KEY =
   'pk_test_51Ser79BkXz3IrSREgfolHBSyAuugOH8NtlC7rLkaEB8OALbIiTd54G6IgMym6FRwH8Oc25Wcq7x7cUpHDFs01diz00sPYiWTOH';
 
+LogBox.ignoreLogs(['expo-notifications: android push notifications', 'android push notifications(remote notifications)']);
+
 export default function App() {
   return (
     // ← 2. Wrap your entire app with SafeAreaProvider at the absolute top level

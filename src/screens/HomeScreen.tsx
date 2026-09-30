@@ -731,6 +731,7 @@ export default function HomeScreen() {
       }
       if (finalStatus === 'granted') {
         try {
+          if (Constants.appOwnership === 'expo' && Platform.OS === 'android') return;
           const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
           const tokenData = (await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : {})).data;
           if (token && tokenData) await axios.post(`${BASE_URL}/auth/users/me/push-token`, { expo_push_token: tokenData }, { headers: { Authorization: `Bearer ${token}` } });

@@ -246,6 +246,7 @@ function getVerificationIconColor(status: string) {
 
 async function registerForPushNotificationsAsync() {
   try {
+    if (Constants.appOwnership === 'expo' && Platform.OS === 'android') return null;
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
         name: 'default',
@@ -677,6 +678,7 @@ export default function DriverDashboard() {
       try {
         const { status } = await Notifications.requestPermissionsAsync();
         if (status === 'granted') {
+          if (Constants.appOwnership === 'expo' && Platform.OS === 'android') return;
           const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
           const tokenData = (await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : {})).data;
           
