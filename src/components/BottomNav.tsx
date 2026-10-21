@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Platform, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppProvider';
-import { styles } from '../styles';
 
 const COLORS = {
   primary: '#1A7A4A',
@@ -11,114 +10,136 @@ const COLORS = {
   soft: '#7A9080',
 };
 
-// Driver Icon Helper mapped directly from Ionicons to avoid missing asset errors
-const DriverIcon = ({ name, size, color }: any) => {
-  let iconName = 'ellipse';
-  if (name === 'ic-home') iconName = 'home-outline';
-  if (name === 'ic-map') iconName = 'map-outline';
-  if (name === 'ic-hist') iconName = 'time-outline';
-  if (name === 'ic-sup') iconName = 'chatbubble-ellipses-outline';
-  return <Ionicons name={iconName as any} size={size} color={color} />;
-};
-
 export default function BottomNav() {
-  const { user, bottomTab, setBottomTab, setCurrentScreen, driverScreenIndex, setDriverScreenIndex } = useAppContext();
-  const pb = Platform.OS === 'android' ? 20 : 0;
-  
+  const {
+    user,
+    bottomTab,
+    setBottomTab,
+    setCurrentScreen,
+    driverScreenIndex,
+    setDriverScreenIndex,
+  } = useAppContext();
+
   const isDriver = user?.role === 'driver' || user?.role?.value === 'driver';
 
   if (isDriver) {
-    const TABS = [
-      { label: 'Home', icon: 'ic-home', target: 0 },
-      { label: 'Active', icon: 'ic-map', target: 2 }, 
-      { label: 'History', icon: 'ic-hist', target: 5 },
-      { label: 'Support', icon: 'ic-sup', target: 7 },
+    // ── DRIVER TAB BAR: Dashboard · Jobs · Earnings · Performance ──
+    const DRIVER_TABS = [
+      { label: 'Dashboard', icon: 'speedometer-outline', target: 0 },
+      { label: 'Jobs', icon: 'cube-outline', target: 2 },
+      { label: 'Earnings', icon: 'wallet-outline', target: 3 },
+      { label: 'Performance', icon: 'star-outline', target: 4 },
     ];
 
     return (
-      <View style={[localStyles.tabbar, Platform.OS === 'android' ? { paddingBottom: pb } : {}]}>
-        {TABS.map((tab) => (
-          <TouchableOpacity 
-            key={tab.label} 
-            style={localStyles.tab} 
-            onPress={() => {
-              setCurrentScreen('home'); // ensures DriverDashboard is mounted
-              setDriverScreenIndex(tab.target);
-            }}
-          >
-            <View style={localStyles.tabIcoWrap}>
-              <DriverIcon
-                name={tab.icon}
-                size={18}
-                color={driverScreenIndex === tab.target ? COLORS.primary : COLORS.inactive}
-              />
-            </View>
-            <Text style={[localStyles.tabLbl, driverScreenIndex === tab.target && localStyles.tabLblOn]}>
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+      <View style={styles.tabbar}>
+        {DRIVER_TABS.map((tab) => {
+          const isActive = driverScreenIndex === tab.target;
+          return (
+            <TouchableOpacity
+              key={tab.label}
+              style={styles.tab}
+              onPress={() => {
+                setCurrentScreen('home'); // ensures DriverDashboard is mounted
+                setDriverScreenIndex(tab.target);
+              }}
+              activeOpacity={0.8}
+            >
+              <View style={styles.tabIcoWrap}>
+                <Ionicons
+                  name={tab.icon as any}
+                  size={20}
+                  color={isActive ? COLORS.primary : COLORS.inactive}
+                />
+              </View>
+              <Text style={[styles.tabLbl, isActive && styles.tabLblOn]}>
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     );
   }
 
-  // CUSTOMER BOTTOM NAV
-  const renderItem = (tab: any, label: string, icon: any) => {
-    const isActive = bottomTab === tab;
-
-    return (
-      <TouchableOpacity
-        style={styles.navItem}
-        onPress={() => {
-          setBottomTab(tab);
-          if (tab === 'home') setCurrentScreen('home');
-        }}
-        activeOpacity={0.8}
-      >
-        <Ionicons
-          name={icon}
-          size={22} 
-          color={isActive ? '#0F766E' : COLORS.inactive}
-        />
-        <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
-          {label}
-        </Text>
-      </TouchableOpacity>
-    );
-  };
+  // ── CUSTOMER TAB BAR: Home · Orders · Track · Support ──
+  const CUSTOMER_TABS = [
+    { label: 'Home', tab: 'home' as const, icon: 'home-outline' },
+    { label: 'Orders', tab: 'rides' as const, icon: 'document-text-outline' },
+    { label: 'Track', tab: 'track' as const, icon: 'navigate-outline' },
+    { label: 'Support', tab: 'support' as const, icon: 'chatbubbles-outline' },
+  ];
 
   return (
-    <View style={[styles.bottomNav, Platform.OS === 'android' ? { paddingBottom: pb } : {}]}>
-      {renderItem('home', 'Home', 'home-outline')}
-      {renderItem('rides', 'Orders', 'car-outline')}
-      {renderItem('account', 'Menu', 'grid-outline')}
+    <View style={styles.tabbar}>
+      {CUSTOMER_TABS.map((item) => {
+        const isActive = bottomTab === item.tab;
+        return (
+          <TouchableOpacity
+            key={item.label}
+            style={styles.tab}
+            onPress={() => {
+              setBottomTab(item.tab);
+              if (item.tab === 'home' || item.tab === 'rides' || item.tab === 'track') {
+                setCurrentScreen('home');
+              } else if (item.tab === 'support') {
+                setCurrentScreen('support');
+              }
+            }}
+            activeOpacity={0.8}
+          >
+            <View style={styles.tabIcoWrap}>
+              <Ionicons
+                name={item.icon as any}
+                size={21}
+                color={isActive ? COLORS.primary : COLORS.inactive}
+              />
+            </View>
+            <Text style={[styles.tabLbl, isActive && styles.tabLblOn]}>
+              {item.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
 
-const localStyles = StyleSheet.create({
+const styles = StyleSheet.create({
   tabbar: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1.5,
     borderTopColor: '#D4E2DA',
-    paddingTop: 10,
+    paddingTop: 8,
     paddingBottom: Platform.OS === 'ios' ? 24 : 10,
+    elevation: 8,
+    shadowColor: '#0F1A14',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
   },
   tab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 3,
+    paddingVertical: 2,
   },
   tabIcoWrap: {
-    marginBottom: 4,
+    width: 26,
+    height: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tabLbl: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '600',
     color: COLORS.inactive,
+    letterSpacing: 0.2,
   },
   tabLblOn: {
     color: COLORS.primary,
-  }
+    fontWeight: '700',
+  },
 });

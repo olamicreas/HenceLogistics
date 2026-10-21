@@ -119,8 +119,8 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
   } catch {}
 });
 
-type CurrentScreen = 'login' | 'home' | 'create-job' | 'profile' | 'subscription' | 'account-hub' | 'support' | 'settings' | 'delete';
-type BottomTab = 'home' | 'rides' | 'account';
+type CurrentScreen = 'login' | 'home' | 'create-job' | 'profile' | 'subscription' | 'account-hub' | 'support' | 'settings' | 'delete' | 'payment';
+type BottomTab = 'home' | 'rides' | 'track' | 'support' | 'account';
 
 export interface RouteStop {
   id: string;

@@ -12,6 +12,7 @@ import CreateJobScreen from './screens/CreateJobScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import AccountHubScreen from './screens/AccountHubScreen'; 
 import SubscriptionScreen from './screens/SubscriptionScreen';
+import PaymentScreen from './screens/PaymentScreen';
 import { styles } from './styles';
 
 // Reusable Back Header for Sub-screens
@@ -192,8 +193,11 @@ export default function AppRoot() {
 
   const isDriver = user?.role === 'driver' || user?.role?.value === 'driver';
   
-  // 🔥 FIXED: Added 'account-hub' to the allowed list so the BottomNav stays visible
-  const showBottomNav = token && ((!isDriver && (currentScreen === 'home' || currentScreen === 'create-job' || currentScreen === 'account-hub')) || (isDriver && (currentScreen === 'home' || currentScreen === 'account-hub')));
+  // Show bottom nav across main operational tabs and hubs
+  const showBottomNav = token && (
+    (!isDriver && (currentScreen === 'home' || currentScreen === 'create-job' || currentScreen === 'account-hub' || currentScreen === 'support' || currentScreen === 'payment')) ||
+    (isDriver && (currentScreen === 'home' || currentScreen === 'account-hub'))
+  );
 
   return (
     <SafeAreaProvider>
@@ -213,13 +217,14 @@ export default function AppRoot() {
           {/* ACCOUNT & SUPPORT ROUTES WITH BACK NAVIGATION */}
           {token && currentScreen === 'account-hub' && <AccountHubScreen />}
           {token && currentScreen === 'profile' && <ProfileScreen />}
-          {token && currentScreen === 'support' && <SupportScreen onBack={() => setCurrentScreen('account-hub')} />}
+          {token && currentScreen === 'payment' && <PaymentScreen onBack={() => setCurrentScreen('home')} />}
+          {token && currentScreen === 'support' && <SupportScreen onBack={() => setCurrentScreen('home')} />}
           {token && currentScreen === 'settings' && <SettingsScreen onBack={() => setCurrentScreen('account-hub')} />}
           {token && currentScreen === 'delete' && <DeleteScreen logout={logout} onBack={() => setCurrentScreen('account-hub')} />}
           {token && currentScreen === 'subscription' && <SubscriptionScreen />}
 
           {/* DRIVER ROUTE */}
-          {token && isDriver && !['profile', 'support', 'settings', 'delete', 'subscription', 'account-hub'].includes(currentScreen) && <DriverDashboard />}
+          {token && isDriver && !['profile', 'support', 'settings', 'delete', 'subscription', 'account-hub', 'payment'].includes(currentScreen) && <DriverDashboard />}
         </View>
 
         {showBottomNav && <BottomNav />}

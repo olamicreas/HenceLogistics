@@ -1,10 +1,20 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Modal, Pressable, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Modal,
+  Pressable,
+  StyleSheet,
+  ScrollView,
+  Platform,
+  Dimensions,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppContext } from '../context/AppProvider';
-import { styles } from '../styles';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function Header() {
   const {
@@ -15,133 +25,571 @@ export default function Header() {
     setCurrentScreen,
     setBottomTab,
     logout,
-    setDriverScreenIndex
+    setDriverScreenIndex,
   } = useAppContext();
 
+  const insets = useSafeAreaInsets();
   if (!token) return null;
 
-  const isDriver = user?.role === 'driver';
-  const insets = useSafeAreaInsets();
+  const isDriver = user?.role === 'driver' || user?.role?.value === 'driver';
+
+  // Compute initials dynamically
+  const getInitials = (name?: string, fallback: string = isDriver ? 'JW' : 'EW') => {
+    if (!name || !name.trim()) return fallback;
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
+
+  const initials = getInitials(user?.name);
+  const fullName = user?.name || (isDriver ? 'James Walsh' : 'Emma Walsh');
+  const userEmail = user?.email || (isDriver ? 'james.walsh@driver.hence.ie' : 'emma.walsh@example.com');
+
+  const closeAndNavigate = (action: () => void) => {
+    setMenuVisible(false);
+    // Allow drawer animation to start smoothly before navigation
+    setTimeout(() => {
+      action();
+    }, 150);
+  };
 
   return (
     <>
-      {/* 🛡️ YOUR EXACT ORIGINAL HEADER UI - 100% UNTOUCHED */}
-      <View 
+      {/* ── TOP HEADER BAR ── */}
+      <View
         style={[
-          styles.header, 
-          { 
-            backgroundColor: '#0F1A14', 
-            paddingBottom: 12, paddingTop: Math.max(insets.top, 10), 
-            borderBottomWidth: 0,
-            borderBottomColor: '#E4EBE7', 
-          }
+          styles.headerBar,
+          {
+            paddingTop: Math.max(insets.top, 10),
+          },
         ]}
       >
-        
-        {/* LOGO - Text based with green dot */}
-        <View style={{ paddingHorizontal: 4, justifyContent: 'center' }}>
-          <Text style={{ fontSize: 26, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.5 }}>
-            HENCE<Text style={{ color: '#1A7A4A' }}>.</Text>
+        {/* LOGO */}
+        <View style={styles.logoRow}>
+          <Text style={styles.logoText}>
+            HENCE<Text style={styles.logoDot}>.</Text>
           </Text>
         </View>
 
-        {/* MENU BUTTON - ONLY VISIBLE TO DRIVERS NOW */}
-        {isDriver && (
+        {/* RIGHT ACTION ROW: Bell + Pill Button */}
+        <View style={styles.headerRightRow}>
+          {/* Notification Bell */}
           <TouchableOpacity
-            onPress={() => setMenuVisible(true)}
-            style={{
-              width: 38,
-              height: 38,
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: 12,
-              backgroundColor: '#F8FBF9', 
-              borderWidth: 1,
-              borderColor: '#E4EBE7',
+            style={styles.bellBtn}
+            onPress={() => {
+              if (isDriver) {
+                setDriverScreenIndex(1);
+              } else {
+                setBottomTab('rides');
+                setCurrentScreen('home');
+              }
             }}
             activeOpacity={0.7}
           >
-            <Ionicons name="menu-outline" size={24} color="#0F1A14" />
+            <Ionicons name="notifications-outline" size={18} color="#B8CEC3" />
+            <View style={styles.bellBadge} />
           </TouchableOpacity>
-        )}
+
+          {/* MENU PILL BUTTON (TRIGGER) */}
+          <TouchableOpacity
+            style={styles.menuPill}
+            onPress={() => setMenuVisible(true)}
+            activeOpacity={0.85}
+          >
+            <View style={styles.pillAvatar}>
+              <Text style={styles.pillAvatarText}>{initials}</Text>
+            </View>
+            <View style={styles.pillLines}>
+              <View style={[styles.pillLine, { width: 14 }]} />
+              <View style={[styles.pillLine, { width: 14 }]} />
+              <View style={[styles.pillLine, { width: 10 }]} />
+            </View>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* 🚀 MODAL MENU - STRICTLY FOR DRIVERS */}
-      {isDriver && (
-        <Modal
-          visible={menuVisible}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setMenuVisible(false)}
-        >
-          <Pressable
-            style={{
-              flex: 1,
-              backgroundColor: 'rgba(0, 0, 0, 0.3)', 
-              justifyContent: 'flex-start',
-            }}
-            onPress={() => setMenuVisible(false)}
-          >
-            <BlurView
-              intensity={80}
-              tint="light"
-              style={{
-                width: 260, 
-                alignSelf: 'flex-end',
-                marginTop: 62,
-                marginRight: 12,
-                borderRadius: 16,
-                overflow: 'hidden',
-                borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.6)',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 12 },
-                shadowOpacity: 0.28,
-                shadowRadius: 32,
-              }}
-            >
-              <View style={{ backgroundColor: 'rgba(255,255,255,0.95)', padding: 6 }}>
-                
-                <TouchableOpacity style={ddStyles.item} onPress={() => { setMenuVisible(false); setCurrentScreen('profile'); setBottomTab('account'); }}>
-                  <Ionicons name="person-outline" size={18} color="#1A7A4A" style={ddStyles.icon} />
-                  <Text style={ddStyles.text}>Profile</Text>
-                </TouchableOpacity>
+      {/* ── SLIDE-IN MENU DRAWER ── */}
+      <Modal
+        visible={menuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuVisible(false)}
+      >
+        <View style={styles.drawerOverlay}>
+          {/* Backdrop Tap Closes Drawer */}
+          <Pressable style={styles.drawerBackdrop} onPress={() => setMenuVisible(false)} />
 
-                <TouchableOpacity style={ddStyles.item} onPress={() => { setMenuVisible(false); setBottomTab('rides'); setDriverScreenIndex(3); }}>
-                  <Ionicons name="wallet-outline" size={18} color="#2563EB" style={ddStyles.icon} />
-                  <Text style={ddStyles.text}>View Earnings</Text>
+          {/* Drawer Container Panel */}
+          <View style={[styles.drawerPanel, { paddingTop: Math.max(insets.top, 16) }]}>
+            {/* Drawer Header Banner */}
+            <View style={[styles.drawerHeader, { backgroundColor: isDriver ? '#0F2D20' : '#1A7A4A' }]}>
+              <View style={styles.drawerHeaderTop}>
+                <Text style={styles.drawerMenuLabel}>MENU</Text>
+                <TouchableOpacity
+                  style={styles.drawerCloseBtn}
+                  onPress={() => setMenuVisible(false)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="close" size={18} color="rgba(255,255,255,0.85)" />
                 </TouchableOpacity>
-
-                <TouchableOpacity style={ddStyles.item} onPress={() => { setMenuVisible(false); setBottomTab('rides'); setDriverScreenIndex(6); }}>
-                  <Ionicons name="document-text-outline" size={18} color="#8B5CF6" style={ddStyles.icon} />
-                  <Text style={ddStyles.text}>Verification Docs</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={ddStyles.item} onPress={() => { setMenuVisible(false); setCurrentScreen('subscription'); }}>
-                  <Ionicons name="star-outline" size={18} color="#F59E0B" style={ddStyles.icon} />
-                  <Text style={ddStyles.text}>Upgrade</Text>
-                </TouchableOpacity>
-
-                <View style={ddStyles.divider} />
-
-                {/* LOGOUT BUTTON */}
-                <TouchableOpacity style={ddStyles.item} onPress={() => { setMenuVisible(false); logout(); }}>
-                  <Ionicons name="log-out-outline" size={18} color="#1A7A4A" style={ddStyles.icon} />
-                  <Text style={[ddStyles.text, { color: '#0F1A14' }]}>Log Out</Text>
-                </TouchableOpacity>
-                
               </View>
-            </BlurView>
-          </Pressable>
-        </Modal>
-      )}
+
+              {/* User Avatar + Details */}
+              <View style={styles.drawerUserRow}>
+                <View style={styles.drawerAvatarWrap}>
+                  <View style={styles.drawerAvatar}>
+                    <Text style={styles.drawerAvatarText}>{initials}</Text>
+                  </View>
+                  <View style={styles.cameraBadge}>
+                    <Ionicons name="camera" size={10} color="#0F2D20" />
+                  </View>
+                </View>
+
+                <View style={styles.drawerUserInfo}>
+                  <Text style={styles.drawerUserName} numberOfLines={1}>
+                    {fullName}
+                  </Text>
+                  <Text style={styles.drawerUserEmail} numberOfLines={1}>
+                    {userEmail}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Menu Items List */}
+            <ScrollView style={styles.menuScroll} contentContainerStyle={styles.menuScrollContent}>
+              {isDriver ? (
+                /* ── DRIVER MENU ITEMS ── */
+                <>
+                  {/* 1. Profile Settings */}
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => closeAndNavigate(() => setCurrentScreen('profile'))}
+                  >
+                    <View style={[styles.menuItemIcon, { backgroundColor: '#E8F5EE', borderColor: '#C5E8D4' }]}>
+                      <Ionicons name="person-outline" size={18} color="#1A7A4A" />
+                    </View>
+                    <View style={styles.menuItemTextCol}>
+                      <Text style={styles.menuItemLabel}>Profile Settings</Text>
+                      <Text style={styles.menuItemSub}>Name, photo, contact details</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#B8CEC3" />
+                  </TouchableOpacity>
+
+                  {/* 2. Earnings */}
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() =>
+                      closeAndNavigate(() => {
+                        setCurrentScreen('home');
+                        setDriverScreenIndex(3);
+                      })
+                    }
+                  >
+                    <View style={[styles.menuItemIcon, { backgroundColor: '#0F2D20', borderColor: '#0F2D20' }]}>
+                      <Ionicons name="wallet-outline" size={18} color="#C8F135" />
+                    </View>
+                    <View style={styles.menuItemTextCol}>
+                      <Text style={styles.menuItemLabel}>Earnings</Text>
+                      <Text style={styles.menuItemSub}>Payments, history & reports</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#B8CEC3" />
+                  </TouchableOpacity>
+
+                  {/* 3. Performance & Reviews */}
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() =>
+                      closeAndNavigate(() => {
+                        setCurrentScreen('home');
+                        setDriverScreenIndex(4);
+                      })
+                    }
+                  >
+                    <View style={[styles.menuItemIcon, { backgroundColor: '#E8F5EE', borderColor: '#C5E8D4' }]}>
+                      <Ionicons name="star-outline" size={18} color="#1A7A4A" />
+                    </View>
+                    <View style={styles.menuItemTextCol}>
+                      <Text style={styles.menuItemLabel}>Performance & Reviews</Text>
+                      <Text style={styles.menuItemSub}>Ratings, feedback & trust score</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#B8CEC3" />
+                  </TouchableOpacity>
+
+                  {/* 4. Subscription */}
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => closeAndNavigate(() => setCurrentScreen('subscription'))}
+                  >
+                    <View style={[styles.menuItemIcon, { backgroundColor: '#EAF2FB', borderColor: '#c4ddf5' }]}>
+                      <Ionicons name="flash-outline" size={18} color="#1E6BB8" />
+                    </View>
+                    <View style={styles.menuItemTextCol}>
+                      <Text style={styles.menuItemLabel}>Subscription</Text>
+                      <Text style={styles.menuItemSub}>Plan, billing & upgrades</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#B8CEC3" />
+                  </TouchableOpacity>
+
+                  {/* 5. Help & Support */}
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => closeAndNavigate(() => setCurrentScreen('support'))}
+                  >
+                    <View style={[styles.menuItemIcon, { backgroundColor: '#EAF2FB', borderColor: '#c4ddf5' }]}>
+                      <Ionicons name="help-circle-outline" size={18} color="#1E6BB8" />
+                    </View>
+                    <View style={styles.menuItemTextCol}>
+                      <Text style={styles.menuItemLabel}>Help & Support</Text>
+                      <Text style={styles.menuItemSub}>FAQs and contact us</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#B8CEC3" />
+                  </TouchableOpacity>
+                </>
+              ) : (
+                /* ── CUSTOMER MENU ITEMS ── */
+                <>
+                  {/* 1. New Booking */}
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() =>
+                      closeAndNavigate(() => {
+                        setBottomTab('home');
+                        setCurrentScreen('home');
+                      })
+                    }
+                  >
+                    <View style={[styles.menuItemIcon, { backgroundColor: '#E8F5EE', borderColor: '#C5E8D4' }]}>
+                      <Ionicons name="car-outline" size={18} color="#1A7A4A" />
+                    </View>
+                    <View style={styles.menuItemTextCol}>
+                      <Text style={styles.menuItemLabel}>New Booking</Text>
+                      <Text style={styles.menuItemSub}>Start a delivery or collection</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#B8CEC3" />
+                  </TouchableOpacity>
+
+                  {/* 2. My Account */}
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => closeAndNavigate(() => setCurrentScreen('account-hub'))}
+                  >
+                    <View style={[styles.menuItemIcon, { backgroundColor: '#E8F5EE', borderColor: '#C5E8D4' }]}>
+                      <Ionicons name="person-outline" size={18} color="#1A7A4A" />
+                    </View>
+                    <View style={styles.menuItemTextCol}>
+                      <Text style={styles.menuItemLabel}>My Account</Text>
+                      <Text style={styles.menuItemSub}>Profile, addresses, settings</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#B8CEC3" />
+                  </TouchableOpacity>
+
+                  {/* 3. My Orders */}
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() =>
+                      closeAndNavigate(() => {
+                        setBottomTab('rides');
+                        setCurrentScreen('home');
+                      })
+                    }
+                  >
+                    <View style={[styles.menuItemIcon, { backgroundColor: '#0F2D20', borderColor: '#0F2D20' }]}>
+                      <Ionicons name="document-text-outline" size={18} color="#C8F135" />
+                    </View>
+                    <View style={styles.menuItemTextCol}>
+                      <Text style={styles.menuItemLabel}>My Orders</Text>
+                      <Text style={styles.menuItemSub}>View booking history</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#B8CEC3" />
+                  </TouchableOpacity>
+
+                  {/* 4. Payment Methods */}
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => closeAndNavigate(() => setCurrentScreen('payment'))}
+                  >
+                    <View style={[styles.menuItemIcon, { backgroundColor: '#EAF2FB', borderColor: '#c4ddf5' }]}>
+                      <Ionicons name="card-outline" size={18} color="#1E6BB8" />
+                    </View>
+                    <View style={styles.menuItemTextCol}>
+                      <Text style={styles.menuItemLabel}>Payment Methods</Text>
+                      <Text style={styles.menuItemSub}>Cards and billing</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#B8CEC3" />
+                  </TouchableOpacity>
+
+                  {/* 5. Help & Support */}
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => closeAndNavigate(() => setCurrentScreen('support'))}
+                  >
+                    <View style={[styles.menuItemIcon, { backgroundColor: '#EAF2FB', borderColor: '#c4ddf5' }]}>
+                      <Ionicons name="chatbubbles-outline" size={18} color="#1E6BB8" />
+                    </View>
+                    <View style={styles.menuItemTextCol}>
+                      <Text style={styles.menuItemLabel}>Help & Support</Text>
+                      <Text style={styles.menuItemSub}>FAQs and contact us</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#B8CEC3" />
+                  </TouchableOpacity>
+                </>
+              )}
+
+              {/* Thin Divider */}
+              <View style={styles.menuDivider} />
+
+              {/* 6. Log Out Button */}
+              <TouchableOpacity
+                style={styles.menuItemDanger}
+                onPress={() => closeAndNavigate(() => logout())}
+              >
+                <View style={[styles.menuItemIcon, { backgroundColor: '#FEE8E6', borderColor: '#f0c0c0' }]}>
+                  <Ionicons name="log-out-outline" size={18} color="#C0392B" />
+                </View>
+                <View style={styles.menuItemTextCol}>
+                  <Text style={[styles.menuItemLabel, { color: '#C0392B' }]}>Log Out</Text>
+                  <Text style={[styles.menuItemSub, { color: 'rgba(192,57,43,0.6)' }]}>Sign out of your account</Text>
+                </View>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }
 
-const ddStyles = StyleSheet.create({
-  item: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 12, borderRadius: 9 },
-  icon: { marginRight: 11 },
-  text: { fontSize: 13, fontWeight: '700', color: '#0F1A14' },
-  divider: { height: 1, backgroundColor: '#D4E2DA', marginVertical: 4, marginHorizontal: 4 }
+const styles = StyleSheet.create({
+  headerBar: {
+    backgroundColor: '#0F1A14',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: '#172B21',
+  },
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logoText: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
+  },
+  logoDot: {
+    color: '#1A7A4A',
+  },
+  headerRightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  bellBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 7,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#E74C3C',
+    borderWidth: 1,
+    borderColor: '#0F1A14',
+  },
+  menuPill: {
+    height: 36,
+    borderRadius: 22,
+    backgroundColor: '#0F1A14',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 4,
+    paddingRight: 10,
+    gap: 7,
+  },
+  pillAvatar: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#C8F135',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pillAvatarText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#0F2D20',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  pillLines: {
+    flexDirection: 'column',
+    gap: 3.5,
+  },
+  pillLine: {
+    height: 1.5,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 1,
+  },
+  drawerOverlay: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: 'rgba(15,26,20,0.5)',
+  },
+  drawerBackdrop: {
+    flex: 1,
+  },
+  drawerPanel: {
+    width: Math.min(SCREEN_WIDTH * 0.85, 310),
+    backgroundColor: '#FFFFFF',
+    height: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: -4, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 20,
+  },
+  drawerHeader: {
+    paddingHorizontal: 16,
+    paddingBottom: 18,
+    paddingTop: 12,
+  },
+  drawerHeaderTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  drawerMenuLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.6)',
+    letterSpacing: 1.2,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  drawerCloseBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  drawerUserRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  drawerAvatarWrap: {
+    position: 'relative',
+  },
+  drawerAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  drawerAvatarText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  cameraBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#C8F135',
+    borderWidth: 2,
+    borderColor: '#0F2D20',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  drawerUserInfo: {
+    flex: 1,
+  },
+  drawerUserName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  drawerUserEmail: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.7)',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  menuScroll: {
+    flex: 1,
+  },
+  menuScrollContent: {
+    paddingVertical: 8,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  menuItemDanger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  menuItemIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuItemTextCol: {
+    flex: 1,
+  },
+  menuItemLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0F1A14',
+  },
+  menuItemSub: {
+    fontSize: 11,
+    color: '#7A9080',
+    marginTop: 1,
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: '#D4E2DA',
+    marginHorizontal: 16,
+    marginVertical: 6,
+  },
 });

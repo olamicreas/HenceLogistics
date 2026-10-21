@@ -538,7 +538,7 @@ export const PremiumQrModal = ({ visible, onClose, stopIndex, stopAddress, qrVal
 export default function HomeScreen() {
   const GOOGLE_MAPS_API_KEY = 'AIzaSyCnt02Uotcj2lXun70USSQ2hRsOcDXrZLY';
   const {
-    user, token, bottomTab, setCurrentScreen,
+    user, token, bottomTab, setBottomTab, setCurrentScreen,
     pickupAddr, setPickupAddr, pickupCoord, setPickupCoord, stops, setStops, addStop, removeStop, updateStop,
     bookingMode, setBookingMode, isScheduled, setIsScheduled, scheduleTime, setScheduleTime,
     openQuoteFlow, activeSearchIndex, setActiveSearchIndex, scheduleSearch,
@@ -1150,10 +1150,37 @@ export default function HomeScreen() {
  
 
   
+  useEffect(() => {
+    if (bottomTab === 'track' && activeBooking) {
+      setTrackingModalVisible(true);
+    }
+  }, [bottomTab, activeBooking]);
+
   if (bottomTab === 'account') {
     const { currentScreen } = useAppContext();
     if (currentScreen === 'profile') return <ProfileScreen />;    
     return <AccountHubScreen />;
+  }
+
+  if (bottomTab === 'track' && !activeBooking) {
+    return (
+      <ScrollView contentContainerStyle={{ padding: 24, alignItems: 'center', justifyContent: 'center', flex: 1, backgroundColor: '#F4F8F6' }}>
+        <View style={{ width: 68, height: 68, borderRadius: 34, backgroundColor: '#E8F5EE', borderWidth: 1, borderColor: '#C5E8D4', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+          <Ionicons name="navigate-outline" size={32} color="#1A7A4A" />
+        </View>
+        <Text style={{ fontSize: 18, fontWeight: '700', color: '#0F1A14', marginBottom: 6 }}>No Active Delivery</Text>
+        <Text style={{ fontSize: 13, color: '#7A9080', textAlign: 'center', maxWidth: 280, marginBottom: 22, lineHeight: 20 }}>
+          You don't have any deliveries in transit right now. Once your booking is confirmed, live tracking will appear here.
+        </Text>
+        <TouchableOpacity
+          style={{ backgroundColor: '#1A7A4A', paddingVertical: 13, paddingHorizontal: 26, borderRadius: 12, shadowColor: '#1A7A4A', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 }}
+          onPress={() => setBottomTab('home')}
+          activeOpacity={0.8}
+        >
+          <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>Book a Delivery</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    );
   }
 
   if (bottomTab === 'rides') {
