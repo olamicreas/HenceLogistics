@@ -1,8 +1,9 @@
 import React from 'react';
 // 🔥 FIXED: Imported Linking from react-native
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, SafeAreaView, Alert, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, SafeAreaView, Alert, Linking, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppProvider';
+import { getFullAvatarUrl, getUserDisplayName, getUserInitials } from '../utils/avatar';
 
 const COLORS = {
   primary: '#1A7A4A',
@@ -16,6 +17,10 @@ const COLORS = {
 
 export default function AccountHubScreen() {
   const { user, logout, setCurrentScreen } = useAppContext();
+  const isDriver = user?.role === 'driver' || user?.role?.value === 'driver';
+  const displayName = getUserDisplayName(user, isDriver);
+  const initials = getUserInitials(user?.full_name || user?.name, user?.email, isDriver);
+  const avatarUrl = getFullAvatarUrl(user?.avatar_url || user?.avatar);
 
   const renderOption = (icon: any, title: string, subtitle: string, screenTarget: string, isDanger = false) => (
     <TouchableOpacity 
@@ -31,7 +36,7 @@ export default function AccountHubScreen() {
           // 🔥 FIXED: safely opens the browser instead of getting stuck on a blank screen
           Linking.openURL('https://hence.com/terms');
         } else {
-          setCurrentScreen(screenTarget);
+          setCurrentScreen(screenTarget as any);
         }
       }}
     >
@@ -51,11 +56,19 @@ export default function AccountHubScreen() {
       <ScrollView contentContainerStyle={localStyles.scroll}>
         
         <View style={localStyles.header}>
-          <View style={localStyles.avatar}>
-             <Text style={localStyles.avatarText}>{user?.full_name?.charAt(0) || 'U'}</Text>
-          </View>
-          <View>
-            <Text style={localStyles.userName}>{user?.full_name || 'My Account'}</Text>
+          <TouchableOpacity
+            style={localStyles.avatar}
+            onPress={() => setCurrentScreen('profile')}
+            activeOpacity={0.8}
+          >
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={{ width: 52, height: 52, borderRadius: 26 }} />
+            ) : (
+              <Text style={localStyles.avatarText}>{initials}</Text>
+            )}
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={localStyles.userName}>{displayName}</Text>
             <Text style={localStyles.userEmail}>{user?.email || 'Manage your settings'}</Text>
           </View>
         </View>
@@ -88,7 +101,7 @@ export default function AccountHubScreen() {
 const localStyles = StyleSheet.create({
   scroll: { padding: 16, paddingBottom: 100 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, marginTop: 10 },
-  avatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#C5E8D4', alignItems: 'center', justifyContent: 'center', marginRight: 14 },
+  avatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#C5E8D4', alignItems: 'center', justifyContent: 'center', marginRight: 14, overflow: 'hidden' },
   avatarText: { fontSize: 20, fontWeight: '600', color: COLORS.primary },
   userName: { fontSize: 18, fontWeight: '600', color: COLORS.ink },
   userEmail: { fontSize: 13, color: COLORS.soft, marginTop: 2, fontWeight: '400' },

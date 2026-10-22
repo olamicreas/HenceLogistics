@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Platform, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppContext } from '../context/AppProvider';
 
 const COLORS = {
@@ -20,6 +21,10 @@ export default function BottomNav() {
     setDriverScreenIndex,
   } = useAppContext();
 
+  const insets = useSafeAreaInsets();
+  // Guarantee exact safe area padding for iOS home indicator and Android navigation bars
+  const bottomPadding = Math.max(insets.bottom, Platform.OS === 'ios' ? 14 : 8);
+
   const isDriver = user?.role === 'driver' || user?.role?.value === 'driver';
 
   if (isDriver) {
@@ -32,7 +37,7 @@ export default function BottomNav() {
     ];
 
     return (
-      <View style={styles.tabbar}>
+      <View style={[styles.tabbar, { paddingBottom: bottomPadding }]}>
         {DRIVER_TABS.map((tab) => {
           const isActive = driverScreenIndex === tab.target;
           return (
@@ -62,16 +67,15 @@ export default function BottomNav() {
     );
   }
 
-  // ── CUSTOMER TAB BAR: Home · Orders · Track · Support ──
+  // ── CUSTOMER TAB BAR: Home · Orders · Track ──
   const CUSTOMER_TABS = [
     { label: 'Home', tab: 'home' as const, icon: 'home-outline' },
     { label: 'Orders', tab: 'rides' as const, icon: 'document-text-outline' },
     { label: 'Track', tab: 'track' as const, icon: 'navigate-outline' },
-    { label: 'Support', tab: 'support' as const, icon: 'chatbubbles-outline' },
   ];
 
   return (
-    <View style={styles.tabbar}>
+    <View style={[styles.tabbar, { paddingBottom: bottomPadding }]}>
       {CUSTOMER_TABS.map((item) => {
         const isActive = bottomTab === item.tab;
         return (
@@ -80,11 +84,7 @@ export default function BottomNav() {
             style={styles.tab}
             onPress={() => {
               setBottomTab(item.tab);
-              if (item.tab === 'home' || item.tab === 'rides' || item.tab === 'track') {
-                setCurrentScreen('home');
-              } else if (item.tab === 'support') {
-                setCurrentScreen('support');
-              }
+              setCurrentScreen('home');
             }}
             activeOpacity={0.8}
           >
@@ -112,7 +112,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1.5,
     borderTopColor: '#D4E2DA',
     paddingTop: 8,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 10,
     elevation: 8,
     shadowColor: '#0F1A14',
     shadowOffset: { width: 0, height: -2 },

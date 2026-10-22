@@ -63,7 +63,7 @@ export default function PaymentScreen({ onBack }: PaymentScreenProps) {
 
           <View style={styles.cardBottomRow}>
             <View>
-              <Text style={styles.cardHolderName}>{user?.name?.toUpperCase() || 'HENCE CUSTOMER'}</Text>
+              <Text style={styles.cardHolderName}>{user?.full_name?.toUpperCase() || user?.name?.toUpperCase() || 'HENCE CUSTOMER'}</Text>
               <Text style={styles.cardExpiry}>EXPIRES 09/28</Text>
             </View>
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,18 @@ import {
   ScrollView,
   Platform,
   Dimensions,
+  Image,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppContext } from '../context/AppProvider';
+import {
+  getFullAvatarUrl,
+  getUserInitials,
+  getUserDisplayName,
+  pickImageFromLibrary,
+} from '../utils/avatar';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -26,26 +34,35 @@ export default function Header() {
     setBottomTab,
     logout,
     setDriverScreenIndex,
+    uploadAvatar,
   } = useAppContext();
 
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const insets = useSafeAreaInsets();
   if (!token) return null;
 
   const isDriver = user?.role === 'driver' || user?.role?.value === 'driver';
 
-  // Compute initials dynamically
-  const getInitials = (name?: string, fallback: string = isDriver ? 'JW' : 'EW') => {
-    if (!name || !name.trim()) return fallback;
-    const parts = name.trim().split(/\s+/);
-    if (parts.length >= 2) {
-      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-    }
-    return name.slice(0, 2).toUpperCase();
-  };
+  // Derived real dynamic profile values — NEVER hardcoded dummy names
+  const displayName = getUserDisplayName(user, isDriver);
+  const initials = getUserInitials(user?.full_name || user?.name, user?.email, isDriver);
+  const avatarUrl = getFullAvatarUrl(user?.avatar_url || user?.avatar);
+  const userEmail = user?.email || '';
 
-  const initials = getInitials(user?.name);
-  const fullName = user?.name || (isDriver ? 'James Walsh' : 'Emma Walsh');
-  const userEmail = user?.email || (isDriver ? 'james.walsh@driver.hence.ie' : 'emma.walsh@example.com');
+  const handlePickPhoto = async () => {
+    try {
+      const uri = await pickImageFromLibrary();
+      if (!uri) return;
+      setUploadingAvatar(true);
+      if (uploadAvatar) {
+        await uploadAvatar(uri);
+      }
+    } catch (e) {
+      console.warn('Pick photo error:', e);
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const closeAndNavigate = (action: () => void) => {
     setMenuVisible(false);
@@ -99,7 +116,11 @@ export default function Header() {
             activeOpacity={0.85}
           >
             <View style={styles.pillAvatar}>
-              <Text style={styles.pillAvatarText}>{initials}</Text>
+              {avatarUrl ? (
+                <Image source={{ uri: avatarUrl }} style={styles.pillAvatarImg} />
+              ) : (
+                <Text style={styles.pillAvatarText}>{initials}</Text>
+              )}
             </View>
             <View style={styles.pillLines}>
               <View style={[styles.pillLine, { width: 14 }]} />
@@ -138,22 +159,36 @@ export default function Header() {
 
               {/* User Avatar + Details */}
               <View style={styles.drawerUserRow}>
-                <View style={styles.drawerAvatarWrap}>
+                <TouchableOpacity
+                  style={styles.drawerAvatarWrap}
+                  onPress={handlePickPhoto}
+                  activeOpacity={0.8}
+                >
                   <View style={styles.drawerAvatar}>
-                    <Text style={styles.drawerAvatarText}>{initials}</Text>
+                    {avatarUrl ? (
+                      <Image source={{ uri: avatarUrl }} style={styles.drawerAvatarImg} />
+                    ) : (
+                      <Text style={styles.drawerAvatarText}>{initials}</Text>
+                    )}
                   </View>
                   <View style={styles.cameraBadge}>
-                    <Ionicons name="camera" size={10} color="#0F2D20" />
+                    {uploadingAvatar ? (
+                      <ActivityIndicator size="small" color="#0F2D20" />
+                    ) : (
+                      <Ionicons name="camera" size={11} color="#0F2D20" />
+                    )}
                   </View>
-                </View>
+                </TouchableOpacity>
 
                 <View style={styles.drawerUserInfo}>
                   <Text style={styles.drawerUserName} numberOfLines={1}>
-                    {fullName}
+                    {displayName}
                   </Text>
-                  <Text style={styles.drawerUserEmail} numberOfLines={1}>
-                    {userEmail}
-                  </Text>
+                  {userEmail ? (
+                    <Text style={styles.drawerUserEmail} numberOfLines={1}>
+                      {userEmail}
+                    </Text>
+                  ) : null}
                 </View>
               </View>
             </View>
@@ -432,6 +467,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#C8F135',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  pillAvatarImg: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
   },
   pillAvatarText: {
     fontSize: 10,
@@ -511,6 +552,12 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.3)',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  drawerAvatarImg: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
   },
   drawerAvatarText: {
     fontSize: 18,

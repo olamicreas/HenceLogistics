@@ -200,36 +200,33 @@ export default function AppRoot() {
   );
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.container} edges={['bottom']}>
-        
-        <StatusBar barStyle="light-content" backgroundColor="#0F1A14" />
-        
-        {token && <Header />}
-        
-        <View style={{ flex: 1, backgroundColor: '#F4F8F6' }}>
-          {!token && <AuthScreen />}
+    <View style={{ flex: 1, backgroundColor: '#0F1A14' }}>
+      <StatusBar barStyle="light-content" backgroundColor="#0F1A14" />
+      
+      {token && <Header />}
+      
+      <View style={{ flex: 1, backgroundColor: '#F4F8F6' }}>
+        {!token && <AuthScreen />}
 
-          {/* CUSTOMER ROUTES */}
-          {token && !isDriver && currentScreen === 'home' && <HomeScreen />}
-          {token && !isDriver && currentScreen === 'create-job' && <CreateJobScreen />}
+        {/* CUSTOMER ROUTES */}
+        {token && !isDriver && currentScreen === 'home' && <HomeScreen />}
+        {token && !isDriver && currentScreen === 'create-job' && <CreateJobScreen />}
 
-          {/* ACCOUNT & SUPPORT ROUTES WITH BACK NAVIGATION */}
-          {token && currentScreen === 'account-hub' && <AccountHubScreen />}
-          {token && currentScreen === 'profile' && <ProfileScreen />}
-          {token && currentScreen === 'payment' && <PaymentScreen onBack={() => setCurrentScreen('home')} />}
-          {token && currentScreen === 'support' && <SupportScreen onBack={() => setCurrentScreen('home')} />}
-          {token && currentScreen === 'settings' && <SettingsScreen onBack={() => setCurrentScreen('account-hub')} />}
-          {token && currentScreen === 'delete' && <DeleteScreen logout={logout} onBack={() => setCurrentScreen('account-hub')} />}
-          {token && currentScreen === 'subscription' && <SubscriptionScreen />}
+        {/* ACCOUNT & SUPPORT ROUTES WITH BACK NAVIGATION */}
+        {token && currentScreen === 'account-hub' && <AccountHubScreen />}
+        {token && currentScreen === 'profile' && <ProfileScreen />}
+        {token && currentScreen === 'payment' && <PaymentScreen onBack={() => setCurrentScreen('home')} />}
+        {token && currentScreen === 'support' && <SupportScreen onBack={() => setCurrentScreen('home')} />}
+        {token && currentScreen === 'settings' && <SettingsScreen onBack={() => setCurrentScreen('account-hub')} />}
+        {token && currentScreen === 'delete' && <DeleteScreen logout={logout} onBack={() => setCurrentScreen('account-hub')} />}
+        {token && currentScreen === 'subscription' && <SubscriptionScreen />}
 
-          {/* DRIVER ROUTE */}
-          {token && isDriver && !['profile', 'support', 'settings', 'delete', 'subscription', 'account-hub', 'payment'].includes(currentScreen) && <DriverDashboard />}
-        </View>
+        {/* DRIVER ROUTE */}
+        {token && isDriver && !['profile', 'support', 'settings', 'delete', 'subscription', 'account-hub', 'payment'].includes(currentScreen) && <DriverDashboard />}
+      </View>
 
-        {showBottomNav && <BottomNav />}
-      </SafeAreaView>
-    </SafeAreaProvider>
+      {showBottomNav && <BottomNav />}
+    </View>
   );
 }
 

@@ -17,16 +17,13 @@ import {
   Linking,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import { useAppContext } from '../context/AppProvider';
 import { styles as globalStyles } from '../styles';
-
-// 🔥 HELPER: Fixes broken image links if the backend returns a relative URL (e.g. "/uploads/img.jpg")
-const getFullUrl = (url?: string | null) => {
-  if (!url) return null;
-  if (url.startsWith('http')) return url;
-  return `https://hencedelivery.com${url.startsWith('/') ? '' : '/'}${url}`;
-};
+import {
+  getFullAvatarUrl,
+  getUserInitials,
+  pickImageFromLibrary,
+} from '../utils/avatar';
 
 // Local helpers for rendering inputs neatly
 const InputGroup = ({ label, children }: { label: string; children: React.ReactNode }) => (
@@ -59,6 +56,7 @@ export default function ProfileScreen() {
     setProfileDraft,
     loading,
     saveProfile,
+    uploadAvatar: contextUploadAvatar,
     setCurrentScreen,
     setBottomTab,
     isPremium,
@@ -96,53 +94,22 @@ export default function ProfileScreen() {
   };
 
   const handlePickAvatar = async () => {
-    if (!isEditing) return;
-
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (permissionResult.granted === false) {
-      Alert.alert('Permission to access camera roll is required!');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
-    });
-
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const uri = result.assets[0].uri;
-      uploadAvatar(uri);
-    }
-  };
-
-  const uploadAvatar = async (uri: string) => {
-    setUploadingAvatar(true);
     try {
-      const formData = new FormData();
-      const filename = uri.split('/').pop() || `avatar_${Date.now()}.jpg`;
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : 'image/jpeg';
+      const uri = await pickImageFromLibrary();
+      if (!uri) return;
 
-      formData.append('file', { uri, name: filename, type } as any);
-
-      const response = await axios.post('https://hencedelivery.com/auth/users/me/avatar', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${token}`
-        },
-      });
-
-      const newAvatarUrl = response.data.url;
-
-      setProfileDraft({ ...profileDraft, avatar_url: newAvatarUrl });
-      if (setUser) setUser({ ...user, avatar_url: newAvatarUrl });
-
-      Alert.alert('Success', 'Profile picture updated successfully!');
+      setUploadingAvatar(true);
+      if (contextUploadAvatar) {
+        const newUrl = await contextUploadAvatar(uri);
+        if (newUrl) {
+          setProfileDraft((prev: any) => ({ ...prev, avatar_url: newUrl }));
+        }
+      } else {
+        setProfileDraft((prev: any) => ({ ...prev, avatar_url: uri }));
+        if (setUser) setUser({ ...user, avatar_url: uri });
+      }
     } catch (e: any) {
-      console.warn("Avatar Upload Error:", e?.response?.data || e?.message);
-      Alert.alert('Error', 'Failed to upload profile picture. Please try again.');
+      console.warn("Avatar Upload Error:", e?.message);
     } finally {
       setUploadingAvatar(false);
     }
@@ -154,7 +121,12 @@ export default function ProfileScreen() {
     editable ? localStyles.inputEditable : localStyles.inputReadOnly
   ];
 
-  const safeAvatarUrl = getFullUrl(profileDraft?.avatar_url);
+  const safeAvatarUrl = getFullAvatarUrl(profileDraft?.avatar_url || user?.avatar_url);
+  const initials = getUserInitials(
+    profileDraft?.full_name || user?.full_name || user?.name,
+    profileDraft?.email || user?.email,
+    isDriver
+  );
 
   return (
     <SafeAreaView style={globalStyles.container}>
@@ -182,32 +154,32 @@ export default function ProfileScreen() {
         <ScrollView contentContainerStyle={localStyles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Avatar / Role Badge */}
           <View style={localStyles.avatarSection}>
-            <TouchableOpacity onPress={handlePickAvatar} disabled={!isEditing} activeOpacity={0.8}>
+            <TouchableOpacity onPress={handlePickAvatar} activeOpacity={0.8}>
               <View style={localStyles.avatarContainer}>
                 {safeAvatarUrl ? (
                   <Image source={{ uri: safeAvatarUrl }} style={localStyles.avatarImage} />
                 ) : (
-                  <Text style={localStyles.avatarInitials}>
-                    {profileDraft?.full_name
-                      ? profileDraft.full_name.substring(0, 2).toUpperCase()
-                      : 'US'}
-                  </Text>
+                  <Text style={localStyles.avatarInitials}>{initials}</Text>
                 )}
 
-                {isEditing && (
-                  <View style={localStyles.editAvatarBadge}>
-                    {uploadingAvatar ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <Ionicons name="camera" size={14} color="#fff" />
-                    )}
-                  </View>
-                )}
+                <View style={localStyles.editAvatarBadge}>
+                  {uploadingAvatar ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Ionicons name="camera" size={14} color="#fff" />
+                  )}
+                </View>
               </View>
             </TouchableOpacity>
 
-            <Text style={localStyles.userName}>{profileDraft?.full_name || 'User Name'}</Text>
-            <Text style={localStyles.userEmail}>{profileDraft?.email || 'No email'}</Text>
+            <Text style={localStyles.avatarHint}>Tap photo to change</Text>
+
+            <Text style={localStyles.userName}>
+              {profileDraft?.full_name || user?.full_name || user?.name || 'User Name'}
+            </Text>
+            <Text style={localStyles.userEmail}>
+              {profileDraft?.email || user?.email || 'No email'}
+            </Text>
 
             <View
               style={[
@@ -221,7 +193,7 @@ export default function ProfileScreen() {
                   isDriver ? localStyles.roleTextDriver : localStyles.roleTextUser,
                 ]}
               >
-                {isDriver ? 'Driver Account' : ''}
+                {isDriver ? 'Driver Account' : 'Customer Account'}
               </Text>
             </View>
 
@@ -516,6 +488,12 @@ const localStyles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: '#FFFFFF',
+  },
+  avatarHint: {
+    fontSize: 11,
+    color: '#7A9080',
+    marginTop: 6,
+    fontWeight: '500',
   },
   userName: {
     fontSize: 18,
