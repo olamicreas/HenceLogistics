@@ -17,6 +17,7 @@ import { useStripe } from '@stripe/stripe-react-native';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import * as ImagePicker from 'expo-image-picker';
+import { getFullAvatarUrl } from '../utils/avatar';
 
 
 
@@ -289,7 +290,9 @@ interface AppContextType {
   stopSubscriptionPolling: () => void;
 
   saveProfile: () => Promise<void>;
-  uploadAvatar: (uri: string) => Promise<string | null>;
+  uploadAvatar: (
+    imageInput: string | { uri: string; base64?: string | null }
+  ) => Promise<string | null>;
   openNavigationToJob: (job: any) => void;
   markPickedUp: (jobId: number) => Promise<void>;
   markDelivered: (jobId: number) => Promise<void>;
@@ -1438,12 +1441,29 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const url = `${ENDPOINTS.USER_ME}?ts=${Date.now()}`;
       const res = await api.get(url, { headers: authHeaders(t) });
 
-      setUser(res.data);
-      setProfileDraft(res.data);
-      setIsPremium(!!(res.data.stripe_onboarding_complete || res.data.is_premium));
+      const cachedAvatar = await AsyncStorage.getItem('user_avatar_cached');
+      const resolvedAvatar = res.data?.avatar_url || cachedAvatar || null;
+
+      const derivedFullName =
+        res.data?.full_name ||
+        (res.data?.first_name
+          ? `${res.data.first_name} ${res.data.last_name || ''}`.trim()
+          : '') ||
+        res.data?.name ||
+        '';
+
+      const mergedUser = {
+        ...res.data,
+        full_name: derivedFullName || res.data?.full_name || '',
+        avatar_url: resolvedAvatar,
+      };
+
+      setUser(mergedUser);
+      setProfileDraft(mergedUser);
+      setIsPremium(!!(mergedUser.stripe_onboarding_complete || mergedUser.is_premium));
 
       // 🚨 CRITICAL FIX: Save the user data to physical storage instantly
-      await AsyncStorage.setItem('userData', JSON.stringify(res.data));
+      await AsyncStorage.setItem('userData', JSON.stringify(mergedUser));
 
       try {
         await registerPushToken();
@@ -2195,14 +2215,44 @@ const refreshDriverJobs = async () => {
 
   const saveProfile = async () => {
     try {
-      const payload = { ...profileDraft };
+      const cachedAvatar = await AsyncStorage.getItem('user_avatar_cached');
+      const preservedAvatar =
+        profileDraft?.avatar_url || user?.avatar_url || cachedAvatar || null;
+
+      const rawFullName = (profileDraft?.full_name || user?.full_name || '').trim();
+      const parts = rawFullName.split(/\s+/).filter(Boolean);
+      const firstName = parts[0] || profileDraft?.first_name || user?.first_name || '';
+      const lastName =
+        parts.slice(1).join(' ') || profileDraft?.last_name || user?.last_name || '';
+
+      const payload = {
+        ...profileDraft,
+        full_name: rawFullName,
+        first_name: firstName,
+        last_name: lastName,
+      };
+
       const res = await api.put(ENDPOINTS.USER_ME, payload, {
         headers: authHeaders(),
       });
 
-      setUser(res.data);
-      setProfileDraft(res.data);
+      const resFullName =
+        res.data?.full_name ||
+        (res.data?.first_name ? `${res.data.first_name} ${res.data.last_name || ''}`.trim() : '') ||
+        rawFullName;
+
+      const updatedUser = {
+        ...res.data,
+        full_name: resFullName,
+        first_name: res.data?.first_name || firstName,
+        last_name: res.data?.last_name || lastName,
+        avatar_url: res.data?.avatar_url || preservedAvatar,
+      };
+
+      setUser(updatedUser);
+      setProfileDraft(updatedUser);
       setEditingProfile(false);
+      await AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
       Alert.alert('Success', 'Profile updated.');
     } catch (e: any) {
       Alert.alert(
@@ -2212,51 +2262,88 @@ const refreshDriverJobs = async () => {
     }
   };
 
-  const uploadAvatar = async (uri: string): Promise<string | null> => {
+  const uploadAvatar = async (
+    imageInput: string | { uri: string; base64?: string | null }
+  ): Promise<string | null> => {
     try {
-      // 1. Immediately update user & profileDraft in local state with the chosen uri
-      setUser((prev: any) => (prev ? { ...prev, avatar_url: uri } : { avatar_url: uri }));
-      setProfileDraft((prev: any) => (prev ? { ...prev, avatar_url: uri } : { avatar_url: uri }));
+      const chosenUri =
+        typeof imageInput === 'string'
+          ? imageInput
+          : imageInput.base64 || imageInput.uri;
+      const fileUri =
+        typeof imageInput === 'string'
+          ? imageInput
+          : imageInput.uri;
 
-      // 2. Persist to AsyncStorage immediately so the chosen picture remains on relaunch
+      // 1. Immediately update user & profileDraft in local state with chosenUri
+      setUser((prev: any) => ({ ...(prev || {}), avatar_url: chosenUri }));
+      setProfileDraft((prev: any) => ({ ...(prev || {}), avatar_url: chosenUri }));
+
+      // 2. Persist to AsyncStorage immediately so the picture survives relaunch
       try {
+        await AsyncStorage.setItem('user_avatar_cached', chosenUri);
         const stored = await AsyncStorage.getItem('userData');
         const parsed = stored ? JSON.parse(stored) : {};
-        await AsyncStorage.setItem('userData', JSON.stringify({ ...parsed, avatar_url: uri }));
+        await AsyncStorage.setItem(
+          'userData',
+          JSON.stringify({ ...parsed, avatar_url: chosenUri })
+        );
       } catch (err) {}
 
-      // 3. Upload to backend
-      const formData = new FormData();
-      const filename = uri.split('/').pop() || `avatar_${Date.now()}.jpg`;
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : 'image/jpeg';
-      formData.append('file', { uri, name: filename, type } as any);
-
-      const res = await axios.post(`${API_URL}/auth/users/me/avatar`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const serverUrl = res.data?.url;
-      if (serverUrl) {
-        setUser((prev: any) => (prev ? { ...prev, avatar_url: serverUrl } : { avatar_url: serverUrl }));
-        setProfileDraft((prev: any) => (prev ? { ...prev, avatar_url: serverUrl } : { avatar_url: serverUrl }));
+      // 3. Upload to backend if fileUri is available
+      if (fileUri) {
         try {
-          const stored = await AsyncStorage.getItem('userData');
-          const parsed = stored ? JSON.parse(stored) : {};
-          await AsyncStorage.setItem('userData', JSON.stringify({ ...parsed, avatar_url: serverUrl }));
-        } catch (err) {}
+          const formData = new FormData();
+          const filename = fileUri.split('/').pop() || `avatar_${Date.now()}.jpg`;
+          const match = /\.(\w+)$/.exec(filename);
+          const type = match ? `image/${match[1]}` : 'image/jpeg';
+          formData.append('file', {
+            uri: fileUri,
+            name: filename,
+            type,
+          } as any);
+
+          // DO NOT explicitly set 'Content-Type' so React Native generates multipart boundary
+          const uploadHeaders: Record<string, string> = {};
+          if (token) {
+            uploadHeaders['Authorization'] = `Bearer ${token}`;
+          }
+
+          const response = await fetch(`${API_URL}/auth/users/me/avatar`, {
+            method: 'POST',
+            headers: uploadHeaders,
+            body: formData,
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            const serverUrl = data?.url || data?.avatar_url;
+            if (serverUrl) {
+              const fullServerUrl = getFullAvatarUrl(serverUrl) || serverUrl;
+              setUser((prev: any) => ({ ...(prev || {}), avatar_url: fullServerUrl }));
+              setProfileDraft((prev: any) => ({ ...(prev || {}), avatar_url: fullServerUrl }));
+              await AsyncStorage.setItem('user_avatar_cached', fullServerUrl);
+              const stored = await AsyncStorage.getItem('userData');
+              const parsed = stored ? JSON.parse(stored) : {};
+              await AsyncStorage.setItem(
+                'userData',
+                JSON.stringify({ ...parsed, avatar_url: fullServerUrl })
+              );
+              Alert.alert('Success', 'Profile picture updated successfully!');
+              return fullServerUrl;
+            }
+          }
+        } catch (backendErr: any) {
+          console.warn('Backend avatar upload non-blocking error:', backendErr?.message);
+        }
       }
 
       Alert.alert('Success', 'Profile picture updated successfully!');
-      return serverUrl || uri;
+      return chosenUri;
     } catch (e: any) {
-      console.warn('Avatar upload error:', e?.response?.data || e?.message);
-      // Even if network upload has an issue, local avatar is saved & kept
+      console.warn('Avatar upload error:', e?.message);
       Alert.alert('Success', 'Profile picture updated successfully!');
-      return uri;
+      return null;
     }
   };
 

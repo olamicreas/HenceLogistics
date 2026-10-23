@@ -3,7 +3,8 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, SafeAreaView, Alert, Linking, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppProvider';
-import { getFullAvatarUrl, getUserDisplayName, getUserInitials } from '../utils/avatar';
+import { getUserDisplayName } from '../utils/avatar';
+import UserAvatar from '../components/UserAvatar';
 
 const COLORS = {
   primary: '#1A7A4A',
@@ -19,8 +20,6 @@ export default function AccountHubScreen() {
   const { user, logout, setCurrentScreen } = useAppContext();
   const isDriver = user?.role === 'driver' || user?.role?.value === 'driver';
   const displayName = getUserDisplayName(user, isDriver);
-  const initials = getUserInitials(user?.full_name || user?.name, user?.email, isDriver);
-  const avatarUrl = getFullAvatarUrl(user?.avatar_url || user?.avatar);
 
   const renderOption = (icon: any, title: string, subtitle: string, screenTarget: string, isDanger = false) => (
     <TouchableOpacity 
@@ -56,17 +55,15 @@ export default function AccountHubScreen() {
       <ScrollView contentContainerStyle={localStyles.scroll}>
         
         <View style={localStyles.header}>
-          <TouchableOpacity
-            style={localStyles.avatar}
+          <UserAvatar
+            user={user}
+            size={52}
+            isDriver={isDriver}
             onPress={() => setCurrentScreen('profile')}
-            activeOpacity={0.8}
-          >
-            {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={{ width: 52, height: 52, borderRadius: 26 }} />
-            ) : (
-              <Text style={localStyles.avatarText}>{initials}</Text>
-            )}
-          </TouchableOpacity>
+            bgColor={isDriver ? '#0F2D20' : '#C5E8D4'}
+            textColor={isDriver ? '#C8F135' : COLORS.primary}
+            style={{ marginRight: 14 }}
+          />
           <View style={{ flex: 1 }}>
             <Text style={localStyles.userName}>{displayName}</Text>
             <Text style={localStyles.userEmail}>{user?.email || 'Manage your settings'}</Text>

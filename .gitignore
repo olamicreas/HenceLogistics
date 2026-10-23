@@ -39,4 +39,5 @@ yarn-error.*
 /ios
 /android
 *.apk
-*.apk
+*.ipa
+HenceLogistics-iOS/

@@ -16,11 +16,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppContext } from '../context/AppProvider';
 import {
-  getFullAvatarUrl,
-  getUserInitials,
   getUserDisplayName,
   pickImageFromLibrary,
 } from '../utils/avatar';
+import UserAvatar from './UserAvatar';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -45,17 +44,15 @@ export default function Header() {
 
   // Derived real dynamic profile values — NEVER hardcoded dummy names
   const displayName = getUserDisplayName(user, isDriver);
-  const initials = getUserInitials(user?.full_name || user?.name, user?.email, isDriver);
-  const avatarUrl = getFullAvatarUrl(user?.avatar_url || user?.avatar);
   const userEmail = user?.email || '';
 
   const handlePickPhoto = async () => {
     try {
-      const uri = await pickImageFromLibrary();
-      if (!uri) return;
+      const result = await pickImageFromLibrary();
+      if (!result) return;
       setUploadingAvatar(true);
       if (uploadAvatar) {
-        await uploadAvatar(uri);
+        await uploadAvatar(result);
       }
     } catch (e) {
       console.warn('Pick photo error:', e);
@@ -115,13 +112,13 @@ export default function Header() {
             onPress={() => setMenuVisible(true)}
             activeOpacity={0.85}
           >
-            <View style={styles.pillAvatar}>
-              {avatarUrl ? (
-                <Image source={{ uri: avatarUrl }} style={styles.pillAvatarImg} />
-              ) : (
-                <Text style={styles.pillAvatarText}>{initials}</Text>
-              )}
-            </View>
+            <UserAvatar
+              user={user}
+              size={26}
+              isDriver={isDriver}
+              bgColor="#0F2D20"
+              textColor="#C8F135"
+            />
             <View style={styles.pillLines}>
               <View style={[styles.pillLine, { width: 14 }]} />
               <View style={[styles.pillLine, { width: 14 }]} />
@@ -159,26 +156,16 @@ export default function Header() {
 
               {/* User Avatar + Details */}
               <View style={styles.drawerUserRow}>
-                <TouchableOpacity
-                  style={styles.drawerAvatarWrap}
+                <UserAvatar
+                  user={user}
+                  size={52}
+                  isDriver={isDriver}
                   onPress={handlePickPhoto}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.drawerAvatar}>
-                    {avatarUrl ? (
-                      <Image source={{ uri: avatarUrl }} style={styles.drawerAvatarImg} />
-                    ) : (
-                      <Text style={styles.drawerAvatarText}>{initials}</Text>
-                    )}
-                  </View>
-                  <View style={styles.cameraBadge}>
-                    {uploadingAvatar ? (
-                      <ActivityIndicator size="small" color="#0F2D20" />
-                    ) : (
-                      <Ionicons name="camera" size={11} color="#0F2D20" />
-                    )}
-                  </View>
-                </TouchableOpacity>
+                  showCameraBadge
+                  uploading={uploadingAvatar}
+                  bgColor={isDriver ? '#0A2016' : '#145F39'}
+                  textColor="#C8F135"
+                />
 
                 <View style={styles.drawerUserInfo}>
                   <Text style={styles.drawerUserName} numberOfLines={1}>

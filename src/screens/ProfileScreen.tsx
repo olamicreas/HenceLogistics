@@ -20,10 +20,10 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppProvider';
 import { styles as globalStyles } from '../styles';
 import {
-  getFullAvatarUrl,
-  getUserInitials,
+  getUserDisplayName,
   pickImageFromLibrary,
 } from '../utils/avatar';
+import UserAvatar from '../components/UserAvatar';
 
 // Local helpers for rendering inputs neatly
 const InputGroup = ({ label, children }: { label: string; children: React.ReactNode }) => (
@@ -74,10 +74,19 @@ export default function ProfileScreen() {
     console.log("User Object from AppProvider:", JSON.stringify(user, null, 2));
   }, [user]);
 
-  // Strict Sync: Force the draft to perfectly match the logged-in user when not editing.
+  // Strict Sync: Force the draft to match the logged-in user when not editing.
   useEffect(() => {
     if (user && !isEditing && setProfileDraft) {
-      setProfileDraft({ ...user });
+      const derivedFullName =
+        user.full_name ||
+        user.fullName ||
+        (user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : '') ||
+        user.name ||
+        '';
+      setProfileDraft({
+        ...user,
+        full_name: derivedFullName,
+      });
     }
   }, [user, isEditing]);
 
@@ -95,18 +104,19 @@ export default function ProfileScreen() {
 
   const handlePickAvatar = async () => {
     try {
-      const uri = await pickImageFromLibrary();
-      if (!uri) return;
+      const result = await pickImageFromLibrary();
+      if (!result) return;
 
       setUploadingAvatar(true);
       if (contextUploadAvatar) {
-        const newUrl = await contextUploadAvatar(uri);
+        const newUrl = await contextUploadAvatar(result);
         if (newUrl) {
           setProfileDraft((prev: any) => ({ ...prev, avatar_url: newUrl }));
         }
       } else {
-        setProfileDraft((prev: any) => ({ ...prev, avatar_url: uri }));
-        if (setUser) setUser({ ...user, avatar_url: uri });
+        const chosen = result.base64 || result.uri;
+        setProfileDraft((prev: any) => ({ ...prev, avatar_url: chosen }));
+        if (setUser) setUser({ ...user, avatar_url: chosen });
       }
     } catch (e: any) {
       console.warn("Avatar Upload Error:", e?.message);
@@ -121,12 +131,8 @@ export default function ProfileScreen() {
     editable ? localStyles.inputEditable : localStyles.inputReadOnly
   ];
 
-  const safeAvatarUrl = getFullAvatarUrl(profileDraft?.avatar_url || user?.avatar_url);
-  const initials = getUserInitials(
-    profileDraft?.full_name || user?.full_name || user?.name,
-    profileDraft?.email || user?.email,
-    isDriver
-  );
+  const userObj = profileDraft || user;
+  const displayName = getUserDisplayName(userObj, isDriver);
 
   return (
     <SafeAreaView style={globalStyles.container}>
@@ -154,28 +160,22 @@ export default function ProfileScreen() {
         <ScrollView contentContainerStyle={localStyles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Avatar / Role Badge */}
           <View style={localStyles.avatarSection}>
-            <TouchableOpacity onPress={handlePickAvatar} activeOpacity={0.8}>
-              <View style={localStyles.avatarContainer}>
-                {safeAvatarUrl ? (
-                  <Image source={{ uri: safeAvatarUrl }} style={localStyles.avatarImage} />
-                ) : (
-                  <Text style={localStyles.avatarInitials}>{initials}</Text>
-                )}
-
-                <View style={localStyles.editAvatarBadge}>
-                  {uploadingAvatar ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Ionicons name="camera" size={14} color="#fff" />
-                  )}
-                </View>
-              </View>
-            </TouchableOpacity>
+            <UserAvatar
+              user={userObj}
+              size={84}
+              isDriver={isDriver}
+              onPress={handlePickAvatar}
+              showCameraBadge
+              uploading={uploadingAvatar}
+              bgColor={isDriver ? '#0F2D20' : '#1A7A4A'}
+              textColor="#C8F135"
+              borderColor="#C8F135"
+            />
 
             <Text style={localStyles.avatarHint}>Tap photo to change</Text>
 
             <Text style={localStyles.userName}>
-              {profileDraft?.full_name || user?.full_name || user?.name || 'User Name'}
+              {displayName}
             </Text>
             <Text style={localStyles.userEmail}>
               {profileDraft?.email || user?.email || 'No email'}
@@ -211,9 +211,11 @@ export default function ProfileScreen() {
             <InputGroup label="Full Name">
               <TextInput
                 style={getInputStyle(isEditing)}
-                value={profileDraft?.full_name}
+                value={profileDraft?.full_name ?? ''}
                 editable={isEditing}
-                onChangeText={(v) => setProfileDraft({ ...profileDraft, full_name: v })}
+                onChangeText={(v) =>
+                  setProfileDraft((prev: any) => ({ ...(prev || {}), full_name: v }))
+                }
                 placeholder="e.g. John Doe"
                 placeholderTextColor="#9CA3AF"
               />
