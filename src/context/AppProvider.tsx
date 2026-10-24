@@ -1545,9 +1545,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-const refreshDriverJobs = async () => {
+  const isDriverUser = (u: any) => (u?.role?.value || u?.role) === 'driver';
+
+  const refreshDriverJobs = async () => {
     const currentToken = tokenRef.current || token;
-    if (!currentToken || user?.role !== 'driver') return;
+    if (!currentToken || !isDriverUser(user)) return;
 
     try {
       const [jobsRes, userRes] = await Promise.all([
@@ -1560,9 +1562,16 @@ const refreshDriverJobs = async () => {
       ]);
 
       const updatedUser = userRes.data;
-      setUser(updatedUser);
-      setProfileDraft(updatedUser);
-      setIsPremium(!!updatedUser.is_premium);
+      const cachedAvatar = await AsyncStorage.getItem('user_avatar_cached');
+      const preservedAvatar = updatedUser?.avatar_url || user?.avatar_url || cachedAvatar || null;
+      const mergedUser = {
+        ...updatedUser,
+        avatar_url: preservedAvatar,
+      };
+
+      setUser(mergedUser);
+      setProfileDraft(mergedUser);
+      setIsPremium(!!mergedUser.is_premium);
 
       const nowTs = Date.now() / 1000;
 
@@ -1701,7 +1710,7 @@ const refreshDriverJobs = async () => {
 
   const pollActiveBooking = async () => {
     // 🔥 FIXED: Allow 'customer' AND 'individual' roles to pass, just block drivers!
-    if (!token || !user || user.role === 'driver') return;
+    if (!token || !user || isDriverUser(user)) return;
 
     try {
       const res = await api.get(ENDPOINTS.BOOKINGS_ACTIVE, {
@@ -1802,7 +1811,7 @@ const refreshDriverJobs = async () => {
     const currentToken = tokenRef.current || token;
     const driverId = user?.id;
 
-    if (!currentToken || !driverId || user?.role !== 'driver') return;
+    if (!currentToken || !driverId || !isDriverUser(user)) return;
 
     try {
       if (driverWsRef.current) {
@@ -1938,7 +1947,7 @@ const refreshDriverJobs = async () => {
       ws.onclose = () => {
         driverWsRef.current = null;
 
-        if (user?.role !== 'driver') return;
+        if (!isDriverUser(user)) return;
 
         if (wsReconnectRef.current.timer) {
           clearTimeout(wsReconnectRef.current.timer);
@@ -1962,7 +1971,7 @@ const refreshDriverJobs = async () => {
     const currentToken = tokenRef.current || token;
 
     // 🔥 FIXED: Block drivers, but allow BOTH 'customer' and 'individual' to connect!
-    if (!currentToken || !bookingId || user?.role === 'driver') return;
+    if (!currentToken || !bookingId || isDriverUser(user)) return;
 
     try {
       if (customerWsRef.current) {
@@ -2320,15 +2329,18 @@ const refreshDriverJobs = async () => {
             const serverUrl = data?.url || data?.avatar_url;
             if (serverUrl) {
               const fullServerUrl = getFullAvatarUrl(serverUrl) || serverUrl;
-              setUser((prev: any) => ({ ...(prev || {}), avatar_url: fullServerUrl }));
-              setProfileDraft((prev: any) => ({ ...(prev || {}), avatar_url: fullServerUrl }));
-              await AsyncStorage.setItem('user_avatar_cached', fullServerUrl);
-              const stored = await AsyncStorage.getItem('userData');
-              const parsed = stored ? JSON.parse(stored) : {};
-              await AsyncStorage.setItem(
-                'userData',
-                JSON.stringify({ ...parsed, avatar_url: fullServerUrl })
-              );
+              // If chosenUri was not a full base64 image, use the server URL
+              if (!chosenUri.startsWith('data:image/')) {
+                setUser((prev: any) => ({ ...(prev || {}), avatar_url: fullServerUrl }));
+                setProfileDraft((prev: any) => ({ ...(prev || {}), avatar_url: fullServerUrl }));
+                await AsyncStorage.setItem('user_avatar_cached', fullServerUrl);
+                const stored = await AsyncStorage.getItem('userData');
+                const parsed = stored ? JSON.parse(stored) : {};
+                await AsyncStorage.setItem(
+                  'userData',
+                  JSON.stringify({ ...parsed, avatar_url: fullServerUrl })
+                );
+              }
               Alert.alert('Success', 'Profile picture updated successfully!');
               return fullServerUrl;
             }
@@ -2655,15 +2667,13 @@ const refreshDriverJobs = async () => {
   }, [driverLocation, trackingEnabled]);
 
   useEffect(() => {
-    if (user?.role !== 'driver' || !token || !user?.id) return;
+    if (!isDriverUser(user) || !token || !user?.id) return;
 
     connectDriverSocket();
 
     const fallbackPoll = setInterval(() => {
-      if (!driverWsRef.current || driverWsRef.current.readyState !== 1) {
-        refreshDriverJobs().catch(() => {});
-      }
-    }, 5000);
+      refreshDriverJobs().catch(() => {});
+    }, 4000);
 
     return () => {
       clearInterval(fallbackPoll);
@@ -2675,7 +2685,7 @@ const refreshDriverJobs = async () => {
 
   useEffect(() => {
     // 🔥 Make sure this allows 'customer' too!
-    if (user?.role === 'driver' || !token || !activeBooking?.id) return;
+    if (isDriverUser(user) || !token || !activeBooking?.id) return;
 
     connectCustomerSocket(activeBooking.id);
 

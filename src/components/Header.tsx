@@ -142,7 +142,7 @@ export default function Header() {
           {/* Drawer Container Panel */}
           <View style={[styles.drawerPanel, { paddingTop: Math.max(insets.top, 16) }]}>
             {/* Drawer Header Banner */}
-            <View style={[styles.drawerHeader, { backgroundColor: isDriver ? '#0F2D20' : '#1A7A4A' }]}>
+            <View style={[styles.drawerHeader, { backgroundColor: isDriver ? '#0F2D20' : '#0F1A14' }]}>
               <View style={styles.drawerHeaderTop}>
                 <Text style={styles.drawerMenuLabel}>MENU</Text>
                 <TouchableOpacity
@@ -163,7 +163,7 @@ export default function Header() {
                   onPress={handlePickPhoto}
                   showCameraBadge
                   uploading={uploadingAvatar}
-                  bgColor={isDriver ? '#0A2016' : '#145F39'}
+                  bgColor={isDriver ? '#0A2016' : '#0F1A14'}
                   textColor="#C8F135"
                 />
 
@@ -200,27 +200,7 @@ export default function Header() {
                     <Ionicons name="chevron-forward" size={16} color="#B8CEC3" />
                   </TouchableOpacity>
 
-                  {/* 2. Earnings */}
-                  <TouchableOpacity
-                    style={styles.menuItem}
-                    onPress={() =>
-                      closeAndNavigate(() => {
-                        setCurrentScreen('home');
-                        setDriverScreenIndex(3);
-                      })
-                    }
-                  >
-                    <View style={[styles.menuItemIcon, { backgroundColor: '#0F2D20', borderColor: '#0F2D20' }]}>
-                      <Ionicons name="wallet-outline" size={18} color="#C8F135" />
-                    </View>
-                    <View style={styles.menuItemTextCol}>
-                      <Text style={styles.menuItemLabel}>Earnings</Text>
-                      <Text style={styles.menuItemSub}>Payments, history & reports</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={16} color="#B8CEC3" />
-                  </TouchableOpacity>
-
-                  {/* 3. Performance & Reviews */}
+                  {/* 2. Performance & Reviews */}
                   <TouchableOpacity
                     style={styles.menuItem}
                     onPress={() =>

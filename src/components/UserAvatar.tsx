@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { getFullAvatarUrl, getUserInitials } from '../utils/avatar';
 
@@ -37,18 +38,35 @@ export default function UserAvatar({
   style,
 }: UserAvatarProps) {
   const [imageError, setImageError] = useState(false);
+  const [cachedFallback, setCachedFallback] = useState<string | null>(null);
 
   const rawAvatarUrl = user?.avatar_url || user?.avatar || user?.photo;
   const avatarUrl = getFullAvatarUrl(rawAvatarUrl);
   const initials = getUserInitials(user, user?.email, isDriver);
 
-  // Reset error state if the avatar url updates (e.g. after upload)
+  // Sync with persistent local avatar if available
+  useEffect(() => {
+    let mounted = true;
+    AsyncStorage.getItem('user_avatar_cached').then((c) => {
+      if (mounted && c) {
+        setCachedFallback(c);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [user]);
+
+  // Reset error state if the avatar url updates
   useEffect(() => {
     setImageError(false);
   }, [avatarUrl]);
 
-  const defaultBg = bgColor || (isDriver ? '#0F2D20' : '#C8F135');
-  const defaultText = textColor || (isDriver ? '#C8F135' : '#0F2D20');
+  // Prioritize primary avatarUrl; if it fails to load, seamlessly fall back to local cached image
+  const displayImageUri = !imageError && avatarUrl ? avatarUrl : cachedFallback;
+
+  const defaultBg = bgColor || (isDriver ? '#0F2D20' : '#0F1A14');
+  const defaultText = textColor || (isDriver ? '#C8F135' : '#C8F135');
 
   const badgeSize = Math.max(Math.round(size * 0.34), 18);
 
@@ -67,7 +85,7 @@ export default function UserAvatar({
         style,
       ]}
     >
-      {/* 1. Underlying initials text: ALWAYS rendered so alias NEVER disappears */}
+      {/* 1. Underlying initials text: ALWAYS rendered as foundation so circle is never empty */}
       <Text
         style={[
           styles.initialsText,
@@ -81,10 +99,10 @@ export default function UserAvatar({
         {initials}
       </Text>
 
-      {/* 2. Real Image: Overlays over initials if URL exists and hasn't errored */}
-      {avatarUrl && !imageError ? (
+      {/* 2. Real Image: Overlays over initials */}
+      {displayImageUri ? (
         <Image
-          source={{ uri: avatarUrl }}
+          source={{ uri: displayImageUri }}
           style={[
             StyleSheet.absoluteFillObject,
             {
@@ -95,7 +113,7 @@ export default function UserAvatar({
           ]}
           resizeMode="cover"
           onError={() => {
-            console.warn('Avatar image failed to load, falling back to initials underlay:', avatarUrl);
+            console.warn('Avatar image failed to load, falling back:', displayImageUri);
             setImageError(true);
           }}
           onLoad={() => setImageError(false)}

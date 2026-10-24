@@ -28,12 +28,11 @@ export default function BottomNav() {
   const isDriver = user?.role === 'driver' || user?.role?.value === 'driver';
 
   if (isDriver) {
-    // ── DRIVER TAB BAR: Dashboard · Jobs · Earnings · Performance ──
+    // ── DRIVER TAB BAR: Dashboard · Jobs · Earnings ──
     const DRIVER_TABS = [
       { label: 'Dashboard', icon: 'speedometer-outline', target: 0 },
       { label: 'Jobs', icon: 'cube-outline', target: 2 },
       { label: 'Earnings', icon: 'wallet-outline', target: 3 },
-      { label: 'Performance', icon: 'star-outline', target: 4 },
     ];
 
     return (

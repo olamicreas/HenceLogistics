@@ -167,7 +167,7 @@ export default function ProfileScreen() {
               onPress={handlePickAvatar}
               showCameraBadge
               uploading={uploadingAvatar}
-              bgColor={isDriver ? '#0F2D20' : '#1A7A4A'}
+              bgColor={isDriver ? '#0F2D20' : '#0F1A14'}
               textColor="#C8F135"
               borderColor="#C8F135"
             />

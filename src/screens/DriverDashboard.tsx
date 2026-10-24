@@ -831,6 +831,18 @@ export default function DriverDashboard() {
     };
   }, []); 
 
+  // Ensure driver is online in backend DB and jobs are immediately refreshed
+  useEffect(() => {
+    if (token) {
+      if (updateDriverStatus) {
+        updateDriverStatus('available').catch(() => {});
+      }
+      if (refreshDriverJobs) {
+        refreshDriverJobs().catch(() => {});
+      }
+    }
+  }, [token]);
+
   useEffect(() => {
     let pingInterval: NodeJS.Timeout | null = null;
 
@@ -839,25 +851,41 @@ export default function DriverDashboard() {
         if (!token) return;
 
         try {
-          const location = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced, 
-          });
+          let lat: number | null = null;
+          let lon: number | null = null;
 
-          const payload = { 
-            lat: location.coords.latitude, 
-            lon: location.coords.longitude, 
-            ts: Date.now() / 1000 
-          };
-          
-          await axios.post(`${BASE_URL}/driver/location`, payload, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          try {
+            const location = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.Balanced,
+            });
+            lat = location.coords.latitude;
+            lon = location.coords.longitude;
+          } catch {
+            const last = await Location.getLastKnownPositionAsync();
+            if (last) {
+              lat = last.coords.latitude;
+              lon = last.coords.longitude;
+            }
+          }
+
+          if (lat !== null && lon !== null) {
+            const payload = {
+              lat,
+              lon,
+              ts: Date.now() / 1000,
+            };
+
+            await axios.post(`${BASE_URL}/driver/location`, payload, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+          }
         } catch (e: any) {
+          // non-blocking
         }
       };
 
       await sendPing();
-      pingInterval = setInterval(sendPing, 12000);
+      pingInterval = setInterval(sendPing, 10000);
     };
 
     if (isOnline && token) {

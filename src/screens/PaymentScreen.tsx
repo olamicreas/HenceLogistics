@@ -1,5 +1,18 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  Platform,
+  Modal,
+  TextInput,
+  Switch,
+  KeyboardAvoidingView,
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAppContext } from '../context/AppProvider';
@@ -8,12 +21,195 @@ interface PaymentScreenProps {
   onBack?: () => void;
 }
 
+export interface SavedCard {
+  id: string;
+  brand: 'visa' | 'mastercard' | 'amex' | 'discover' | 'card';
+  last4: string;
+  expMonth: string;
+  expYear: string;
+  cardholderName: string;
+  isDefault: boolean;
+}
+
 export default function PaymentScreen({ onBack }: PaymentScreenProps) {
   const { user, setCurrentScreen, rideHistory } = useAppContext();
-  const [selectedCard, setSelectedCard] = useState('card_default');
 
-  const completedRides = (rideHistory || []).filter(
-    (r: any) => ['completed', 'paid', 'delivered'].includes((r.status || '').toLowerCase())
+  const storageKey = `@hence_saved_cards_${user?.id || user?.email || 'default'}`;
+
+  const [cards, setCards] = useState<SavedCard[]>([]);
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+
+  // Form State for Adding Card
+  const [cardholderName, setCardholderName] = useState(
+    user?.full_name || user?.name || ''
+  );
+  const [cardNumber, setCardNumber] = useState('');
+  const [expiry, setExpiry] = useState('');
+  const [cvc, setCvc] = useState('');
+  const [setAsDefault, setSetAsDefault] = useState(true);
+  const [formError, setFormError] = useState('');
+
+  // Load saved cards from physical storage on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem(storageKey);
+        if (stored) {
+          const parsed: SavedCard[] = JSON.parse(stored);
+          setCards(parsed);
+          const def = parsed.find((c) => c.isDefault) || parsed[0];
+          if (def) setSelectedCardId(def.id);
+        }
+      } catch (e) {
+        console.warn('Failed to load saved cards', e);
+      }
+    })();
+  }, [storageKey]);
+
+  // Persist cards helper
+  const persistCards = async (newCards: SavedCard[]) => {
+    setCards(newCards);
+    try {
+      await AsyncStorage.setItem(storageKey, JSON.stringify(newCards));
+    } catch (e) {
+      console.warn('Failed to persist cards', e);
+    }
+  };
+
+  // Detect card brand from number
+  const detectBrand = (num: string): SavedCard['brand'] => {
+    const clean = num.replace(/\s+/g, '');
+    if (clean.startsWith('4')) return 'visa';
+    if (/^(5[1-5]|2[2-7])/.test(clean)) return 'mastercard';
+    if (/^3[47]/.test(clean)) return 'amex';
+    if (/^6(011|5)/.test(clean)) return 'discover';
+    return 'card';
+  };
+
+  // Format card number with spaces every 4 digits
+  const handleCardNumberChange = (text: string) => {
+    const clean = text.replace(/[^0-9]/g, '').slice(0, 16);
+    const parts = clean.match(/.{1,4}/g);
+    setCardNumber(parts ? parts.join(' ') : clean);
+    setFormError('');
+  };
+
+  // Format expiry MM/YY
+  const handleExpiryChange = (text: string) => {
+    const clean = text.replace(/[^0-9]/g, '').slice(0, 4);
+    if (clean.length >= 3) {
+      setExpiry(`${clean.slice(0, 2)}/${clean.slice(2, 4)}`);
+    } else {
+      setExpiry(clean);
+    }
+    setFormError('');
+  };
+
+  const handleOpenAddCard = () => {
+    setCardholderName(user?.full_name || user?.name || '');
+    setCardNumber('');
+    setExpiry('');
+    setCvc('');
+    setSetAsDefault(cards.length === 0);
+    setFormError('');
+    setModalVisible(true);
+  };
+
+  const handleSaveCard = async () => {
+    const rawNumber = cardNumber.replace(/\s+/g, '');
+    if (rawNumber.length < 15) {
+      setFormError('Please enter a valid 15 or 16 digit card number.');
+      return;
+    }
+
+    const expParts = expiry.split('/');
+    if (expParts.length !== 2 || expParts[0].length !== 2 || expParts[1].length !== 2) {
+      setFormError('Please enter a valid expiration date (MM/YY).');
+      return;
+    }
+
+    const month = parseInt(expParts[0], 10);
+    if (month < 1 || month > 12) {
+      setFormError('Expiration month must be between 01 and 12.');
+      return;
+    }
+
+    if (cvc.trim().length < 3) {
+      setFormError('Please enter a valid CVC code.');
+      return;
+    }
+
+    if (!cardholderName.trim()) {
+      setFormError('Please enter the name on the card.');
+      return;
+    }
+
+    const brand = detectBrand(rawNumber);
+    const last4 = rawNumber.slice(-4);
+    const newCardId = `card_${Date.now()}`;
+
+    const newCard: SavedCard = {
+      id: newCardId,
+      brand,
+      last4,
+      expMonth: expParts[0],
+      expYear: expParts[1],
+      cardholderName: cardholderName.trim(),
+      isDefault: setAsDefault || cards.length === 0,
+    };
+
+    let updatedCards = [...cards];
+    if (newCard.isDefault) {
+      updatedCards = updatedCards.map((c) => ({ ...c, isDefault: false }));
+    }
+    updatedCards.push(newCard);
+
+    await persistCards(updatedCards);
+    setSelectedCardId(newCardId);
+    setModalVisible(false);
+    Alert.alert('Card Added', `Your ${brand.toUpperCase()} ending in ${last4} has been saved.`);
+  };
+
+  const handleDeleteCard = (cardId: string) => {
+    Alert.alert('Remove Card', 'Are you sure you want to remove this saved card?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          const filtered = cards.filter((c) => c.id !== cardId);
+          if (filtered.length > 0 && !filtered.some((c) => c.isDefault)) {
+            filtered[0].isDefault = true;
+          }
+          await persistCards(filtered);
+          if (selectedCardId === cardId) {
+            setSelectedCardId(filtered[0]?.id || null);
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleSetDefault = async (cardId: string) => {
+    const updated = cards.map((c) => ({
+      ...c,
+      isDefault: c.id === cardId,
+    }));
+    await persistCards(updated);
+    setSelectedCardId(cardId);
+  };
+
+  // Active / Selected card for the gradient display
+  const activeCard =
+    cards.find((c) => c.id === selectedCardId) ||
+    cards.find((c) => c.isDefault) ||
+    cards[0] ||
+    null;
+
+  // Real completed / paid orders
+  const completedRides = (rideHistory || []).filter((r: any) =>
+    ['completed', 'paid', 'delivered'].includes((r.status || '').toLowerCase())
   );
 
   return (
@@ -32,7 +228,7 @@ export default function PaymentScreen({ onBack }: PaymentScreenProps) {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Payment Methods</Text>
         <TouchableOpacity
-          onPress={() => Alert.alert('Add Card', 'Stripe card onboarding will open here.')}
+          onPress={handleOpenAddCard}
           style={styles.addBtn}
           activeOpacity={0.7}
         >
@@ -48,7 +244,6 @@ export default function PaymentScreen({ onBack }: PaymentScreenProps) {
           end={{ x: 1, y: 1 }}
           style={styles.payCard}
         >
-          {/* Decorative shapes */}
           <View style={styles.cardCircle1} />
           <View style={styles.cardCircle2} />
 
@@ -59,119 +254,294 @@ export default function PaymentScreen({ onBack }: PaymentScreenProps) {
           </View>
 
           {/* Card Number */}
-          <Text style={styles.cardNumber}>••••  ••••  ••••  4821</Text>
+          <Text style={styles.cardNumber}>
+            {activeCard
+              ? `••••  ••••  ••••  ${activeCard.last4}`
+              : '••••  ••••  ••••  ••••'}
+          </Text>
 
           <View style={styles.cardBottomRow}>
-            <View>
-              <Text style={styles.cardHolderName}>{user?.full_name?.toUpperCase() || user?.name?.toUpperCase() || 'HENCE CUSTOMER'}</Text>
-              <Text style={styles.cardExpiry}>EXPIRES 09/28</Text>
+            <View style={{ flex: 1, marginRight: 12 }}>
+              <Text style={styles.cardHolderName} numberOfLines={1}>
+                {activeCard
+                  ? activeCard.cardholderName.toUpperCase()
+                  : user?.full_name?.toUpperCase() || user?.name?.toUpperCase() || 'NO CARD ATTACHED'}
+              </Text>
+              <Text style={styles.cardExpiry}>
+                {activeCard
+                  ? `EXPIRES ${activeCard.expMonth}/${activeCard.expYear}`
+                  : 'ATTACH CARD BELOW'}
+              </Text>
             </View>
 
-            {/* Interlocking Card Network Circles */}
+            {/* Card Brand Badge */}
             <View style={styles.networkCircles}>
-              <View style={[styles.netCircle, { backgroundColor: '#EB001B', zIndex: 1 }]} />
-              <View style={[styles.netCircle, { backgroundColor: '#F79E1B', marginLeft: -12, zIndex: 2 }]} />
+              {activeCard?.brand === 'mastercard' ? (
+                <>
+                  <View style={[styles.netCircle, { backgroundColor: '#EB001B', zIndex: 1 }]} />
+                  <View style={[styles.netCircle, { backgroundColor: '#F79E1B', marginLeft: -12, zIndex: 2 }]} />
+                </>
+              ) : activeCard?.brand === 'visa' ? (
+                <View style={styles.visaBadge}>
+                  <Text style={styles.visaText}>VISA</Text>
+                </View>
+              ) : (
+                <View style={styles.genericCardBadge}>
+                  <Ionicons name="card" size={22} color="#C8F135" />
+                </View>
+              )}
             </View>
           </View>
         </LinearGradient>
 
-        {/* Saved Cards */}
+        {/* Saved Cards Header */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>SAVED CARDS</Text>
-          <TouchableOpacity onPress={() => Alert.alert('Add Card', 'Opening secure card entry...')}>
+          <TouchableOpacity onPress={handleOpenAddCard} activeOpacity={0.7}>
             <Text style={styles.sectionAction}>+ Add new</Text>
           </TouchableOpacity>
         </View>
 
+        {/* Real Saved Cards List */}
         <View style={styles.cardList}>
-          {/* Card 1 */}
-          <TouchableOpacity
-            style={styles.cardRow}
-            onPress={() => setSelectedCard('card_default')}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.cardRowIcon, { backgroundColor: '#E8F5EE', borderColor: '#C5E8D4' }]}>
-              <Ionicons name="card-outline" size={18} color="#1A7A4A" />
-            </View>
-            <View style={styles.cardRowInfo}>
-              <Text style={styles.cardRowTitle}>Visa •••• 4821</Text>
-              <Text style={styles.cardRowSub}>Default · Expires 09/28</Text>
-            </View>
-            <View style={styles.defaultBadge}>
-              <Text style={styles.defaultBadgeText}>Default</Text>
-            </View>
-          </TouchableOpacity>
+          {cards.length > 0 ? (
+            cards.map((card, idx) => {
+              const isSelected = card.id === (activeCard?.id || selectedCardId);
+              return (
+                <TouchableOpacity
+                  key={card.id}
+                  style={[
+                    styles.cardRow,
+                    idx === cards.length - 1 && { borderBottomWidth: 0 },
+                    isSelected && { backgroundColor: '#F0FAF4' },
+                  ]}
+                  onPress={() => handleSetDefault(card.id)}
+                  activeOpacity={0.8}
+                >
+                  <View
+                    style={[
+                      styles.cardRowIcon,
+                      isSelected
+                        ? { backgroundColor: '#E8F5EE', borderColor: '#C5E8D4' }
+                        : { backgroundColor: '#F4F8F6' },
+                    ]}
+                  >
+                    <Ionicons
+                      name="card-outline"
+                      size={18}
+                      color={isSelected ? '#1A7A4A' : '#7A9080'}
+                    />
+                  </View>
+                  <View style={styles.cardRowInfo}>
+                    <Text style={styles.cardRowTitle}>
+                      {card.brand.toUpperCase()} •••• {card.last4}
+                    </Text>
+                    <Text style={styles.cardRowSub}>
+                      Expires {card.expMonth}/{card.expYear} · {card.cardholderName}
+                    </Text>
+                  </View>
 
-          {/* Card 2 */}
-          <TouchableOpacity
-            style={[styles.cardRow, { borderBottomWidth: 0 }]}
-            onPress={() => setSelectedCard('card_secondary')}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.cardRowIcon, { backgroundColor: '#F4F8F6' }]}>
-              <Ionicons name="card-outline" size={18} color="#7A9080" />
+                  {card.isDefault && (
+                    <View style={styles.defaultBadge}>
+                      <Text style={styles.defaultBadgeText}>Default</Text>
+                    </View>
+                  )}
+
+                  <TouchableOpacity
+                    onPress={() => handleDeleteCard(card.id)}
+                    style={styles.deleteCardBtn}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="trash-outline" size={16} color="#C0392B" />
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              );
+            })
+          ) : (
+            <View style={styles.emptyCardBox}>
+              <Ionicons name="card-outline" size={32} color="#B8CEC3" />
+              <Text style={styles.emptyCardTitle}>No payment cards saved</Text>
+              <Text style={styles.emptyCardSub}>
+                Add your real credit or debit card for seamless checkout.
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyAddBtn}
+                onPress={handleOpenAddCard}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="add" size={16} color="#0F2D20" />
+                <Text style={styles.emptyAddBtnText}>Add Card</Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.cardRowInfo}>
-              <Text style={styles.cardRowTitle}>Mastercard •••• 9034</Text>
-              <Text style={styles.cardRowSub}>Expires 03/26</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="#B8CEC3" />
-          </TouchableOpacity>
+          )}
         </View>
 
-        {/* Billing History */}
-        <View style={[styles.sectionHeaderRow, { marginTop: 20 }]}>
+        {/* Real Billing History */}
+        <View style={[styles.sectionHeaderRow, { marginTop: 24 }]}>
           <Text style={styles.sectionTitle}>BILLING HISTORY</Text>
         </View>
 
         <View style={styles.cardList}>
           {completedRides.length > 0 ? (
-            completedRides.slice(0, 5).map((ride: any, index: number) => (
+            completedRides.slice(0, 10).map((ride: any, index: number) => (
               <View
                 key={ride.id || index}
                 style={[
                   styles.billRow,
-                  index === completedRides.slice(0, 5).length - 1 && { borderBottomWidth: 0 },
+                  index === completedRides.slice(0, 10).length - 1 && { borderBottomWidth: 0 },
                 ]}
               >
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.billOrderTitle}>Order #{ride.id ? `HEN-${ride.id}` : 'HEN-8821'}</Text>
+                <View style={{ flex: 1, marginRight: 12 }}>
+                  <Text style={styles.billOrderTitle}>
+                    Order #{ride.id ? `HEN-${ride.id}` : 'HEN-ORDER'}
+                  </Text>
                   <Text style={styles.billOrderSub}>
-                    {ride.created_at ? new Date(ride.created_at).toLocaleDateString() : 'Recent'} · {ride.vehicle_type || 'Cargo Van'}
+                    {ride.created_at
+                      ? new Date(ride.created_at).toLocaleDateString()
+                      : 'Completed'}{' '}
+                    · {ride.vehicle_type ? ride.vehicle_type.replace('_', ' ') : 'Standard'}
                   </Text>
                 </View>
                 <Text style={styles.billAmount}>
-                  €{parseFloat(ride.final_price || 27).toFixed(2)}
+                  €{parseFloat(ride.final_price || 0).toFixed(2)}
                 </Text>
               </View>
             ))
           ) : (
-            <>
-              <View style={styles.billRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.billOrderTitle}>Order #HEN-8821</Text>
-                  <Text style={styles.billOrderSub}>Today · Large Van</Text>
-                </View>
-                <Text style={styles.billAmount}>€27.00</Text>
-              </View>
-              <View style={styles.billRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.billOrderTitle}>Order #HEN-8802</Text>
-                  <Text style={styles.billOrderSub}>15 Oct · Cargo Van</Text>
-                </View>
-                <Text style={styles.billAmount}>€31.50</Text>
-              </View>
-              <View style={[styles.billRow, { borderBottomWidth: 0 }]}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.billOrderTitle}>Order #HEN-8787</Text>
-                  <Text style={styles.billOrderSub}>12 Oct · Large Van</Text>
-                </View>
-                <Text style={styles.billAmount}>€44.00</Text>
-              </View>
-            </>
+            <View style={styles.emptyHistoryBox}>
+              <Ionicons name="receipt-outline" size={30} color="#B8CEC3" />
+              <Text style={styles.emptyHistoryTitle}>No billing history yet</Text>
+              <Text style={styles.emptyHistorySub}>
+                Invoices and payment receipts will appear here once your orders are completed.
+              </Text>
+            </View>
           )}
         </View>
       </ScrollView>
+
+      {/* ── REAL CARD ENTRY MODAL ── */}
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add Payment Card</Text>
+              <TouchableOpacity
+                onPress={() => setModalVisible(false)}
+                style={styles.modalCloseBtn}
+              >
+                <Ionicons name="close" size={20} color="#0F1A14" />
+              </TouchableOpacity>
+            </View>
+
+            {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Cardholder Name */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>CARDHOLDER NAME</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. John Doe"
+                  placeholderTextColor="#B8CEC3"
+                  value={cardholderName}
+                  onChangeText={setCardholderName}
+                />
+              </View>
+
+              {/* Card Number */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>CARD NUMBER</Text>
+                <View style={styles.cardInputWrapper}>
+                  <TextInput
+                    style={[styles.input, { flex: 1, borderTopRightRadius: 0, borderBottomRightRadius: 0 }]}
+                    placeholder="4000 1234 5678 9010"
+                    placeholderTextColor="#B8CEC3"
+                    keyboardType="number-pad"
+                    value={cardNumber}
+                    onChangeText={handleCardNumberChange}
+                    maxLength={19}
+                  />
+                  <View style={styles.brandIconBox}>
+                    <Ionicons
+                      name="card"
+                      size={20}
+                      color={
+                        detectBrand(cardNumber) === 'visa'
+                          ? '#1A7A4A'
+                          : detectBrand(cardNumber) === 'mastercard'
+                          ? '#F79E1B'
+                          : '#7A9080'
+                      }
+                    />
+                  </View>
+                </View>
+              </View>
+
+              {/* Expiry and CVC Row */}
+              <View style={styles.rowInputs}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                  <Text style={styles.inputLabel}>EXPIRY (MM/YY)</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="MM/YY"
+                    placeholderTextColor="#B8CEC3"
+                    keyboardType="number-pad"
+                    value={expiry}
+                    onChangeText={handleExpiryChange}
+                    maxLength={5}
+                  />
+                </View>
+
+                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                  <Text style={styles.inputLabel}>CVC / CVV</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="123"
+                    placeholderTextColor="#B8CEC3"
+                    keyboardType="number-pad"
+                    value={cvc}
+                    onChangeText={(t) => setCvc(t.slice(0, 4))}
+                    maxLength={4}
+                    secureTextEntry
+                  />
+                </View>
+              </View>
+
+              {/* Set Default Toggle */}
+              <View style={styles.switchRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.switchTitle}>Set as default payment card</Text>
+                  <Text style={styles.switchSub}>Use this card for instant delivery bookings</Text>
+                </View>
+                <Switch
+                  value={setAsDefault}
+                  onValueChange={setSetAsDefault}
+                  trackColor={{ true: '#1A7A4A', false: '#D4E2DA' }}
+                  thumbColor="#FFFFFF"
+                />
+              </View>
+
+              {/* Save Button */}
+              <TouchableOpacity
+                style={styles.saveCardBtn}
+                onPress={handleSaveCard}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="lock-closed" size={16} color="#0F2D20" style={{ marginRight: 6 }} />
+                <Text style={styles.saveCardBtnText}>Save Card Securely</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -304,6 +674,25 @@ const styles = StyleSheet.create({
     height: 26,
     borderRadius: 13,
   },
+  visaBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 6,
+  },
+  visaText: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+    fontSize: 12,
+    letterSpacing: 1.5,
+    fontStyle: 'italic',
+  },
+  genericCardBadge: {
+    width: 30,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -373,6 +762,42 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1A7A4A',
   },
+  deleteCardBtn: {
+    padding: 6,
+  },
+  emptyCardBox: {
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyCardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F1A14',
+    marginTop: 8,
+  },
+  emptyCardSub: {
+    fontSize: 11,
+    color: '#7A9080',
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: 14,
+    maxWidth: 240,
+  },
+  emptyAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#C8F135',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+  },
+  emptyAddBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F2D20',
+    marginLeft: 4,
+  },
   billRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -396,5 +821,132 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#0F1A14',
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  emptyHistoryBox: {
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyHistoryTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0F1A14',
+    marginTop: 6,
+  },
+  emptyHistorySub: {
+    fontSize: 11,
+    color: '#7A9080',
+    textAlign: 'center',
+    marginTop: 4,
+    maxWidth: 240,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: '85%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F1A14',
+  },
+  modalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F4F8F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  errorText: {
+    color: '#C0392B',
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  inputGroup: {
+    marginBottom: 14,
+  },
+  inputLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#7A9080',
+    letterSpacing: 0.8,
+    marginBottom: 6,
+  },
+  input: {
+    backgroundColor: '#F4F8F6',
+    borderWidth: 1,
+    borderColor: '#D4E2DA',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#0F1A14',
+  },
+  cardInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  brandIconBox: {
+    backgroundColor: '#F4F8F6',
+    borderWidth: 1,
+    borderLeftWidth: 0,
+    borderColor: '#D4E2DA',
+    borderTopRightRadius: 10,
+    borderBottomRightRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    height: 42,
+    justifyContent: 'center',
+  },
+  rowInputs: {
+    flexDirection: 'row',
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F4F8F6',
+    marginBottom: 16,
+  },
+  switchTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0F1A14',
+  },
+  switchSub: {
+    fontSize: 10,
+    color: '#7A9080',
+    marginTop: 2,
+  },
+  saveCardBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#C8F135',
+    borderRadius: 12,
+    paddingVertical: 14,
+    marginBottom: Platform.OS === 'ios' ? 20 : 10,
+  },
+  saveCardBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F2D20',
   },
 });

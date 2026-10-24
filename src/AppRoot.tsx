@@ -196,7 +196,7 @@ export default function AppRoot() {
   // Show bottom nav across main operational tabs and hubs
   const showBottomNav = token && (
     (!isDriver && (currentScreen === 'home' || currentScreen === 'create-job' || currentScreen === 'account-hub' || currentScreen === 'support' || currentScreen === 'payment')) ||
-    (isDriver && (currentScreen === 'home' || currentScreen === 'account-hub'))
+    (isDriver && (currentScreen === 'home' || currentScreen === 'driver-dashboard' || currentScreen === 'account-hub'))
   );
 
   return (
