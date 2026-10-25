@@ -354,6 +354,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const bgLocationRunningRef = useRef(false);
   const appStateRef = useRef(AppState.currentState);
   const tokenRef = useRef<string | null>(null);
+  const userRef = useRef<any>(null);
   const bookingDraftRef = useRef<any>(null);
   const [driverScreenIndex, setDriverScreenIndex] = useState(0);
 
@@ -511,6 +512,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     tokenRef.current = token;
   }, [token]);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   const authHeaders = (overrideToken?: string | null) => {
     const t = overrideToken ?? tokenRef.current ?? token;
@@ -1561,17 +1566,47 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }),
       ]);
 
+      const currentUser = userRef.current || user;
       const updatedUser = userRes.data;
       const cachedAvatar = await AsyncStorage.getItem('user_avatar_cached');
-      const preservedAvatar = updatedUser?.avatar_url || user?.avatar_url || cachedAvatar || null;
+      const preservedAvatar =
+        currentUser?.avatar_url || updatedUser?.avatar_url || cachedAvatar || null;
       const mergedUser = {
         ...updatedUser,
         avatar_url: preservedAvatar,
       };
 
-      setUser(mergedUser);
-      setProfileDraft(mergedUser);
-      setIsPremium(!!mergedUser.is_premium);
+      setUser((prevUser: any) => {
+        if (!prevUser) return mergedUser;
+        const hasChanged =
+          prevUser.id !== mergedUser.id ||
+          prevUser.email !== mergedUser.email ||
+          prevUser.full_name !== mergedUser.full_name ||
+          prevUser.phone !== mergedUser.phone ||
+          prevUser.avatar_url !== mergedUser.avatar_url ||
+          prevUser.operational_status !== mergedUser.operational_status ||
+          prevUser.is_premium !== mergedUser.is_premium ||
+          prevUser.vehicle_type !== mergedUser.vehicle_type ||
+          prevUser.registration_plate !== mergedUser.registration_plate ||
+          prevUser.reg_plate !== mergedUser.reg_plate ||
+          prevUser.rating !== mergedUser.rating;
+        return hasChanged ? mergedUser : prevUser;
+      });
+
+      setProfileDraft((prevDraft: any) => {
+        if (!prevDraft) return mergedUser;
+        const hasChanged =
+          prevDraft.id !== mergedUser.id ||
+          prevDraft.email !== mergedUser.email ||
+          prevDraft.full_name !== mergedUser.full_name ||
+          prevDraft.phone !== mergedUser.phone ||
+          prevDraft.avatar_url !== mergedUser.avatar_url ||
+          prevDraft.vehicle_type !== mergedUser.vehicle_type ||
+          prevDraft.registration_plate !== mergedUser.registration_plate;
+        return hasChanged ? mergedUser : prevDraft;
+      });
+
+      setIsPremium((prev) => (prev === !!mergedUser.is_premium ? prev : !!mergedUser.is_premium));
 
       const nowTs = Date.now() / 1000;
 

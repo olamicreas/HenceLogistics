@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, memo } from 'react';
 import {
   View,
   Text,
@@ -25,7 +25,7 @@ interface UserAvatarProps {
   style?: any;
 }
 
-export default function UserAvatar({
+function UserAvatar({
   user,
   size = 40,
   isDriver = false,
@@ -44,22 +44,28 @@ export default function UserAvatar({
   const avatarUrl = getFullAvatarUrl(rawAvatarUrl);
   const initials = getUserInitials(user, user?.email, isDriver);
 
-  // Sync with persistent local avatar if available
+  const prevAvatarUrlRef = useRef<string | null>(avatarUrl);
+  const userId = user?.id || user?.email;
+
+  // Sync with persistent local avatar if available - only once on mount or when user ID changes
   useEffect(() => {
     let mounted = true;
     AsyncStorage.getItem('user_avatar_cached').then((c) => {
       if (mounted && c) {
-        setCachedFallback(c);
+        setCachedFallback((prev) => (prev === c ? prev : c));
       }
     });
     return () => {
       mounted = false;
     };
-  }, [user]);
+  }, [userId]);
 
-  // Reset error state if the avatar url updates
+  // Reset error state ONLY if the actual avatar url string changes
   useEffect(() => {
-    setImageError(false);
+    if (prevAvatarUrlRef.current !== avatarUrl) {
+      prevAvatarUrlRef.current = avatarUrl;
+      setImageError(false);
+    }
   }, [avatarUrl]);
 
   // Prioritize primary avatarUrl; if it fails to load, seamlessly fall back to local cached image
@@ -102,6 +108,7 @@ export default function UserAvatar({
       {/* 2. Real Image: Overlays over initials */}
       {displayImageUri ? (
         <Image
+          key={displayImageUri}
           source={{ uri: displayImageUri }}
           style={[
             StyleSheet.absoluteFillObject,
@@ -171,6 +178,8 @@ export default function UserAvatar({
 
   return avatarCircle;
 }
+
+export default memo(UserAvatar);
 
 const styles = StyleSheet.create({
   pressableWrap: {

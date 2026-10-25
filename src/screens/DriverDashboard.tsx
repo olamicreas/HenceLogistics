@@ -641,6 +641,90 @@ export default function DriverDashboard() {
   const docsFromProfile = useMemo(() => getVerificationDocs(profileDraft), [profileDraft]);
 
   const [hiddenHistoryIds, setHiddenHistoryIds] = useState<number[]>([]);
+  const [reviewFilter, setReviewFilter] = useState<'all' | '5' | '4' | 'below'>('all');
+  const [expandedReviews, setExpandedReviews] = useState<Record<string, boolean>>({});
+
+  const toggleReview = (id: string) => {
+    setExpandedReviews((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const REVIEWS_DATA = useMemo(
+    () => [
+      {
+        id: 'rev-1',
+        initials: 'SC',
+        name: 'Sarah C.',
+        avatarBg: '#E8F5EE',
+        avatarColor: '#1A7A4A',
+        stars: 5,
+        date: '2 Oct 2026',
+        route: 'JOB-4812 · Medium Van · D2 → Dundrum',
+        body:
+          'Emma was fantastic. Arrived right on time, helped pack carefully and got everything to Dundrum safely. Would definitely book again!',
+        tags: ['Careful with items', 'Professional', 'On time'],
+      },
+      {
+        id: 'rev-2',
+        initials: 'MO',
+        name: "Mark O'Brien",
+        avatarBg: '#EAF2FB',
+        avatarColor: '#1A7A4A',
+        stars: 5,
+        date: '29 Sep 2026',
+        route: 'JOB-4799 · Large Van · Rathmines → Sandyford',
+        body:
+          'Brilliant service. Extremely fast loading and very polite. Took great care of a fragile glass cabinet.',
+        tags: ['Careful with items', 'Great communication'],
+      },
+      {
+        id: 'rev-3',
+        initials: 'RK',
+        name: 'Ronan K.',
+        avatarBg: '#E8F5EE',
+        avatarColor: '#1A7A4A',
+        stars: 5,
+        date: '28 Sep 2026',
+        route: 'Office equipment · Cargo Van · D2 → Leopardstown',
+        body:
+          'Exceptional service. Moved all our server equipment without a scratch. Very organised, kept everything wrapped properly. Our whole IT team was impressed.',
+        tags: ['Careful with items', 'Professional', 'On time'],
+      },
+      {
+        id: 'rev-4',
+        initials: 'LK',
+        name: 'Laura K.',
+        avatarBg: '#FEF3DC',
+        avatarColor: '#C47A0A',
+        stars: 5,
+        date: '24 Sep 2026',
+        route: 'JOB-4769 · Large Van · Clontarf → D6',
+        body:
+          "Saved our move day. Showed up early, packed the van perfectly, and didn't damage a single thing. Would book again without hesitation.",
+        tags: ['Helpful', 'On time'],
+      },
+      {
+        id: 'rev-5',
+        initials: 'AM',
+        name: 'A. Murphy',
+        avatarBg: '#F4F4F4',
+        avatarColor: '#888888',
+        stars: 3,
+        date: '20 Sep 2026',
+        route: 'Appliance delivery · Small Van · D8 → Tallaght',
+        body:
+          "Job got done but the van smelled a bit and he didn't have a trolley so I had to help carry the washing machine myself. Did the job but room to improve.",
+        tags: ['Room to improve'],
+      },
+    ],
+    []
+  );
+
+  const filteredReviews = useMemo(() => {
+    if (reviewFilter === '5') return REVIEWS_DATA.filter((r) => r.stars === 5);
+    if (reviewFilter === '4') return REVIEWS_DATA.filter((r) => r.stars === 4);
+    if (reviewFilter === 'below') return REVIEWS_DATA.filter((r) => r.stars <= 3);
+    return REVIEWS_DATA;
+  }, [reviewFilter, REVIEWS_DATA]);
 
   // 🔥 DYNAMIC ROUTE CALCULATORS: Overrides broken backend distances
   const getTrueDistance = (job: any) => {
@@ -2511,85 +2595,188 @@ export default function DriverDashboard() {
   };
 
   const renderPerformance = () => (
-    <>
-      <ScrollView contentContainerStyle={styles.pad}>
-        <View style={styles.scoreCard}>
-          <View style={styles.scoreRing}>
-            <Text style={styles.scoreNum}>{trustScore}</Text>
+    <ScrollView
+      contentContainerStyle={[styles.pad, { paddingBottom: 110 }]}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* 1. Overall rating summary card */}
+      <View style={styles.scoreCard}>
+        <View style={styles.protoScoreRing}>
+          <Text style={styles.protoScoreNum}>4.9</Text>
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center' }}>
+          <Text style={styles.scoreTitle}>Excellent Driver</Text>
+          <View style={{ flexDirection: 'row', gap: 3, marginVertical: 4 }}>
+            {[1, 2, 3, 4, 5].map((s) => (
+              <Ionicons key={s} name="star" size={14} color="#1A7A4A" />
+            ))}
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.scoreTitle}>{trustBand}</Text>
-            <Text style={styles.scoreSub}>Based on your live backend job history</Text>
-            <Text style={styles.scorePill}>
-              {trustScore >= 85 ? 'Priority dispatch active' : 'Keep improving'}
-            </Text>
+          <Text style={styles.scoreSub}>214 reviews · Top 15% on Hence</Text>
+          <View style={styles.protoPillWrap}>
+            <Text style={styles.protoScorePill}>Priority dispatch active</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* 2. Customer Reviews Rating Breakdown Card */}
+      <View style={styles.card}>
+        <View style={styles.ch}>
+          <View>
+            <Text style={styles.ct}>Customer Reviews</Text>
+            <Text style={styles.cs}>All 214 reviews</Text>
+          </View>
+          <View style={styles.scoreBadgePill}>
+            <Ionicons name="star" size={12} color="#1A7A4A" style={{ marginRight: 4 }} />
+            <Text style={styles.scoreBadgePillText}>4.9</Text>
           </View>
         </View>
 
-        <View style={styles.card}>
-          <View style={styles.ch}>
-            <Text style={styles.ct}>Score Breakdown</Text>
-            
+        {/* Rating summary with big 4.9 and 5-star bars */}
+        <View style={styles.breakdownHeaderRow}>
+          <View style={styles.breakdownLeftCol}>
+            <Text style={styles.breakdownBigNum}>4.9</Text>
+            <View style={{ flexDirection: 'row', gap: 2, marginVertical: 4 }}>
+              {[1, 2, 3, 4, 5].map((s) => (
+                <Ionicons key={s} name="star" size={13} color="#1A7A4A" />
+              ))}
+            </View>
+            <Text style={styles.breakdownTotalCount}>214 reviews</Text>
           </View>
 
-          <View style={{ paddingHorizontal: 14 }}>
+          <View style={styles.breakdownBarsCol}>
             {[
-              ['Acceptance Rate', 'Jobs accepted vs offered', acceptanceRate, `${acceptanceRate}%`],
-              ['Completion Rate', 'Jobs finished successfully', completionRate, `${completionRate}%`],
-              ['Customer Rating', 'Average across all deliveries', Math.round((averageRating / 5) * 100), `${averageRating.toFixed(1)}★`],
-              ['On-Time Delivery', 'Based on completed jobs', onTimeRate, `${onTimeRate}%`],
-              ['Dispute Rate', 'Keep this under 2%', Math.max(0, 100 - disputeRate * 10), `${disputeRate}%`],
-              ['Zone Coverage', 'Availability and delivery activity', Math.min(100, Math.max(50, completedRides.length * 5)), `${Math.min(100, Math.max(50, completedRides.length * 5))}%`],
-            ].map((m, idx) => (
-              <View key={idx} style={[styles.metricRow, idx === 5 && { borderBottomWidth: 0 }]}>
-                <View style={styles.metricInfo}>
-                  <Text style={styles.metricName}>{m[0] as string}</Text>
-                  <Text style={styles.metricSub}>{m[1] as string}</Text>
-                </View>
-                <View style={styles.metricBarBg}>
+              { star: '5', pct: '82%', color: '#1A7A4A' },
+              { star: '4', pct: '12%', color: '#1A7A4A' },
+              { star: '3', pct: '4%', color: '#C47A0A' },
+              { star: '2', pct: '1%', color: '#C0392B' },
+              { star: '1', pct: '1%', color: '#C0392B' },
+            ].map((bar) => (
+              <View key={bar.star} style={styles.starBarRow}>
+                <Text style={styles.starBarLabel}>{bar.star}</Text>
+                <View style={styles.starBarTrack}>
                   <View
-                    style={[
-                      styles.metricBarFill,
-                      {
-                        width: `${m[2]}%`,
-                        backgroundColor: m[0] === 'Dispute Rate' ? COLORS.warning : COLORS.primary,
-                      },
-                    ]}
+                    style={[styles.starBarFill, { width: bar.pct, backgroundColor: bar.color }]}
                   />
                 </View>
-                <Text style={[styles.metricVal, m[0] === 'Dispute Rate' && { color: COLORS.warning }]}>
-                  {m[3] as string}
-                </Text>
+                <Text style={styles.starBarPct}>{bar.pct}</Text>
               </View>
             ))}
           </View>
         </View>
 
-        <View style={styles.card}>
-          <View style={styles.ch}>
-            <Text style={styles.ct}>How to Improve</Text>
-          </View>
-          <View style={styles.cb}>
-            <View style={styles.tipBoxWarn}>
-              <View style={styles.tipHead}>
-                <DriverIcon name="ic-warn" size={14} color={COLORS.warning} />
-                <Text style={styles.tipHeadText}>Dispute Rate — {disputeRate}%</Text>
-              </View>
-              <Text style={styles.tipText}>
-                Always upload delivery proof and keep customer notes documented.
+        {/* Category tags customers choose */}
+        <View style={styles.categoryTagsWrap}>
+          {[
+            { tag: 'Careful with items', count: 148 },
+            { tag: 'Professional', count: 132 },
+            { tag: 'On time', count: 119 },
+            { tag: 'Great communication', count: 98 },
+            { tag: 'Helpful', count: 87 },
+          ].map((item) => (
+            <View key={item.tag} style={styles.categoryTagPill}>
+              <Ionicons
+                name="pricetag-outline"
+                size={11}
+                color="#1A7A4A"
+                style={{ marginRight: 5 }}
+              />
+              <Text style={styles.categoryTagText}>
+                {item.tag} <Text style={styles.categoryTagCount}>{item.count}</Text>
               </Text>
             </View>
-
-            <View style={styles.tipBoxSoft}>
-              <Text style={styles.tipHeadTextSoft}>On-Time Rate — {onTimeRate}%</Text>
-              <Text style={styles.tipText}>
-                Use navigation early and confirm pickup promptly to raise on-time score.
-              </Text>
-            </View>
-          </View>
+          ))}
         </View>
-      </ScrollView>
-    </>
+      </View>
+
+      {/* 3. Filter Chips */}
+      <View style={styles.reviewFilterRow}>
+        {[
+          { key: 'all', label: 'All (214)' },
+          { key: '5', label: '5 ★ (175)' },
+          { key: '4', label: '4 ★ (26)' },
+          { key: 'below', label: '3 ★ & below (13)' },
+        ].map((f) => {
+          const active = reviewFilter === f.key;
+          return (
+            <TouchableOpacity
+              key={f.key}
+              onPress={() => setReviewFilter(f.key as any)}
+              style={[styles.revFilterChip, active && styles.revFilterChipActive]}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.revFilterChipText, active && styles.revFilterChipTextActive]}>
+                {f.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* 4. Customer Reviews List */}
+      <View style={{ gap: 10 }}>
+        {filteredReviews.map((rev) => {
+          const isExpanded = !!expandedReviews[rev.id];
+          return (
+            <View key={rev.id} style={styles.revCard}>
+              <View style={styles.revCardTop}>
+                <View style={[styles.revAvatar, { backgroundColor: rev.avatarBg }]}>
+                  <Text style={[styles.revAvatarText, { color: rev.avatarColor }]}>
+                    {rev.initials}
+                  </Text>
+                </View>
+
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.revCustomerName}>{rev.name}</Text>
+                  <Text style={styles.revRouteInfo} numberOfLines={1}>
+                    {rev.route}
+                  </Text>
+                </View>
+
+                <View style={{ alignItems: 'flex-end', gap: 3 }}>
+                  <View style={{ flexDirection: 'row', gap: 2 }}>
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Ionicons
+                        key={s}
+                        name="star"
+                        size={11}
+                        color={s <= rev.stars ? '#1A7A4A' : '#D4E2DA'}
+                      />
+                    ))}
+                  </View>
+                  <Text style={styles.revDateText}>{rev.date}</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => toggleReview(rev.id)}
+                style={styles.revToggleBtn}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.revToggleText}>
+                  {isExpanded ? 'Hide review ▴' : 'Read review ▾'}
+                </Text>
+              </TouchableOpacity>
+
+              {isExpanded && (
+                <View style={styles.revBodyWrap}>
+                  <Text style={styles.revBodyText}>{rev.body}</Text>
+                </View>
+              )}
+
+              {rev.tags && rev.tags.length > 0 && (
+                <View style={styles.revChipsRow}>
+                  {rev.tags.map((t) => (
+                    <View key={t} style={styles.revChipBadge}>
+                      <Text style={styles.revChipText}>{t}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          );
+        })}
+      </View>
+    </ScrollView>
   );
 
   const renderHistory = () => {
@@ -3827,6 +4014,237 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  protoScoreRing: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    borderWidth: 4,
+    borderColor: '#1A7A4A',
+    backgroundColor: '#E8F5EE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  protoScoreNum: {
+    fontSize: 22,
+    fontFamily: 'monospace',
+    color: '#1A7A4A',
+    fontWeight: '800',
+  },
+  protoPillWrap: {
+    marginTop: 6,
+    alignSelf: 'flex-start',
+  },
+  protoScorePill: {
+    backgroundColor: '#E8F5EE',
+    color: '#1A7A4A',
+    fontSize: 10,
+    fontWeight: '700',
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  scoreBadgePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5EE',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  scoreBadgePillText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#1A7A4A',
+    fontFamily: 'monospace',
+  },
+  breakdownHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    gap: 16,
+  },
+  breakdownLeftCol: {
+    alignItems: 'center',
+    minWidth: 80,
+  },
+  breakdownBigNum: {
+    fontSize: 42,
+    fontWeight: '800',
+    color: '#0F1A14',
+    fontFamily: 'monospace',
+    lineHeight: 46,
+  },
+  breakdownTotalCount: {
+    fontSize: 11,
+    color: '#688275',
+    marginTop: 2,
+  },
+  breakdownBarsCol: {
+    flex: 1,
+    gap: 5,
+  },
+  starBarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  starBarLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#688275',
+    width: 12,
+  },
+  starBarTrack: {
+    flex: 1,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#E8EFEA',
+    overflow: 'hidden',
+  },
+  starBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  starBarPct: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#688275',
+    width: 32,
+    textAlign: 'right',
+    fontFamily: 'monospace',
+  },
+  categoryTagsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    padding: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#D4E2DA',
+  },
+  categoryTagPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F4F8F6',
+    borderWidth: 1,
+    borderColor: '#D4E2DA',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  categoryTagText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#0F1A14',
+  },
+  categoryTagCount: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#1A7A4A',
+    fontFamily: 'monospace',
+  },
+  reviewFilterRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginVertical: 12,
+  },
+  revFilterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D4E2DA',
+  },
+  revFilterChipActive: {
+    backgroundColor: '#1A7A4A',
+    borderColor: '#1A7A4A',
+  },
+  revFilterChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#3A5245',
+  },
+  revFilterChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  revCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#D4E2DA',
+    padding: 14,
+    ...shadow('rgba(15,26,20,0.05)'),
+  },
+  revCardTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  revAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  revAvatarText: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  revCustomerName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0F1A14',
+  },
+  revRouteInfo: {
+    fontSize: 11,
+    color: '#688275',
+    marginTop: 2,
+  },
+  revDateText: {
+    fontSize: 10,
+    color: '#688275',
+  },
+  revToggleBtn: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    paddingVertical: 2,
+  },
+  revToggleText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#1A7A4A',
+  },
+  revBodyWrap: {
+    marginTop: 8,
+    padding: 10,
+    backgroundColor: '#F4F8F6',
+    borderRadius: 8,
+  },
+  revBodyText: {
+    fontSize: 12,
+    color: '#0F1A14',
+    lineHeight: 18,
+  },
+  revChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 10,
+  },
+  revChipBadge: {
+    backgroundColor: '#E8F5EE',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  revChipText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#1A7A4A',
   },
   scoreNum: { fontSize: 20, fontFamily: 'monospace', color: COLORS.primary, fontWeight: '500' },
   scoreTitle: { fontSize: 17, fontWeight: '700', color: COLORS.ink },
