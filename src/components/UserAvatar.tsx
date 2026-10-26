@@ -47,12 +47,17 @@ function UserAvatar({
   const prevAvatarUrlRef = useRef<string | null>(avatarUrl);
   const userId = user?.id || user?.email;
 
-  // Sync with persistent local avatar if available - only once on mount or when user ID changes
+  // Sync with persistent local avatar if available - strictly keyed to this specific user ID
   useEffect(() => {
     let mounted = true;
-    AsyncStorage.getItem('user_avatar_cached').then((c) => {
-      if (mounted && c && c !== cachedFallback) {
-        setCachedFallback(c);
+    if (!userId) {
+      setCachedFallback(null);
+      return;
+    }
+    const userKey = `user_avatar_cached_${userId}`;
+    AsyncStorage.getItem(userKey).then((c) => {
+      if (mounted) {
+        setCachedFallback(c || null);
       }
     });
     return () => {

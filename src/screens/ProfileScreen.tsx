@@ -34,6 +34,7 @@ export default function ProfileScreen() {
     loading,
     saveProfile,
     uploadAvatar: contextUploadAvatar,
+    changePassword,
     setCurrentScreen,
     setBottomTab,
     isPremium,
@@ -51,6 +52,16 @@ export default function ProfileScreen() {
   const [editValue, setEditValue] = useState('');
   const [editInputType, setEditInputType] = useState<'default' | 'email-address' | 'phone-pad'>('default');
   const [savingEdit, setSavingEdit] = useState(false);
+
+  // Password Change State
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [currentPasswordInput, setCurrentPasswordInput] = useState('');
+  const [newPasswordInput, setNewPasswordInput] = useState('');
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
 
   // Secondary Sheets State
   const [notifSheetVisible, setNotifSheetVisible] = useState(false);
@@ -174,6 +185,42 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleChangePasswordSubmit = async () => {
+    if (!currentPasswordInput) {
+      Alert.alert('Required', 'Please enter your current password.');
+      return;
+    }
+    if (newPasswordInput.length < 6) {
+      Alert.alert('Invalid Password', 'New password must be at least 6 characters long.');
+      return;
+    }
+    if (newPasswordInput !== confirmPasswordInput) {
+      Alert.alert('Mismatch', 'New passwords do not match. Please re-check.');
+      return;
+    }
+    if (currentPasswordInput === newPasswordInput) {
+      Alert.alert('Error', 'New password must be different from your current password.');
+      return;
+    }
+
+    try {
+      setChangingPassword(true);
+      if (changePassword) {
+        await changePassword(currentPasswordInput, newPasswordInput);
+      }
+      Keyboard.dismiss();
+      setPasswordModalVisible(false);
+      setCurrentPasswordInput('');
+      setNewPasswordInput('');
+      setConfirmPasswordInput('');
+      Alert.alert('Success', 'Password updated successfully! Please keep your new password safe.');
+    } catch (err: any) {
+      Alert.alert('Password Change Failed', err?.message || 'Could not update password.');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   const getNotifSummary = () => {
     const active = [];
     if (isDriver) {
@@ -283,7 +330,7 @@ export default function ProfileScreen() {
               </View>
 
               {/* Phone */}
-              <View style={[styles.supRow, { borderBottomWidth: 0 }]}>
+              <View style={styles.supRow}>
                 <View style={[styles.supIconWrap, { backgroundColor: '#E8F5EE', borderColor: '#C5E8D4' }]}>
                   <Ionicons name="call-outline" size={18} color="#1A7A4A" />
                 </View>
@@ -297,6 +344,29 @@ export default function ProfileScreen() {
                   activeOpacity={0.7}
                 >
                   <Text style={styles.editPillText}>Edit</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Password */}
+              <View style={[styles.supRow, { borderBottomWidth: 0 }]}>
+                <View style={[styles.supIconWrap, { backgroundColor: '#E8F5EE', borderColor: '#C5E8D4' }]}>
+                  <Ionicons name="lock-closed-outline" size={18} color="#1A7A4A" />
+                </View>
+                <View style={styles.supInfo}>
+                  <Text style={styles.supTitle}>Password</Text>
+                  <Text style={styles.supSub}>••••••••••••</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    setCurrentPasswordInput('');
+                    setNewPasswordInput('');
+                    setConfirmPasswordInput('');
+                    setPasswordModalVisible(true);
+                  }}
+                  style={styles.editPill}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.editPillText}>Change</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -514,6 +584,153 @@ export default function ProfileScreen() {
                     <ActivityIndicator color="#FFFFFF" size="small" />
                   ) : (
                     <Text style={styles.saveBtnText}>Save changes</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ── CHANGE PASSWORD MODAL ── */}
+      <Modal
+        visible={passwordModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          Keyboard.dismiss();
+          setPasswordModalVisible(false);
+        }}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
+        >
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={() => {
+              Keyboard.dismiss();
+              setPasswordModalVisible(false);
+            }}
+          >
+            <TouchableOpacity
+              style={styles.passwordSheetContainer}
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <View style={styles.dragHandle} />
+              <Text style={styles.sheetHeaderTitle}>Change Password</Text>
+              <Text style={styles.sheetHeaderSub}>
+                Enter your current password and choose a secure new password.
+              </Text>
+
+              {/* Current Password */}
+              <View style={styles.passInputGroup}>
+                <Text style={styles.passFieldLabel}>CURRENT PASSWORD</Text>
+                <View style={styles.passInputWrap}>
+                  <TextInput
+                    style={styles.passTextInput}
+                    value={currentPasswordInput}
+                    onChangeText={setCurrentPasswordInput}
+                    secureTextEntry={!showCurrentPass}
+                    placeholder="Enter current password"
+                    placeholderTextColor="#9CA3AF"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowCurrentPass(!showCurrentPass)}
+                    style={styles.passEyeBtn}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name={showCurrentPass ? 'eye-off-outline' : 'eye-outline'}
+                      size={19}
+                      color="#688275"
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* New Password */}
+              <View style={styles.passInputGroup}>
+                <Text style={styles.passFieldLabel}>NEW PASSWORD</Text>
+                <View style={styles.passInputWrap}>
+                  <TextInput
+                    style={styles.passTextInput}
+                    value={newPasswordInput}
+                    onChangeText={setNewPasswordInput}
+                    secureTextEntry={!showNewPass}
+                    placeholder="At least 6 characters"
+                    placeholderTextColor="#9CA3AF"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowNewPass(!showNewPass)}
+                    style={styles.passEyeBtn}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name={showNewPass ? 'eye-off-outline' : 'eye-outline'}
+                      size={19}
+                      color="#688275"
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Confirm New Password */}
+              <View style={styles.passInputGroup}>
+                <Text style={styles.passFieldLabel}>CONFIRM NEW PASSWORD</Text>
+                <View style={styles.passInputWrap}>
+                  <TextInput
+                    style={styles.passTextInput}
+                    value={confirmPasswordInput}
+                    onChangeText={setConfirmPasswordInput}
+                    secureTextEntry={!showConfirmPass}
+                    placeholder="Re-enter new password"
+                    placeholderTextColor="#9CA3AF"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowConfirmPass(!showConfirmPass)}
+                    style={styles.passEyeBtn}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name={showConfirmPass ? 'eye-off-outline' : 'eye-outline'}
+                      size={19}
+                      color="#688275"
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={[styles.editSheetButtonsRow, { marginTop: 8 }]}>
+                <TouchableOpacity
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    setPasswordModalVisible(false);
+                  }}
+                  style={styles.cancelBtn}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={handleChangePasswordSubmit}
+                  style={styles.saveBtn}
+                  activeOpacity={0.8}
+                  disabled={changingPassword}
+                >
+                  {changingPassword ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <Text style={styles.saveBtnText}>Update Password</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -1088,5 +1305,47 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     color: '#1A7A4A',
+  },
+  passwordSheetContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  passInputGroup: {
+    marginBottom: 12,
+  },
+  passFieldLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#688275',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  passInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F4F8F6',
+    borderWidth: 1.5,
+    borderColor: '#D4E2DA',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+  },
+  passTextInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#0F1A14',
+  },
+  passEyeBtn: {
+    padding: 6,
   },
 });

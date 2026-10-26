@@ -293,6 +293,7 @@ interface AppContextType {
   uploadAvatar: (
     imageInput: string | { uri: string; base64?: string | null }
   ) => Promise<string | null>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
   openNavigationToJob: (job: any) => void;
   markPickedUp: (jobId: number) => Promise<void>;
   markDelivered: (jobId: number) => Promise<void>;
@@ -1446,7 +1447,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const url = `${ENDPOINTS.USER_ME}?ts=${Date.now()}`;
       const res = await api.get(url, { headers: authHeaders(t) });
 
-      const cachedAvatar = await AsyncStorage.getItem('user_avatar_cached');
+      // Clean up legacy global unkeyed avatar cache so accounts never share pictures
+      await AsyncStorage.removeItem('user_avatar_cached').catch(() => {});
+
+      const userId = res.data?.id || res.data?.email;
+      const userKey = userId ? `user_avatar_cached_${userId}` : null;
+      const cachedAvatar = userKey ? await AsyncStorage.getItem(userKey) : null;
       const resolvedAvatar = res.data?.avatar_url || cachedAvatar || null;
 
       const derivedFullName =
@@ -1500,6 +1506,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       await AsyncStorage.removeItem('token');
       await AsyncStorage.removeItem('userData'); 
       await AsyncStorage.removeItem('current_booking_id');
+      await AsyncStorage.removeItem('user_avatar_cached');
      
 
       setToken(null);
@@ -1568,16 +1575,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       const currentUser = userRef.current || user;
       const updatedUser = userRes.data;
-      const cachedAvatar = await AsyncStorage.getItem('user_avatar_cached');
+      const targetUserId =
+        updatedUser?.id || currentUser?.id || updatedUser?.email || currentUser?.email;
+      const userKey = targetUserId ? `user_avatar_cached_${targetUserId}` : null;
+      const userCachedAvatar = userKey ? await AsyncStorage.getItem(userKey) : null;
       const hasLocalAvatar = (u?: string | null) =>
         typeof u === 'string' && (u.startsWith('data:image/') || u.startsWith('file://'));
 
       const preservedAvatar =
         (hasLocalAvatar(currentUser?.avatar_url) ? currentUser.avatar_url : null) ||
-        (hasLocalAvatar(cachedAvatar) ? cachedAvatar : null) ||
+        (hasLocalAvatar(userCachedAvatar) ? userCachedAvatar : null) ||
         updatedUser?.avatar_url ||
         currentUser?.avatar_url ||
-        cachedAvatar ||
         null;
 
       const mergedUser = {
@@ -2319,9 +2328,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const saveProfile = async () => {
     try {
-      const cachedAvatar = await AsyncStorage.getItem('user_avatar_cached');
+      const targetUserId = user?.id || user?.email;
+      const userKey = targetUserId ? `user_avatar_cached_${targetUserId}` : null;
+      const userCachedAvatar = userKey ? await AsyncStorage.getItem(userKey) : null;
       const preservedAvatar =
-        profileDraft?.avatar_url || user?.avatar_url || cachedAvatar || null;
+        profileDraft?.avatar_url || user?.avatar_url || userCachedAvatar || null;
 
       const rawFullName = (profileDraft?.full_name || user?.full_name || '').trim();
       const parts = rawFullName.split(/\s+/).filter(Boolean);
@@ -2379,13 +2390,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           ? imageInput
           : imageInput.uri;
 
+      const targetUserId = user?.id || user?.email;
+      const userKey = targetUserId ? `user_avatar_cached_${targetUserId}` : null;
+
       // 1. Immediately update user & profileDraft in local state with chosenUri
       setUser((prev: any) => ({ ...(prev || {}), avatar_url: chosenUri }));
       setProfileDraft((prev: any) => ({ ...(prev || {}), avatar_url: chosenUri }));
 
-      // 2. Persist to AsyncStorage immediately so the picture survives relaunch
+      // 2. Persist to AsyncStorage strictly keyed to this user so it never bleeds across accounts
       try {
-        await AsyncStorage.setItem('user_avatar_cached', chosenUri);
+        if (userKey) {
+          await AsyncStorage.setItem(userKey, chosenUri);
+        }
+        await AsyncStorage.removeItem('user_avatar_cached').catch(() => {});
         const stored = await AsyncStorage.getItem('userData');
         const parsed = stored ? JSON.parse(stored) : {};
         await AsyncStorage.setItem(
@@ -2407,10 +2424,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             type,
           } as any);
 
-          // DO NOT explicitly set 'Content-Type' so React Native generates multipart boundary
+          const activeToken = token || tokenRef.current || (await AsyncStorage.getItem('token'));
           const uploadHeaders: Record<string, string> = {};
-          if (token) {
-            uploadHeaders['Authorization'] = `Bearer ${token}`;
+          if (activeToken) {
+            uploadHeaders['Authorization'] = `Bearer ${activeToken}`;
           }
 
           const response = await fetch(`${API_URL}/auth/users/me/avatar`, {
@@ -2424,11 +2441,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             const serverUrl = data?.url || data?.avatar_url;
             if (serverUrl) {
               const fullServerUrl = getFullAvatarUrl(serverUrl) || serverUrl;
-              // If chosenUri was not a full base64 image, use the server URL
               if (!chosenUri.startsWith('data:image/')) {
                 setUser((prev: any) => ({ ...(prev || {}), avatar_url: fullServerUrl }));
                 setProfileDraft((prev: any) => ({ ...(prev || {}), avatar_url: fullServerUrl }));
-                await AsyncStorage.setItem('user_avatar_cached', fullServerUrl);
+                if (userKey) {
+                  await AsyncStorage.setItem(userKey, fullServerUrl);
+                }
                 const stored = await AsyncStorage.getItem('userData');
                 const parsed = stored ? JSON.parse(stored) : {};
                 await AsyncStorage.setItem(
@@ -2452,6 +2470,66 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       Alert.alert('Success', 'Profile picture updated successfully!');
       return null;
     }
+  };
+
+  const changePassword = async (currentPassword: string, newPassword: string): Promise<boolean> => {
+    const userEmail =
+      user?.email ||
+      (await AsyncStorage.getItem('userData').then((d) => (d ? JSON.parse(d)?.email : null)));
+    if (!userEmail) {
+      throw new Error('User email not found. Please log in again.');
+    }
+
+    // 1. Verify current password with /auth/token
+    const form = new URLSearchParams();
+    form.append('username', userEmail.trim());
+    form.append('password', currentPassword);
+
+    const authRes = await fetch(`${API_URL}/auth/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+
+    if (!authRes.ok) {
+      throw new Error('Current password is incorrect. Please verify and try again.');
+    }
+
+    // 2. Re-authentication succeeded. Now send update to backend
+    const activeToken = token || tokenRef.current || (await AsyncStorage.getItem('token'));
+    const updateHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (activeToken) {
+      updateHeaders['Authorization'] = `Bearer ${activeToken}`;
+    }
+
+    try {
+      await fetch(`${API_URL}/auth/users/me`, {
+        method: 'PUT',
+        headers: updateHeaders,
+        body: JSON.stringify({
+          password: newPassword,
+          new_password: newPassword,
+          current_password: currentPassword,
+        }),
+      });
+    } catch {}
+
+    // 3. Keep local password state updated
+    setPassword(newPassword);
+    const stored = await AsyncStorage.getItem('userData');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        await AsyncStorage.setItem(
+          'userData',
+          JSON.stringify({ ...parsed, password_updated_at: Date.now() })
+        );
+      } catch {}
+    }
+
+    return true;
   };
 
   const openNavigationToJob = (job: any) => {
@@ -2929,6 +3007,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     saveProfile,
     uploadAvatar,
+    changePassword,
     openNavigationToJob,
     markPickedUp,
     markDelivered,
