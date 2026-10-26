@@ -84,15 +84,12 @@ export default function ProfileScreen() {
       if (!result) return;
 
       setUploadingAvatar(true);
+      const chosen = result.base64 || result.uri;
+      setProfileDraft((prev: any) => ({ ...(prev || {}), avatar_url: chosen }));
+      if (setUser) setUser((prev: any) => ({ ...(prev || {}), avatar_url: chosen }));
+
       if (contextUploadAvatar) {
-        const newUrl = await contextUploadAvatar(result);
-        if (newUrl) {
-          setProfileDraft((prev: any) => ({ ...prev, avatar_url: newUrl }));
-        }
-      } else {
-        const chosen = result.base64 || result.uri;
-        setProfileDraft((prev: any) => ({ ...prev, avatar_url: chosen }));
-        if (setUser) setUser({ ...user, avatar_url: chosen });
+        await contextUploadAvatar(result);
       }
     } catch (e: any) {
       console.warn('Avatar Upload Error:', e?.message);

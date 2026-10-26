@@ -37,7 +37,7 @@ function UserAvatar({
   borderColor,
   style,
 }: UserAvatarProps) {
-  const [imageError, setImageError] = useState(false);
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const [cachedFallback, setCachedFallback] = useState<string | null>(null);
 
   const rawAvatarUrl = user?.avatar_url || user?.avatar || user?.photo;
@@ -51,8 +51,8 @@ function UserAvatar({
   useEffect(() => {
     let mounted = true;
     AsyncStorage.getItem('user_avatar_cached').then((c) => {
-      if (mounted && c) {
-        setCachedFallback((prev) => (prev === c ? prev : c));
+      if (mounted && c && c !== cachedFallback) {
+        setCachedFallback(c);
       }
     });
     return () => {
@@ -60,16 +60,21 @@ function UserAvatar({
     };
   }, [userId]);
 
-  // Reset error state ONLY if the actual avatar url string changes
+  // Reset failedUrl ONLY if the actual avatar url string changes
   useEffect(() => {
     if (prevAvatarUrlRef.current !== avatarUrl) {
       prevAvatarUrlRef.current = avatarUrl;
-      setImageError(false);
+      setFailedUrl(null);
     }
   }, [avatarUrl]);
 
-  // Prioritize primary avatarUrl; if it fails to load, seamlessly fall back to local cached image
-  const displayImageUri = !imageError && avatarUrl ? avatarUrl : cachedFallback;
+  // Prioritize primary avatarUrl; if it fails to load, gracefully fall back to local cached image
+  let displayImageUri: string | null = null;
+  if (avatarUrl && avatarUrl !== failedUrl) {
+    displayImageUri = avatarUrl;
+  } else if (cachedFallback && cachedFallback !== failedUrl) {
+    displayImageUri = cachedFallback;
+  }
 
   const defaultBg = bgColor || (isDriver ? '#0F2D20' : '#0F1A14');
   const defaultText = textColor || (isDriver ? '#C8F135' : '#C8F135');
@@ -108,7 +113,6 @@ function UserAvatar({
       {/* 2. Real Image: Overlays over initials */}
       {displayImageUri ? (
         <Image
-          key={displayImageUri}
           source={{ uri: displayImageUri }}
           style={[
             StyleSheet.absoluteFillObject,
@@ -119,11 +123,11 @@ function UserAvatar({
             },
           ]}
           resizeMode="cover"
+          fadeDuration={0}
           onError={() => {
-            console.warn('Avatar image failed to load, falling back:', displayImageUri);
-            setImageError(true);
+            console.warn('Avatar image failed to load, stopping retry:', displayImageUri);
+            setFailedUrl(displayImageUri);
           }}
-          onLoad={() => setImageError(false)}
         />
       ) : null}
     </View>

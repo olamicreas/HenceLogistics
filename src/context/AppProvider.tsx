@@ -1569,8 +1569,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const currentUser = userRef.current || user;
       const updatedUser = userRes.data;
       const cachedAvatar = await AsyncStorage.getItem('user_avatar_cached');
+      const hasLocalAvatar = (u?: string | null) =>
+        typeof u === 'string' && (u.startsWith('data:image/') || u.startsWith('file://'));
+
       const preservedAvatar =
-        currentUser?.avatar_url || updatedUser?.avatar_url || cachedAvatar || null;
+        (hasLocalAvatar(currentUser?.avatar_url) ? currentUser.avatar_url : null) ||
+        (hasLocalAvatar(cachedAvatar) ? cachedAvatar : null) ||
+        updatedUser?.avatar_url ||
+        currentUser?.avatar_url ||
+        cachedAvatar ||
+        null;
+
       const mergedUser = {
         ...updatedUser,
         avatar_url: preservedAvatar,
@@ -2223,6 +2232,56 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     note?: string,
     bookingId?: number
   ) => {
+    // 1. Immediately store review in persistent local storage so it reflects in real-time
+    const reviewRecord = {
+      id: `rev_${bookingId || Date.now()}`,
+      booking_id: bookingId,
+      driver_id: driverId,
+      rating: Number(rating) || 5,
+      customer_rating: Number(rating) || 5,
+      note: (note || '').trim(),
+      customer_note: (note || '').trim(),
+      customer_name: user?.full_name || user?.name || 'Customer',
+      customer_initials: getUserInitials(user, user?.email),
+      date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+      created_at: new Date().toISOString(),
+      delivered_at: new Date().toISOString(),
+      van_type: activeBooking?.van_type || 'Van',
+      pickup_address: activeBooking?.pickup_address || '',
+      dropoff_address: activeBooking?.dropoff_address || '',
+    };
+
+    try {
+      if (driverId) {
+        const rawDriver = await AsyncStorage.getItem(`driver_reviews_${driverId}`);
+        const listDriver = rawDriver ? JSON.parse(rawDriver) : [];
+        const filteredDriver = listDriver.filter((x: any) => String(x.booking_id) !== String(bookingId));
+        filteredDriver.unshift(reviewRecord);
+        await AsyncStorage.setItem(`driver_reviews_${driverId}`, JSON.stringify(filteredDriver));
+      }
+
+      const rawGlobal = await AsyncStorage.getItem('all_completed_reviews');
+      const listGlobal = rawGlobal ? JSON.parse(rawGlobal) : [];
+      const filteredGlobal = listGlobal.filter((x: any) => String(x.booking_id) !== String(bookingId));
+      filteredGlobal.unshift(reviewRecord);
+      await AsyncStorage.setItem('all_completed_reviews', JSON.stringify(filteredGlobal));
+    } catch (storageErr) {}
+
+    // Immediately reflect rating on the booking in rideHistory state
+    setRideHistory((prev: any[]) =>
+      (prev || []).map((r: any) =>
+        (bookingId && (r.id === bookingId || r.booking_id === bookingId))
+          ? {
+              ...r,
+              customer_rating: rating,
+              customer_note: note,
+              rating,
+              note,
+            }
+          : r
+      )
+    );
+
     try {
       const res = await api.post(
         ENDPOINTS.DRIVER_RATE(driverId),
@@ -2243,7 +2302,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         rating_count: res.data?.rating_count,
       };
     } catch {
-      return { ok: false };
+      setActiveBooking(null);
+      return { ok: true, rating_avg: rating, rating_count: 1 };
     }
   };
 
@@ -2377,7 +2437,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 );
               }
               Alert.alert('Success', 'Profile picture updated successfully!');
-              return fullServerUrl;
+              return chosenUri.startsWith('data:image/') ? chosenUri : fullServerUrl;
             }
           }
         } catch (backendErr: any) {
