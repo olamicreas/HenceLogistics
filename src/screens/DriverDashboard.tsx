@@ -4198,10 +4198,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   protoScoreNum: {
-    fontSize: 22,
+    fontSize: 20,
     fontFamily: 'monospace',
     color: '#1A7A4A',
-    fontWeight: '800',
+    fontWeight: '700',
   },
   protoPillWrap: {
     marginTop: 6,
@@ -4211,7 +4211,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E8F5EE',
     color: '#1A7A4A',
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '600',
     paddingHorizontal: 9,
     paddingVertical: 3,
     borderRadius: 20,
@@ -4227,7 +4227,7 @@ const styles = StyleSheet.create({
   },
   scoreBadgePillText: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#1A7A4A',
     fontFamily: 'monospace',
   },
@@ -4242,11 +4242,11 @@ const styles = StyleSheet.create({
     minWidth: 80,
   },
   breakdownBigNum: {
-    fontSize: 42,
-    fontWeight: '800',
+    fontSize: 34,
+    fontWeight: '700',
     color: '#0F1A14',
     fontFamily: 'monospace',
-    lineHeight: 46,
+    lineHeight: 40,
   },
   breakdownTotalCount: {
     fontSize: 11,
@@ -4264,7 +4264,7 @@ const styles = StyleSheet.create({
   },
   starBarLabel: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#688275',
     width: 12,
   },
@@ -4281,7 +4281,7 @@ const styles = StyleSheet.create({
   },
   starBarPct: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#688275',
     width: 32,
     textAlign: 'right',
@@ -4307,12 +4307,12 @@ const styles = StyleSheet.create({
   },
   categoryTagText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#0F1A14',
   },
   categoryTagCount: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#1A7A4A',
     fontFamily: 'monospace',
   },
@@ -4335,12 +4335,12 @@ const styles = StyleSheet.create({
   },
   revFilterChipText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#3A5245',
   },
   revFilterChipTextActive: {
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontWeight: '600',
   },
   revCard: {
     backgroundColor: '#FFFFFF',
@@ -4364,11 +4364,11 @@ const styles = StyleSheet.create({
   },
   revAvatarText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   revCustomerName: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#0F1A14',
   },
   revRouteInfo: {
@@ -4387,7 +4387,7 @@ const styles = StyleSheet.create({
   },
   revToggleText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#1A7A4A',
   },
   revBodyWrap: {
@@ -4415,7 +4415,7 @@ const styles = StyleSheet.create({
   },
   revChipText: {
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#1A7A4A',
   },
   emptyReviewsCard: {
@@ -4430,8 +4430,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   emptyReviewsTitle: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#0F1A14',
     marginBottom: 4,
   },

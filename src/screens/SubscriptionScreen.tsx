@@ -38,6 +38,7 @@ export default function SubscriptionScreen() {
   } = useAppContext();
 
   const currentPlan: PlanTier = isPremium ? 'pro' : 'basic';
+  const isDriver = (user?.role?.value || user?.role) === 'driver';
   const [selectedPlan, setSelectedPlan] = useState<PlanTier>(currentPlan);
   const [autoRenew, setAutoRenew] = useState(true);
   const [copiedCode, setCopiedCode] = useState(false);
@@ -45,6 +46,13 @@ export default function SubscriptionScreen() {
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
 
   const referralCode = user?.id ? `HENCE-JD${(user.id * 7 + 13) % 90 + 10}` : 'HENCE-JD49';
+
+  // Guard: Customers do not need driver subscription
+  useEffect(() => {
+    if (user && !isDriver) {
+      setCurrentScreen('account-hub');
+    }
+  }, [user, isDriver]);
 
   useEffect(() => {
     setSelectedPlan(isPremium ? 'pro' : 'basic');
@@ -555,8 +563,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 17,
+    fontWeight: '700',
     color: '#FFFFFF',
   },
   headerSub: {
@@ -604,13 +612,13 @@ const styles = StyleSheet.create({
   },
   activePlanTagText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '600',
     color: 'rgba(255, 255, 255, 0.7)',
     letterSpacing: 0.8,
   },
   heroPlanTitle: {
-    fontSize: 26,
-    fontWeight: '900',
+    fontSize: 24,
+    fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 4,
   },
@@ -632,7 +640,7 @@ const styles = StyleSheet.create({
   },
   heroPerkPillText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#FFFFFF',
   },
   card: {
@@ -649,8 +657,8 @@ const styles = StyleSheet.create({
     borderColor: '#D4E2DA',
   },
   cardHeaderTitle: {
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '600',
     color: '#0F1A14',
     marginBottom: 4,
   },
@@ -677,7 +685,7 @@ const styles = StyleSheet.create({
   },
   privTitle: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#0F1A14',
   },
   privDesc: {
@@ -700,8 +708,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#E8F5EE',
   },
   planCardName: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '600',
     color: '#0F1A14',
   },
   currentBadge: {
@@ -712,7 +720,7 @@ const styles = StyleSheet.create({
   },
   currentBadgeText: {
     fontSize: 9,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#FFFFFF',
   },
   planCardDesc: {
@@ -721,8 +729,8 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   planCardPrice: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
     color: '#0F1A14',
     fontFamily: 'monospace',
   },
@@ -766,7 +774,7 @@ const styles = StyleSheet.create({
   },
   confirmPlanBtnText: {
     color: '#FFFFFF',
-    fontWeight: '800',
+    fontWeight: '600',
     fontSize: 14,
   },
   referralBox: {
@@ -783,14 +791,14 @@ const styles = StyleSheet.create({
   },
   referralBoxLabel: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#688275',
     letterSpacing: 0.6,
     marginBottom: 2,
   },
   referralBoxCode: {
-    fontSize: 18,
-    fontWeight: '900',
+    fontSize: 17,
+    fontWeight: '700',
     color: '#1A7A4A',
     fontFamily: 'monospace',
     letterSpacing: 1,
@@ -803,7 +811,7 @@ const styles = StyleSheet.create({
   },
   copyBtnText: {
     color: '#FFFFFF',
-    fontWeight: '800',
+    fontWeight: '600',
     fontSize: 12,
   },
   refStatsRow: {
@@ -819,8 +827,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   refStatNum: {
-    fontSize: 20,
-    fontWeight: '900',
+    fontSize: 18,
+    fontWeight: '700',
     color: '#0F1A14',
   },
   refStatLabel: {
@@ -838,7 +846,7 @@ const styles = StyleSheet.create({
   },
   shareInviteBtnText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#0F1A14',
   },
   billingRow: {
@@ -858,7 +866,7 @@ const styles = StyleSheet.create({
   },
   billingRowTitle: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#0F1A14',
   },
   billingRowSub: {

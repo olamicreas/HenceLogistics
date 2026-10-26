@@ -14,6 +14,7 @@ import {
   Modal,
   Switch,
   Share,
+  Keyboard,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppProvider';
@@ -56,10 +57,15 @@ export default function ProfileScreen() {
   const [privacySheetVisible, setPrivacySheetVisible] = useState(false);
   const [verifSheetVisible, setVerifSheetVisible] = useState(false);
 
-  // Notification toggles
+  // Driver Notification toggles
   const [notifJobAlerts, setNotifJobAlerts] = useState(true);
   const [notifSurgeAlerts, setNotifSurgeAlerts] = useState(true);
   const [notifEarningsSummary, setNotifEarningsSummary] = useState(true);
+
+  // Customer Notification toggles
+  const [notifOrderUpdates, setNotifOrderUpdates] = useState(true);
+  const [notifPromos, setNotifPromos] = useState(false);
+  const [notifEmailReceipts, setNotifEmailReceipts] = useState(true);
 
   // Strict Sync: populate draft from user on mount
   useEffect(() => {
@@ -99,19 +105,21 @@ export default function ProfileScreen() {
   };
 
   const userObj = profileDraft || user;
-  const displayName = getUserDisplayName(userObj, isDriver) || 'Driver';
-  const driverId = userObj?.driver_id || userObj?.id ? `HEN-DRV-${userObj?.id || '7841'}` : 'HEN-DRV-7841';
+  const displayName = getUserDisplayName(userObj, isDriver) || (isDriver ? 'Driver' : 'Customer');
+  const accountId = isDriver
+    ? (userObj?.driver_id || (userObj?.id ? `HEN-DRV-${userObj.id}` : 'HEN-DRV-7841'))
+    : (userObj?.id ? `HEN-CUST-${userObj.id}` : 'Customer Account');
 
   const currentFullName = userObj?.full_name || displayName;
-  const currentEmail = userObj?.email || 'driver@hence.ie';
-  const currentPhone = userObj?.phone || '+353 87 234 5678';
-  const currentVehicleType = userObj?.vehicle_type || userObj?.vehicle_make || 'Large Van · 2021 Ford Transit';
-  const currentPlate = userObj?.registration_plate || userObj?.reg_plate || userObj?.vehicle_plate || '21-D-12345';
+  const currentEmail = userObj?.email || '';
+  const currentPhone = userObj?.phone || '';
+  const currentVehicleType = userObj?.vehicle_type || userObj?.vehicle_make || (isDriver ? 'Large Van · Ford Transit' : '');
+  const currentPlate = userObj?.registration_plate || userObj?.reg_plate || userObj?.vehicle_plate || (isDriver ? '21-D-12345' : '');
 
   const openEditSheet = (field: EditFieldType, label: string, initialVal: string, keyboard: 'default' | 'email-address' | 'phone-pad' = 'default') => {
     setEditTarget(field);
     setEditLabel(label);
-    setEditValue(initialVal);
+    setEditValue(initialVal === 'Not set' ? '' : initialVal);
     setEditInputType(keyboard);
     setEditSheetVisible(true);
   };
@@ -155,6 +163,7 @@ export default function ProfileScreen() {
         setUser((prev: any) => ({ ...(prev || {}), ...updatedDraft }));
       }
 
+      Keyboard.dismiss();
       setEditSheetVisible(false);
       setEditTarget(null);
       Alert.alert('Success', `${editLabel} updated successfully!`);
@@ -167,9 +176,15 @@ export default function ProfileScreen() {
 
   const getNotifSummary = () => {
     const active = [];
-    if (notifJobAlerts) active.push('Job alerts');
-    if (notifSurgeAlerts) active.push('Surge alerts');
-    if (notifEarningsSummary) active.push('Earnings');
+    if (isDriver) {
+      if (notifJobAlerts) active.push('Job alerts');
+      if (notifSurgeAlerts) active.push('Surge alerts');
+      if (notifEarningsSummary) active.push('Earnings');
+    } else {
+      if (notifOrderUpdates) active.push('Order updates');
+      if (notifEmailReceipts) active.push('Email receipts');
+      if (notifPromos) active.push('Promos');
+    }
     if (active.length === 0) return 'All off';
     return `${active.slice(0, 2).join(', ')} on`;
   };
@@ -180,8 +195,12 @@ export default function ProfileScreen() {
       <View style={styles.topBar}>
         <TouchableOpacity
           onPress={() => {
-            setCurrentScreen('driver-dashboard');
-            setBottomTab('dashboard');
+            if (isDriver) {
+              setCurrentScreen('driver-dashboard');
+              setBottomTab('dashboard');
+            } else {
+              setCurrentScreen('account-hub');
+            }
           }}
           style={styles.backButton}
           activeOpacity={0.7}
@@ -199,9 +218,10 @@ export default function ProfileScreen() {
         <ScrollView
           contentContainerStyle={{ paddingBottom: 60 }}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           {/* Profile Hero */}
-          <View style={styles.heroBanner}>
+          <View style={[styles.heroBanner, { backgroundColor: isDriver ? '#0F2D20' : '#0F1A14' }]}>
             <View style={styles.avatarWrap}>
               <UserAvatar
                 user={userObj}
@@ -210,13 +230,13 @@ export default function ProfileScreen() {
                 onPress={handlePickAvatar}
                 showCameraBadge
                 uploading={uploadingAvatar}
-                bgColor="rgba(200,241,53,0.2)"
+                bgColor={isDriver ? 'rgba(200,241,53,0.2)' : 'rgba(255,255,255,0.1)'}
                 textColor="#C8F135"
-                borderColor="rgba(200,241,53,0.5)"
+                borderColor={isDriver ? 'rgba(200,241,53,0.5)' : 'rgba(255,255,255,0.25)'}
               />
             </View>
-            <Text style={styles.heroName}>{currentFullName}</Text>
-            <Text style={styles.heroDriverId}>{driverId}</Text>
+            <Text style={styles.heroName}>{currentFullName || displayName}</Text>
+            <Text style={styles.heroDriverId}>{accountId}</Text>
           </View>
 
           <View style={styles.padContent}>
@@ -233,7 +253,7 @@ export default function ProfileScreen() {
                 </View>
                 <View style={styles.supInfo}>
                   <Text style={styles.supTitle}>Full Name</Text>
-                  <Text style={styles.supSub}>{currentFullName}</Text>
+                  <Text style={styles.supSub}>{currentFullName || 'Not set'}</Text>
                 </View>
                 <TouchableOpacity
                   onPress={() => openEditSheet('full_name', 'Full Name', currentFullName, 'default')}
@@ -251,7 +271,7 @@ export default function ProfileScreen() {
                 </View>
                 <View style={styles.supInfo}>
                   <Text style={styles.supTitle}>Email</Text>
-                  <Text style={styles.supSub}>{currentEmail}</Text>
+                  <Text style={styles.supSub}>{currentEmail || 'Not set'}</Text>
                 </View>
                 <TouchableOpacity
                   onPress={() => openEditSheet('email', 'Email address', currentEmail, 'email-address')}
@@ -269,7 +289,7 @@ export default function ProfileScreen() {
                 </View>
                 <View style={styles.supInfo}>
                   <Text style={styles.supTitle}>Phone</Text>
-                  <Text style={styles.supSub}>{currentPhone}</Text>
+                  <Text style={styles.supSub}>{currentPhone || 'Not set'}</Text>
                 </View>
                 <TouchableOpacity
                   onPress={() => openEditSheet('phone', 'Phone number', currentPhone, 'phone-pad')}
@@ -281,48 +301,50 @@ export default function ProfileScreen() {
               </View>
             </View>
 
-            {/* CARD 2: Vehicle */}
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>Vehicle</Text>
-              </View>
+            {/* CARD 2: Vehicle (Drivers Only) */}
+            {isDriver ? (
+              <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.cardTitle}>Vehicle</Text>
+                </View>
 
-              {/* Vehicle Type */}
-              <View style={styles.supRow}>
-                <View style={[styles.supIconWrap, { backgroundColor: '#0F2D20', borderColor: '#0F2D20' }]}>
-                  <MaterialCommunityIcons name="van-utility" size={19} color="#C8F135" />
+                {/* Vehicle Type */}
+                <View style={styles.supRow}>
+                  <View style={[styles.supIconWrap, { backgroundColor: '#0F2D20', borderColor: '#0F2D20' }]}>
+                    <MaterialCommunityIcons name="van-utility" size={19} color="#C8F135" />
+                  </View>
+                  <View style={styles.supInfo}>
+                    <Text style={styles.supTitle}>Vehicle Type</Text>
+                    <Text style={styles.supSub}>{currentVehicleType || 'Not set'}</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => openEditSheet('vehicle_type', 'Vehicle type', currentVehicleType, 'default')}
+                    style={styles.editPill}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.editPillText}>Edit</Text>
+                  </TouchableOpacity>
                 </View>
-                <View style={styles.supInfo}>
-                  <Text style={styles.supTitle}>Vehicle Type</Text>
-                  <Text style={styles.supSub}>{currentVehicleType}</Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() => openEditSheet('vehicle_type', 'Vehicle type', currentVehicleType, 'default')}
-                  style={styles.editPill}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.editPillText}>Edit</Text>
-                </TouchableOpacity>
-              </View>
 
-              {/* Reg Plate */}
-              <View style={[styles.supRow, { borderBottomWidth: 0 }]}>
-                <View style={[styles.supIconWrap, { backgroundColor: '#EAF2FB', borderColor: '#C4DDF5' }]}>
-                  <Ionicons name="card-outline" size={18} color="#2980B9" />
+                {/* Reg Plate */}
+                <View style={[styles.supRow, { borderBottomWidth: 0 }]}>
+                  <View style={[styles.supIconWrap, { backgroundColor: '#EAF2FB', borderColor: '#C4DDF5' }]}>
+                    <Ionicons name="card-outline" size={18} color="#2980B9" />
+                  </View>
+                  <View style={styles.supInfo}>
+                    <Text style={styles.supTitle}>Reg Plate</Text>
+                    <Text style={styles.supSub}>{currentPlate || 'Not set'}</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => openEditSheet('registration_plate', 'Registration plate', currentPlate, 'default')}
+                    style={styles.editPill}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.editPillText}>Edit</Text>
+                  </TouchableOpacity>
                 </View>
-                <View style={styles.supInfo}>
-                  <Text style={styles.supTitle}>Reg Plate</Text>
-                  <Text style={styles.supSub}>{currentPlate}</Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() => openEditSheet('registration_plate', 'Registration plate', currentPlate, 'default')}
-                  style={styles.editPill}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.editPillText}>Edit</Text>
-                </TouchableOpacity>
               </View>
-            </View>
+            ) : null}
 
             {/* CARD 3: Account */}
             <View style={styles.card}>
@@ -330,26 +352,28 @@ export default function ProfileScreen() {
                 <Text style={styles.cardTitle}>Account</Text>
               </View>
 
-              {/* Subscription */}
-              <TouchableOpacity
-                onPress={() => setCurrentScreen('subscription')}
-                style={styles.supRow}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.supIconWrap, { backgroundColor: '#FEF3DC', borderColor: '#E8C87A' }]}>
-                  <Ionicons name="shield-checkmark-outline" size={18} color="#C47A0A" />
-                </View>
-                <View style={styles.supInfo}>
-                  <Text style={styles.supTitle}>Subscription</Text>
-                  <Text style={styles.supSub}>
-                    {isPremium ? 'Professional · Renews 1 May 2027' : 'Basic Plan · Active'}
-                  </Text>
-                </View>
-                <View style={styles.proBadge}>
-                  <Text style={styles.proBadgeText}>{isPremium ? 'PRO' : 'BASIC'}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color="#A3B8AD" />
-              </TouchableOpacity>
+              {/* Subscription (Drivers Only) */}
+              {isDriver ? (
+                <TouchableOpacity
+                  onPress={() => setCurrentScreen('subscription')}
+                  style={styles.supRow}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.supIconWrap, { backgroundColor: '#FEF3DC', borderColor: '#E8C87A' }]}>
+                    <Ionicons name="shield-checkmark-outline" size={18} color="#C47A0A" />
+                  </View>
+                  <View style={styles.supInfo}>
+                    <Text style={styles.supTitle}>Subscription</Text>
+                    <Text style={styles.supSub}>
+                      {isPremium ? 'Professional · Active' : 'Basic Plan · Active'}
+                    </Text>
+                  </View>
+                  <View style={styles.proBadge}>
+                    <Text style={styles.proBadgeText}>{isPremium ? 'PRO' : 'BASIC'}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color="#A3B8AD" />
+                </TouchableOpacity>
+              ) : null}
 
               {/* Notifications */}
               <TouchableOpacity
@@ -370,7 +394,7 @@ export default function ProfileScreen() {
               {/* Privacy & Data */}
               <TouchableOpacity
                 onPress={() => setPrivacySheetVisible(true)}
-                style={styles.supRow}
+                style={[styles.supRow, !isDriver && { borderBottomWidth: 0 }]}
                 activeOpacity={0.7}
               >
                 <View style={[styles.supIconWrap, { backgroundColor: '#F4F8F6', borderColor: '#D4E2DA' }]}>
@@ -383,30 +407,32 @@ export default function ProfileScreen() {
                 <Ionicons name="chevron-forward" size={18} color="#A3B8AD" />
               </TouchableOpacity>
 
-              {/* Verification */}
-              <TouchableOpacity
-                onPress={() => setVerifSheetVisible(true)}
-                style={[styles.supRow, { borderBottomWidth: 0 }]}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.supIconWrap, { backgroundColor: '#E8F5EE', borderColor: '#C5E8D4' }]}>
-                  <Ionicons name="checkmark-circle-outline" size={18} color="#1A7A4A" />
-                </View>
-                <View style={styles.supInfo}>
-                  <Text style={styles.supTitle}>Verification</Text>
-                  <Text style={styles.supSub}>All documents approved</Text>
-                </View>
-                <View style={styles.verifiedBadge}>
-                  <Text style={styles.verifiedBadgeText}>Verified</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color="#A3B8AD" />
-              </TouchableOpacity>
+              {/* Verification (Drivers Only) */}
+              {isDriver ? (
+                <TouchableOpacity
+                  onPress={() => setVerifSheetVisible(true)}
+                  style={[styles.supRow, { borderBottomWidth: 0 }]}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.supIconWrap, { backgroundColor: '#E8F5EE', borderColor: '#C5E8D4' }]}>
+                    <Ionicons name="checkmark-circle-outline" size={18} color="#1A7A4A" />
+                  </View>
+                  <View style={styles.supInfo}>
+                    <Text style={styles.supTitle}>Verification</Text>
+                    <Text style={styles.supSub}>All documents approved</Text>
+                  </View>
+                  <View style={styles.verifiedBadge}>
+                    <Text style={styles.verifiedBadgeText}>Verified</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color="#A3B8AD" />
+                </TouchableOpacity>
+              ) : null}
             </View>
 
             {/* LOG OUT BUTTON */}
             <TouchableOpacity
               onPress={() => {
-                Alert.alert('Log Out', 'Are you sure you want to log out of your driver account?', [
+                Alert.alert('Log Out', isDriver ? 'Are you sure you want to log out of your driver account?' : 'Are you sure you want to log out of your account?', [
                   { text: 'Cancel', style: 'cancel' },
                   { text: 'Log Out', style: 'destructive', onPress: logout },
                 ]);
@@ -420,58 +446,80 @@ export default function ProfileScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* ── EDIT SHEET MODAL (Prototype exact #editSheet) ── */}
+      {/* ── EDIT SHEET MODAL (With Keyboard Avoiding View) ── */}
       <Modal
         visible={editSheetVisible}
         transparent
-        animationType="slide"
-        onRequestClose={() => setEditSheetVisible(false)}
+        animationType="fade"
+        onRequestClose={() => {
+          Keyboard.dismiss();
+          setEditSheetVisible(false);
+        }}
       >
-        <TouchableOpacity
-          style={styles.modalBackdrop}
-          activeOpacity={1}
-          onPress={() => setEditSheetVisible(false)}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
         >
           <TouchableOpacity
-            style={styles.editSheetContainer}
+            style={styles.modalBackdrop}
             activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
+            onPress={() => {
+              Keyboard.dismiss();
+              setEditSheetVisible(false);
+            }}
           >
-            <View style={styles.dragHandle} />
-            <Text style={styles.editSheetLabel}>{editLabel}</Text>
-            <TextInput
-              style={styles.editSheetInput}
-              value={editValue}
-              onChangeText={setEditValue}
-              keyboardType={editInputType}
-              autoCapitalize={editTarget === 'registration_plate' ? 'characters' : 'words'}
-              autoFocus
-              placeholderTextColor="#9CA3AF"
-            />
-            <View style={styles.editSheetButtonsRow}>
-              <TouchableOpacity
-                onPress={() => setEditSheetVisible(false)}
-                style={styles.cancelBtn}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.editSheetContainer}
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <View style={styles.dragHandle} />
+              <Text style={styles.editSheetLabel}>{editLabel}</Text>
+              <TextInput
+                style={styles.editSheetInput}
+                value={editValue}
+                onChangeText={setEditValue}
+                keyboardType={editInputType}
+                autoCapitalize={
+                  editTarget === 'registration_plate'
+                    ? 'characters'
+                    : editTarget === 'email'
+                    ? 'none'
+                    : 'words'
+                }
+                autoCorrect={editTarget !== 'email' && editTarget !== 'registration_plate'}
+                autoFocus
+                placeholderTextColor="#9CA3AF"
+                selectTextOnFocus
+              />
+              <View style={styles.editSheetButtonsRow}>
+                <TouchableOpacity
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    setEditSheetVisible(false);
+                  }}
+                  style={styles.cancelBtn}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={handleSaveEditSheet}
-                style={styles.saveBtn}
-                activeOpacity={0.8}
-                disabled={savingEdit}
-              >
-                {savingEdit ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
-                ) : (
-                  <Text style={styles.saveBtnText}>Save changes</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+                <TouchableOpacity
+                  onPress={handleSaveEditSheet}
+                  style={styles.saveBtn}
+                  activeOpacity={0.8}
+                  disabled={savingEdit}
+                >
+                  {savingEdit ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <Text style={styles.saveBtnText}>Save changes</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
           </TouchableOpacity>
-        </TouchableOpacity>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* ── NOTIFICATIONS SHEET ── */}
@@ -489,43 +537,85 @@ export default function ProfileScreen() {
           <View style={styles.secondarySheetContainer}>
             <View style={styles.dragHandle} />
             <Text style={styles.sheetHeaderTitle}>Notifications</Text>
-            <Text style={styles.sheetHeaderSub}>Manage push & sms notifications</Text>
+            <Text style={styles.sheetHeaderSub}>Manage push & SMS alerts</Text>
 
-            <View style={styles.notifRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.notifRowTitle}>Job alerts</Text>
-                <Text style={styles.notifRowSub}>Instant push when dispatch assigns offers</Text>
-              </View>
-              <Switch
-                value={notifJobAlerts}
-                onValueChange={setNotifJobAlerts}
-                trackColor={{ false: '#D4E2DA', true: '#1A7A4A' }}
-              />
-            </View>
+            {isDriver ? (
+              <>
+                <View style={styles.notifRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.notifRowTitle}>Job alerts</Text>
+                    <Text style={styles.notifRowSub}>Instant push when dispatch assigns offers</Text>
+                  </View>
+                  <Switch
+                    value={notifJobAlerts}
+                    onValueChange={setNotifJobAlerts}
+                    trackColor={{ false: '#D4E2DA', true: '#1A7A4A' }}
+                  />
+                </View>
 
-            <View style={styles.notifRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.notifRowTitle}>Surge zone alerts</Text>
-                <Text style={styles.notifRowSub}>High-demand live zone alerts near your location</Text>
-              </View>
-              <Switch
-                value={notifSurgeAlerts}
-                onValueChange={setNotifSurgeAlerts}
-                trackColor={{ false: '#D4E2DA', true: '#1A7A4A' }}
-              />
-            </View>
+                <View style={styles.notifRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.notifRowTitle}>Surge zone alerts</Text>
+                    <Text style={styles.notifRowSub}>High-demand live zone alerts near your location</Text>
+                  </View>
+                  <Switch
+                    value={notifSurgeAlerts}
+                    onValueChange={setNotifSurgeAlerts}
+                    trackColor={{ false: '#D4E2DA', true: '#1A7A4A' }}
+                  />
+                </View>
 
-            <View style={[styles.notifRow, { borderBottomWidth: 0 }]}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.notifRowTitle}>Weekly earnings report</Text>
-                <Text style={styles.notifRowSub}>Summary breakdown every Monday morning</Text>
-              </View>
-              <Switch
-                value={notifEarningsSummary}
-                onValueChange={setNotifEarningsSummary}
-                trackColor={{ false: '#D4E2DA', true: '#1A7A4A' }}
-              />
-            </View>
+                <View style={[styles.notifRow, { borderBottomWidth: 0 }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.notifRowTitle}>Weekly earnings report</Text>
+                    <Text style={styles.notifRowSub}>Summary breakdown every Monday morning</Text>
+                  </View>
+                  <Switch
+                    value={notifEarningsSummary}
+                    onValueChange={setNotifEarningsSummary}
+                    trackColor={{ false: '#D4E2DA', true: '#1A7A4A' }}
+                  />
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.notifRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.notifRowTitle}>Order & tracking updates</Text>
+                    <Text style={styles.notifRowSub}>Live driver arrival & delivery notifications</Text>
+                  </View>
+                  <Switch
+                    value={notifOrderUpdates}
+                    onValueChange={setNotifOrderUpdates}
+                    trackColor={{ false: '#D4E2DA', true: '#1A7A4A' }}
+                  />
+                </View>
+
+                <View style={styles.notifRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.notifRowTitle}>Email receipts</Text>
+                    <Text style={styles.notifRowSub}>Automatic order confirmations and invoices</Text>
+                  </View>
+                  <Switch
+                    value={notifEmailReceipts}
+                    onValueChange={setNotifEmailReceipts}
+                    trackColor={{ false: '#D4E2DA', true: '#1A7A4A' }}
+                  />
+                </View>
+
+                <View style={[styles.notifRow, { borderBottomWidth: 0 }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.notifRowTitle}>Promotions & discounts</Text>
+                    <Text style={styles.notifRowSub}>Occasional offers, new features and deals</Text>
+                  </View>
+                  <Switch
+                    value={notifPromos}
+                    onValueChange={setNotifPromos}
+                    trackColor={{ false: '#D4E2DA', true: '#1A7A4A' }}
+                  />
+                </View>
+              </>
+            )}
 
             <TouchableOpacity
               onPress={() => setNotifSheetVisible(false)}
@@ -569,7 +659,9 @@ export default function ProfileScreen() {
               <Ionicons name="download-outline" size={18} color="#1A7A4A" style={{ marginRight: 10 }} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.privacyActionTitle}>Download my data</Text>
-                <Text style={styles.privacyActionSub}>CSV of jobs, earnings and ride logs</Text>
+                <Text style={styles.privacyActionSub}>
+                  {isDriver ? 'CSV of jobs, earnings and ride logs' : 'CSV of bookings and account history'}
+                </Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color="#A3B8AD" />
             </TouchableOpacity>
@@ -579,7 +671,9 @@ export default function ProfileScreen() {
                 setPrivacySheetVisible(false);
                 Alert.alert(
                   'Account Deletion',
-                  'To delete your driver profile and remove data, please contact driver-support@hence.ie. We process all requests in compliance with GDPR.'
+                  isDriver
+                    ? 'To delete your driver profile and remove data, please contact driver-support@hence.ie. We process all requests in compliance with GDPR.'
+                    : 'To delete your account and personal data, please use Delete Account in settings or contact support@hencedelivery.com.'
                 );
               }}
               style={[styles.privacyActionBtn, { borderColor: '#F5C6C2', backgroundColor: '#FDEDEC', marginTop: 10 }]}
@@ -675,12 +769,11 @@ const styles = StyleSheet.create({
   },
   topBarTitle: {
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#0F1A14',
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   heroBanner: {
-    backgroundColor: '#1A7A4A',
     paddingTop: 28,
     paddingBottom: 24,
     paddingHorizontal: 20,
@@ -691,15 +784,15 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   heroName: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 3,
   },
   heroDriverId: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 12,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.65)',
     fontFamily: 'monospace',
     letterSpacing: 0.5,
   },
@@ -726,8 +819,8 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F0F4F2',
   },
   cardTitle: {
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '600',
     color: '#0F1A14',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -755,13 +848,13 @@ const styles = StyleSheet.create({
   },
   supTitle: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#688275',
     marginBottom: 2,
   },
   supSub: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0F1A14',
   },
   editPill: {
@@ -774,7 +867,7 @@ const styles = StyleSheet.create({
   },
   editPillText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#1A7A4A',
   },
   proBadge: {
@@ -788,7 +881,7 @@ const styles = StyleSheet.create({
   },
   proBadgeText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#C47A0A',
   },
   verifiedBadge: {
@@ -802,21 +895,21 @@ const styles = StyleSheet.create({
   },
   verifiedBadgeText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#1A7A4A',
   },
   logoutButton: {
     backgroundColor: '#FDEDEC',
     borderWidth: 1.5,
     borderColor: '#F5C6C2',
-    paddingVertical: 15,
+    paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 6,
   },
   logoutButtonText: {
     color: '#C0392B',
-    fontWeight: '800',
+    fontWeight: '600',
     fontSize: 14,
   },
 
@@ -840,7 +933,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 22,
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: 36,
+    paddingBottom: Platform.OS === 'ios' ? 32 : 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.12,
@@ -848,8 +941,8 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   editSheetLabel: {
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 11,
+    fontWeight: '600',
     color: '#688275',
     textTransform: 'uppercase',
     letterSpacing: 0.6,
@@ -863,8 +956,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '500',
     color: '#0F1A14',
     marginBottom: 16,
   },
@@ -883,7 +976,7 @@ const styles = StyleSheet.create({
   },
   cancelBtnText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#3A5245',
   },
   saveBtn: {
@@ -896,7 +989,7 @@ const styles = StyleSheet.create({
   },
   saveBtnText: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#FFFFFF',
   },
 
@@ -910,8 +1003,8 @@ const styles = StyleSheet.create({
     paddingBottom: 36,
   },
   sheetHeaderTitle: {
-    fontSize: 17,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '700',
     color: '#0F1A14',
     marginBottom: 2,
   },
@@ -928,8 +1021,8 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F4F8F6',
   },
   notifRowTitle: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
     color: '#0F1A14',
     marginBottom: 2,
   },
@@ -946,7 +1039,7 @@ const styles = StyleSheet.create({
   },
   sheetDoneBtnText: {
     color: '#FFFFFF',
-    fontWeight: '800',
+    fontWeight: '600',
     fontSize: 14,
   },
   privacyActionBtn: {
@@ -960,7 +1053,7 @@ const styles = StyleSheet.create({
   },
   privacyActionTitle: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#0F1A14',
   },
   privacyActionSub: {
@@ -977,7 +1070,7 @@ const styles = StyleSheet.create({
   },
   verifDocName: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#0F1A14',
   },
   verifDocMeta: {
@@ -993,7 +1086,7 @@ const styles = StyleSheet.create({
   },
   verifBadgeText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#1A7A4A',
   },
 });

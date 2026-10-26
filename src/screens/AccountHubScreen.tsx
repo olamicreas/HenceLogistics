@@ -74,8 +74,12 @@ export default function AccountHubScreen() {
           {renderOption("person-outline", "Profile Details", "View and edit personal info", "profile")}
           <View style={localStyles.divider} />
           {renderOption("settings-outline", "Account Settings", "Notifications and preferences", "settings")}
-          <View style={localStyles.divider} />
-          {renderOption("card-outline", "Subscription & Billing", "Manage your subscription plan", "subscription")}
+          {isDriver ? (
+            <>
+              <View style={localStyles.divider} />
+              {renderOption("card-outline", "Subscription & Billing", "Manage your subscription plan", "subscription")}
+            </>
+          ) : null}
         </View>
 
         <View style={localStyles.card}>
