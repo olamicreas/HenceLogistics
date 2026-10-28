@@ -357,13 +357,21 @@ export default function BookingModal({ visible, onClose }: { visible: boolean; o
 
           <View style={styles.steps}>
             <View style={step === 1 ? styles.stepActive : styles.stepDone}>
-              <Text style={styles.stepCircle}>{step === 1 ? '1' : '✓'}</Text>
-              <Text style={styles.stepLabel}>Vehicle & Service</Text>
+              <Text style={[styles.stepCircle, step === 1 ? styles.stepCircleActive : styles.stepCirclePending]}>
+                {step === 1 ? '1' : '✓'}
+              </Text>
+              <Text style={[styles.stepLabel, step === 1 ? styles.stepLabelActive : styles.stepLabelPending]}>
+                Vehicle & Service
+              </Text>
             </View>
             <View style={{ width: 16 }} />
             <View style={step === 2 ? styles.stepActive : styles.stepPending}>
-              <Text style={styles.stepCircle}>2</Text>
-              <Text style={styles.stepLabel}>Location & Details</Text>
+              <Text style={[styles.stepCircle, step === 2 ? styles.stepCircleActive : styles.stepCirclePending]}>
+                2
+              </Text>
+              <Text style={[styles.stepLabel, step === 2 ? styles.stepLabelActive : styles.stepLabelPending]}>
+                Location & Details
+              </Text>
             </View>
           </View>
 
@@ -1048,16 +1056,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 0,
     padding: 10,
-    backgroundColor: '#111827',
+    backgroundColor: '#2E8B57',
+    borderBottomWidth: 1,
+    borderBottomColor: '#267347',
     flexShrink: 0,
   },
   stepActive: { flex: 1, alignItems: 'center' },
   stepDone: { flex: 1, alignItems: 'center' },
   stepPending: { flex: 1, alignItems: 'center' },
-  stepCircle: { width: 22, height: 22, borderRadius: 11, textAlign: 'center', textAlignVertical: 'center', fontSize: 9, fontWeight: '700', color: '#FFF' },
-  stepLabel: { fontSize: 8, fontWeight: '600', color: 'rgba(255,255,255,0.55)', marginTop: 3 },
-  stepLineDone: { width: 40, height: 2, backgroundColor: '#2563EB', marginHorizontal: 4 },
-  stepLinePending: { width: 40, height: 2, backgroundColor: 'rgba(255,255,255,0.12)', marginHorizontal: 4 },
+  stepCircle: { width: 22, height: 22, borderRadius: 11, textAlign: 'center', textAlignVertical: 'center', fontSize: 9, fontWeight: '700' },
+  stepCircleActive: { backgroundColor: '#FFFFFF', color: '#2E8B57' },
+  stepCirclePending: { backgroundColor: 'rgba(255,255,255,0.22)', color: 'rgba(255,255,255,0.85)' },
+  stepLabel: { fontSize: 8, marginTop: 3 },
+  stepLabelActive: { color: '#FFFFFF', fontWeight: '700' },
+  stepLabelPending: { color: 'rgba(255,255,255,0.7)', fontWeight: '500' },
+  stepLineDone: { width: 40, height: 2, backgroundColor: '#FFFFFF', marginHorizontal: 4 },
+  stepLinePending: { width: 40, height: 2, backgroundColor: 'rgba(255,255,255,0.25)', marginHorizontal: 4 },
 
   modeLabel: {
     backgroundColor: '#EFF6FF',

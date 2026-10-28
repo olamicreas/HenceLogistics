@@ -1244,13 +1244,21 @@ export default function HomeScreen() {
       {/* --- STEPS --- */}
       <View style={styles.steps}>
         <View style={step === 1 ? styles.stepActive : styles.stepDone}>
-          <Text style={styles.stepCircle}>{step === 1 ? '1' : '✓'}</Text>
-          <Text style={styles.stepLabel}>Vehicle & Service</Text>
+          <Text style={[styles.stepCircle, step === 1 ? styles.stepCircleActive : styles.stepCirclePending]}>
+            {step === 1 ? '1' : '✓'}
+          </Text>
+          <Text style={[styles.stepLabel, step === 1 ? styles.stepLabelActive : styles.stepLabelPending]}>
+            Vehicle & Service
+          </Text>
         </View>
         <View style={{ width: 16 }} />
         <View style={step === 2 ? styles.stepActive : styles.stepPending}>
-          <Text style={styles.stepCircle}>2</Text>
-          <Text style={styles.stepLabel}>Location & Details</Text>
+          <Text style={[styles.stepCircle, step === 2 ? styles.stepCircleActive : styles.stepCirclePending]}>
+            2
+          </Text>
+          <Text style={[styles.stepLabel, step === 2 ? styles.stepLabelActive : styles.stepLabelPending]}>
+            Location & Details
+          </Text>
         </View>
       </View>
 
@@ -2075,7 +2083,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 10,
     paddingHorizontal: 16,
-    backgroundColor: COLORS.ink,
+    backgroundColor: '#2E8B57',
+    borderBottomWidth: 1,
+    borderBottomColor: '#267347',
   },
   stepActive: { flex: 1, alignItems: 'center' },
   stepDone: { flex: 1, alignItems: 'center' },
@@ -2088,19 +2098,31 @@ const styles = StyleSheet.create({
     textAlignVertical: 'center',
     fontSize: 12,
     fontWeight: '800',
-    color: COLORS.white,
-    backgroundColor: 'rgba(255,255,255,0.15)',
     overflow: 'hidden',
     paddingTop: 4, 
   },
+  stepCircleActive: {
+    backgroundColor: '#FFFFFF',
+    color: '#2E8B57',
+  },
+  stepCirclePending: {
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    color: 'rgba(255,255,255,0.85)',
+  },
   stepLabel: {
     fontSize: 10,
-    fontWeight: '600',
-    color: COLORS.white,
     marginTop: 4,
   },
-  stepLineDone: { width: 40, height: 2, backgroundColor: COLORS.primary, marginHorizontal: 4 },
-  stepLinePending: { width: 40, height: 2, backgroundColor: 'rgba(255,255,255,0.12)', marginHorizontal: 4 },
+  stepLabelActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  stepLabelPending: {
+    color: 'rgba(255,255,255,0.7)',
+    fontWeight: '500',
+  },
+  stepLineDone: { width: 40, height: 2, backgroundColor: COLORS.white, marginHorizontal: 4 },
+  stepLinePending: { width: 40, height: 2, backgroundColor: 'rgba(255,255,255,0.25)', marginHorizontal: 4 },
 
   modeToggleRow: { flexDirection: 'row', backgroundColor: COLORS.primarySoft, borderRadius: 28, padding: 3, marginBottom: 12,marginTop: 12, borderWidth: 1, borderColor: COLORS.primaryMid },
   modeToggleBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 24, backgroundColor: 'transparent' },
