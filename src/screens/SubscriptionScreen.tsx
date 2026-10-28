@@ -543,10 +543,10 @@ export default function SubscriptionScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0F1A14',
+    backgroundColor: '#2E8B57',
   },
   header: {
-    backgroundColor: '#0F1A14',
+    backgroundColor: '#2E8B57',
     paddingHorizontal: 18,
     paddingTop: Platform.OS === 'ios' ? 12 : 24,
     paddingBottom: 16,

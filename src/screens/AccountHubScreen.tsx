@@ -7,7 +7,7 @@ import { getUserDisplayName } from '../utils/avatar';
 import UserAvatar from '../components/UserAvatar';
 
 const COLORS = {
-  primary: '#1A7A4A',
+  primary: '#2E8B57',
   ink: '#0F1A14',
   soft: '#7A9080',
   border: '#D4E2DA',
@@ -60,8 +60,8 @@ export default function AccountHubScreen() {
             size={52}
             isDriver={isDriver}
             onPress={() => setCurrentScreen('profile')}
-            bgColor={isDriver ? '#0F2D20' : '#C5E8D4'}
-            textColor={isDriver ? '#C8F135' : COLORS.primary}
+            bgColor={isDriver ? '#236D44' : '#2E8B57'}
+            textColor="#FFFFFF"
             style={{ marginRight: 14 }}
           />
           <View style={{ flex: 1 }}>

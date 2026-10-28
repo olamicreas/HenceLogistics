@@ -4061,7 +4061,7 @@ const styles = StyleSheet.create({
   },
   btnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
 
-  earnHero: { backgroundColor: '#0F1A14', paddingVertical: 18, paddingHorizontal: 16 },
+  earnHero: { backgroundColor: '#2E8B57', paddingVertical: 18, paddingHorizontal: 16 },
   ehLbl: {
     fontSize: 10,
     color: 'rgba(255,255,255,0.4)',

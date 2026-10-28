@@ -268,7 +268,7 @@ export default function ProfileScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Profile Hero */}
-          <View style={[styles.heroBanner, { backgroundColor: isDriver ? '#0F2D20' : '#0F1A14' }]}>
+          <View style={[styles.heroBanner, { backgroundColor: isDriver ? '#236D44' : '#2E8B57' }]}>
             <View style={styles.avatarWrap}>
               <UserAvatar
                 user={userObj}
@@ -277,9 +277,9 @@ export default function ProfileScreen() {
                 onPress={handlePickAvatar}
                 showCameraBadge
                 uploading={uploadingAvatar}
-                bgColor={isDriver ? 'rgba(200,241,53,0.2)' : 'rgba(255,255,255,0.1)'}
-                textColor="#C8F135"
-                borderColor={isDriver ? 'rgba(200,241,53,0.5)' : 'rgba(255,255,255,0.25)'}
+                bgColor="rgba(255,255,255,0.2)"
+                textColor="#FFFFFF"
+                borderColor="rgba(255,255,255,0.35)"
               />
             </View>
             <Text style={styles.heroName}>{currentFullName || displayName}</Text>

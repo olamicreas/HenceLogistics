@@ -81,8 +81,8 @@ function UserAvatar({
     displayImageUri = cachedFallback;
   }
 
-  const defaultBg = bgColor || (isDriver ? '#0F2D20' : '#0F1A14');
-  const defaultText = textColor || (isDriver ? '#C8F135' : '#C8F135');
+  const defaultBg = bgColor || (isDriver ? '#236D44' : '#2E8B57');
+  const defaultText = textColor || (isDriver ? '#C8F135' : '#FFFFFF');
 
   const badgeSize = Math.max(Math.round(size * 0.34), 18);
 
@@ -146,7 +146,7 @@ function UserAvatar({
           width: badgeSize,
           height: badgeSize,
           borderRadius: badgeSize / 2,
-          borderColor: isDriver ? '#0F2D20' : '#FFFFFF',
+          borderColor: isDriver ? '#236D44' : '#2E8B57',
           backgroundColor: '#C8F135',
         },
       ]}

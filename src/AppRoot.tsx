@@ -200,8 +200,8 @@ export default function AppRoot() {
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0F1A14' }}>
-      <StatusBar barStyle="light-content" backgroundColor="#0F1A14" />
+    <View style={{ flex: 1, backgroundColor: '#2E8B57' }}>
+      <StatusBar barStyle="light-content" backgroundColor="#2E8B57" />
       
       {token && <Header />}
       

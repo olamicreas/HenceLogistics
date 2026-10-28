@@ -486,9 +486,9 @@ function DriverOnboarding({ onExit }: { onExit: () => void }) {
           </TouchableOpacity>
         </View>
       ) : (
-        <View style={[obStyles.footer, { backgroundColor: '#0F2D20', borderTopWidth: 0, paddingBottom: Math.max(insets.bottom + 10, 32) }]}>
+        <View style={[obStyles.footer, { backgroundColor: '#2E8B57', borderTopWidth: 0, paddingBottom: Math.max(insets.bottom + 10, 32) }]}>
           <TouchableOpacity style={[obStyles.ctaBtn, { backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.1 }]} onPress={onExit}>
-            <Text style={[obStyles.ctaText, { color: '#0F2D20' }]}>Enter the Driver App →</Text>
+            <Text style={[obStyles.ctaText, { color: '#2E8B57' }]}>Enter the Driver App →</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -1025,8 +1025,8 @@ const styles = StyleSheet.create({
 });
 
 const obStyles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0F2D20' },
-  header: { backgroundColor: '#0F2D20' },
+  container: { flex: 1, backgroundColor: '#2E8B57' },
+  header: { backgroundColor: '#2E8B57' },
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12 },
   backBtn: { width: 32, height: 32, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 15, fontWeight: '700', color: '#fff' },
@@ -1102,7 +1102,7 @@ const obStyles = StyleSheet.create({
   ctaDim: { backgroundColor: '#B8CEC3' },
   ctaText: { fontSize: 15, fontWeight: '700' },
 
-  successContainer: { flex: 1, backgroundColor: '#0F2D20', alignItems: 'center', justifyContent: 'center', padding: 24, minHeight: 600 },
+  successContainer: { flex: 1, backgroundColor: '#2E8B57', alignItems: 'center', justifyContent: 'center', padding: 24, minHeight: 600 },
   successMark: { width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 2, borderColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
   successTitle: { fontSize: 28, fontWeight: '800', color: '#fff', marginBottom: 12 },
   successDesc: { fontSize: 14, color: 'rgba(255,255,255,0.7)', textAlign: 'center', lineHeight: 22, marginBottom: 32 },

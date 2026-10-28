@@ -118,8 +118,8 @@ export default function Header() {
               user={user}
               size={26}
               isDriver={isDriver}
-              bgColor="#0F2D20"
-              textColor="#C8F135"
+              bgColor="rgba(0,0,0,0.2)"
+              textColor="#FFFFFF"
             />
             <View style={styles.pillLines}>
               <View style={[styles.pillLine, { width: 14 }]} />
@@ -144,7 +144,7 @@ export default function Header() {
           {/* Drawer Container Panel */}
           <View style={[styles.drawerPanel, { paddingTop: Math.max(insets.top, 16) }]}>
             {/* Drawer Header Banner */}
-            <View style={[styles.drawerHeader, { backgroundColor: isDriver ? '#0F2D20' : '#0F1A14' }]}>
+            <View style={[styles.drawerHeader, { backgroundColor: isDriver ? '#236D44' : '#2E8B57' }]}>
               <View style={styles.drawerHeaderTop}>
                 <Text style={styles.drawerMenuLabel}>MENU</Text>
                 <TouchableOpacity
@@ -165,8 +165,8 @@ export default function Header() {
                   onPress={handlePickPhoto}
                   showCameraBadge
                   uploading={uploadingAvatar}
-                  bgColor={isDriver ? '#0A2016' : '#0F1A14'}
-                  textColor="#C8F135"
+                  bgColor={isDriver ? '#1E5E3A' : '#236D44'}
+                  textColor="#FFFFFF"
                 />
 
                 <View style={styles.drawerUserInfo}>
@@ -300,8 +300,8 @@ export default function Header() {
                       })
                     }
                   >
-                    <View style={[styles.menuItemIcon, { backgroundColor: '#0F2D20', borderColor: '#0F2D20' }]}>
-                      <Ionicons name="document-text-outline" size={18} color="#C8F135" />
+                    <View style={[styles.menuItemIcon, { backgroundColor: '#EBF5F0', borderColor: '#C2E2D0' }]}>
+                      <Ionicons name="document-text-outline" size={18} color="#2E8B57" />
                     </View>
                     <View style={styles.menuItemTextCol}>
                       <Text style={styles.menuItemLabel}>My Orders</Text>
@@ -368,14 +368,14 @@ export default function Header() {
 
 const styles = StyleSheet.create({
   headerBar: {
-    backgroundColor: '#0F1A14',
+    backgroundColor: '#2E8B57',
     paddingHorizontal: 16,
     paddingBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
-    borderBottomColor: '#172B21',
+    borderBottomColor: '#267347',
   },
   logoRow: {
     flexDirection: 'row',
@@ -394,9 +394,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.16)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
+    borderColor: 'rgba(255,255,255,0.25)',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -410,14 +410,14 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: '#E74C3C',
     borderWidth: 1,
-    borderColor: '#0F1A14',
+    borderColor: '#2E8B57',
   },
   menuPill: {
     height: 36,
     borderRadius: 22,
-    backgroundColor: '#0F1A14',
+    backgroundColor: 'rgba(0,0,0,0.16)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.25)',
     flexDirection: 'row',
     alignItems: 'center',
     paddingLeft: 4,
@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     backgroundColor: '#C8F135',
     borderWidth: 2,
-    borderColor: '#0F2D20',
+    borderColor: '#2E8B57',
     alignItems: 'center',
     justifyContent: 'center',
   },

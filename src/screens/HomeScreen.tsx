@@ -68,10 +68,10 @@ const safePrice = (val: any) => {
 };
 
 const COLORS = {
-  primary: '#1A7A4A',
-  primaryLight: '#22A862',
-  primarySoft: '#E8F5EE',
-  primaryMid: '#C5E8D4',
+  primary: '#2E8B57',
+  primaryLight: '#3A9A66',
+  primarySoft: '#EBF5F0',
+  primaryMid: '#C2E2D0',
   ink: '#0F1A14',
   mid: '#3D5046',
   soft: '#7A9080',
@@ -87,16 +87,16 @@ const COLORS = {
   purpleSoft: '#F0EAF8',
   
   // TRACKING MODAL COLORS
-  forest: '#1A7A4A',
-  forestDark: '#145C38',
+  forest: '#2E8B57',
+  forestDark: '#236D44',
   lemon: '#C8F135',
   paper: '#F6F8F6',
   card: '#FFFFFF',
   line: '#E2E8E4',
   textMuted: '#6B7670',
   amber: '#E8910C',
-  success: '#1A7A4A',
-  successSoft: '#E8F5EE',
+  success: '#2E8B57',
+  successSoft: '#EBF5F0',
 };
 
 const mapStyle = [

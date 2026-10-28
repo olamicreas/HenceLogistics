@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppContext } from '../context/AppProvider';
 
 const COLORS = {
-  primary: '#1A7A4A',
+  primary: '#2E8B57',
   inactive: '#B8CEC3',
   ink: '#0F1A14',
   soft: '#7A9080',
