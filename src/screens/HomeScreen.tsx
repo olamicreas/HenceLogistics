@@ -108,9 +108,9 @@ const mapStyle = [
 
 // --- DATA: VEHICLES ---
 const VEHICLES = [
-  { id: 'large', name: 'Large Van', icon: 'v-large', note: 'Large Van — suitable for large parcels, furniture, appliances, catering and most deliveries up to 1,500 kg.' },
-  { id: 'cargo', name: 'Cargo Van', icon: 'v-cargo', note: 'Cargo Van — best for parcels, electronics, fragile items, medical equipment and food up to 800 kg.' },
-  { id: 'luton', name: 'Luton Van', icon: 'v-luton', note: 'Luton Van — ideal for house removals, large furniture and heavy loads up to 3,000 kg.' },
+  { id: 'large', name: 'Large Van', icon: 'v-large', note: 'Large Van: suitable for large parcels, furniture, appliances, catering and most deliveries up to 1,500 kg.' },
+  { id: 'cargo', name: 'Cargo Van', icon: 'v-cargo', note: 'Cargo Van: best for parcels, electronics, fragile items, medical equipment and food up to 800 kg.' },
+  { id: 'luton', name: 'Luton Van', icon: 'v-luton', note: 'Luton Van: ideal for house removals, large furniture and heavy loads up to 3,000 kg.' },
 ];
 
 const CATEGORIES_SINGLE = [
@@ -131,14 +131,14 @@ type Service = {
 
 const SERVICES_SINGLE: Record<string, Service[]> = {
   collection: [
-    { id: 'gen-c', name: 'General Collection', desc: 'Ad-hoc pickup — tell us what you need', price: 'From €50', base: 50, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-01', v: ['cargo','large','luton'], mode: 'desc' },
+    { id: 'gen-c', name: 'General Collection', desc: 'Ad-hoc pickup: tell us what you need', price: 'From €50', base: 50, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-01', v: ['cargo','large','luton'], mode: 'desc' },
     { id: 'ret-s', name: 'Returns Collection', desc: 'Online returns to stores or warehouses', price: 'From €45', base: 45, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-01', v: ['cargo','large','luton'], mode: 'items' },
     { id: 'stk-s', name: 'Stock & Supply Pickup', desc: 'Goods from suppliers for shops, cafes, offices', price: 'From €55', base: 55, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-02', v: ['cargo','large','luton'], mode: 'items' },
     { id: 'fur-s', name: 'Furniture Pickup', desc: 'Sofas, beds, appliances, office furniture', price: 'From €75', base: 75, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-14', v: ['cargo','large','luton'], mode: 'items' },
     { id: 'evt-s', name: 'Event Equipment', desc: 'Gear from venues, bands, market stalls', price: 'From €70', base: 70, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-20', v: ['cargo','large','luton'], mode: 'items' }
   ],
   deliveries: [
-    { id: 'gen-d', name: 'General Delivery', desc: 'Ad-hoc delivery — tell us what you need', price: 'From €50', base: 50, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-01', v: ['cargo','large','luton'], mode: 'desc' },
+    { id: 'gen-d', name: 'General Delivery', desc: 'Ad-hoc delivery: tell us what you need', price: 'From €50', base: 50, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-01', v: ['cargo','large','luton'], mode: 'desc' },
     { id: 'fur-d', name: 'Furniture Delivery', desc: 'Sofas, beds, appliances with inside drop-off', price: 'From €85', base: 85, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-14', v: ['cargo','large','luton'], mode: 'items' },
     { id: 'sto-d', name: 'Store Transfer', desc: 'Stock between shop locations or warehouse', price: 'From €65', base: 65, svc: 0, badge: 'bs', btxt: 'Standard', ico: 'si-16', v: ['cargo','large','luton'], mode: 'items' },
     { id: 'spe-d', name: 'Specialist Delivery', desc: 'High-value or fragile, white-glove service', price: 'From €120', base: 120, svc: 0, badge: 'bp', btxt: 'Priority', ico: 'si-08', v: ['cargo','large','luton'], mode: 'items' },
@@ -248,7 +248,7 @@ function ChatSupportModal({ visible, onClose, user, activeBooking, sendSupportMe
 
   useEffect(() => {
     if (visible) {
-      setMessages([{ id: 'bot-welcome', sender: 'bot', text: `Hi ${user?.full_name?.split(' ')[0] || 'there'} — I’m Hence Assist. How can I help today?`, time: Date.now() }]);
+      setMessages([{ id: 'bot-welcome', sender: 'bot', text: `Hi ${user?.full_name?.split(' ')[0] || 'there'}, I’m Hence Assist. How can I help today?`, time: Date.now() }]);
       setInput('');
     }
   }, [visible, user]);
@@ -1247,7 +1247,7 @@ export default function HomeScreen() {
           <Text style={styles.stepCircle}>{step === 1 ? '1' : '✓'}</Text>
           <Text style={styles.stepLabel}>Vehicle & Service</Text>
         </View>
-        <View style={step === 1 ? styles.stepLinePending : styles.stepLineDone} />
+        <View style={{ width: 16 }} />
         <View style={step === 2 ? styles.stepActive : styles.stepPending}>
           <Text style={styles.stepCircle}>2</Text>
           <Text style={styles.stepLabel}>Location & Details</Text>
@@ -1355,7 +1355,7 @@ export default function HomeScreen() {
               <BookingIcon name={selectedService?.ico || 'si-01'} size={18} color="#fff" />
               <View style={{ flex: 1 }}>
                 <Text style={styles.serviceBannerName}>{selectedService?.name || 'Service'}</Text>
-                <Text style={styles.serviceBannerSub}>Vehicle Auto-Assigned · Standard Delivery</Text>
+                <Text style={styles.serviceBannerSub}>Vehicle Auto Assigned · Standard Delivery</Text>
               </View>
               <TouchableOpacity onPress={() => setStep(1)}><Text style={styles.serviceBannerChange}>Change</Text></TouchableOpacity>
             </View>
@@ -1765,7 +1765,7 @@ export default function HomeScreen() {
                               <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderTopWidth: 1, borderBottomWidth: 1, borderColor: COLORS.line }}>
                                 <Ionicons name="warning" size={32} color={COLORS.amber} style={{ marginRight: 12 }} />
                                 <View style={{ flex: 1 }}>
-                                  <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.ink }}>High Demand — Pending Review</Text>
+                                  <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.ink }}>High Demand • Pending Review</Text>
                                   <Text style={{ fontSize: 12.5, color: COLORS.textMuted, marginTop: 2 }}>All drivers are currently busy. Dispatch is reviewing your request.</Text>
                                 </View>
                               </View>
@@ -1789,7 +1789,7 @@ export default function HomeScreen() {
                             )}
                             <View style={{ marginTop: 14, paddingHorizontal: 14, paddingVertical: 12, backgroundColor: COLORS.paper, borderRadius: 14, flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
                               <View style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: `${COLORS.forest}33`, borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4, marginRight: 10 }}><Text style={{ fontSize: 10.5, fontWeight: '700', color: COLORS.forestDark }}>{formatJobType(activeBooking.job_type)}</Text></View>
-                              <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: COLORS.ink }}>{(activeBooking?.booking_mode === 'multi' || (activeBooking?.stops?.length > 1)) ? `Multi-Drop · ${activeBooking.stops.length} Stops` : 'Single Drop'}</Text>
+                              <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: COLORS.ink }}>{(activeBooking?.booking_mode === 'multi' || (activeBooking?.stops?.length > 1)) ? `Multi Drop · ${activeBooking.stops.length} Stops` : 'Single Drop'}</Text>
                               <Text style={{ fontSize: 11, fontWeight: '700', color: COLORS.textMuted }}>HNC-{String(activeBooking.id).padStart(4, '0')}</Text>
                             </View>
                             <View style={{ paddingBottom: 10 }}>

@@ -186,7 +186,7 @@ export default function SubscriptionScreen() {
     { icon: '⚡', title: 'Priority Dispatch', desc: 'Your jobs surface first in the matching pool' },
     { icon: '📊', title: 'Earnings Analytics', desc: 'Weekly & monthly breakdowns with trend charts' },
     { icon: '🎯', title: 'Surge Zone Alerts', desc: 'Push alerts when high-demand zones go live near you' },
-    { icon: '💬', title: 'Dedicated Support', desc: 'Skip the queue — direct line to Hence driver support' },
+    { icon: '💬', title: 'Dedicated Support', desc: 'Skip the queue with direct line to Hence driver support' },
     { icon: '🔒', title: 'Verified Pro Badge', desc: 'Displayed on your profile to boost customer trust' },
     { icon: '📅', title: 'Advanced Job Filters', desc: 'Filter by van size, distance cap and minimum fare' },
   ];

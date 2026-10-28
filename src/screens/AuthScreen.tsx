@@ -132,9 +132,11 @@ function DriverOnboarding({ onExit }: { onExit: () => void }) {
               </TouchableOpacity>
             ) : (
               <View style={obStyles.logoWrap}>
-                <Text style={obStyles.logoWordmark}>
-                  HENCE<Text style={{ color: '#1A7A4A' }}>.</Text>
-                </Text>
+                <Image
+                  source={require('../../assets/hence_logo.png')}
+                  style={{ width: 100, height: 26 }}
+                  resizeMode="contain"
+                />
                 <Text style={obStyles.logoSub}>Driver</Text>
               </View>
             )}
@@ -169,7 +171,7 @@ function DriverOnboarding({ onExit }: { onExit: () => void }) {
           <>
             <View style={obStyles.infoBox}>
               <Ionicons name="information-circle-outline" size={18} color="#1A7A4A" style={{ marginTop: 2 }} />
-              <Text style={obStyles.infoText}>Your account is created. Now complete your driver profile — we need your address and licence details before your first job.</Text>
+              <Text style={obStyles.infoText}>Your account is created. Now complete your driver profile. We need your address and licence details before your first job.</Text>
             </View>
 
             <View style={obStyles.card}>
@@ -386,7 +388,7 @@ function DriverOnboarding({ onExit }: { onExit: () => void }) {
               </TouchableOpacity>
 
               <TouchableOpacity style={[obStyles.planCard, obStyles.planPro, plan === 'pro' && obStyles.planCardOn]} onPress={() => setPlan('pro')} activeOpacity={0.9}>
-                <Text style={[obStyles.planTier, { color: '#1A7A4A' }]}>PRO PLAN — MOST POPULAR</Text>
+                <Text style={[obStyles.planTier, { color: '#1A7A4A' }]}>PRO PLAN • MOST POPULAR</Text>
                 <Text style={obStyles.planPrice}>€59<Text style={{ fontSize: 16 }}>.99</Text></Text>
                 <Text style={obStyles.planMo}>per month</Text>
                 <View style={obStyles.planHr} />
@@ -434,7 +436,7 @@ function DriverOnboarding({ onExit }: { onExit: () => void }) {
                 </View>
                 <View style={[obStyles.sumRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
                   <Text style={obStyles.sumLbl}>Primary</Text>
-                  <Text style={obStyles.sumVal}>{rankOrder.length > 0 ? opNames[rankOrder[0]] : '—'}</Text>
+                  <Text style={obStyles.sumVal}>{rankOrder.length > 0 ? opNames[rankOrder[0]] : 'None'}</Text>
                 </View>
               </View>
             </View>
@@ -473,10 +475,10 @@ function DriverOnboarding({ onExit }: { onExit: () => void }) {
               <ActivityIndicator color="#FFFFFF" />
             ) : (
               <Text style={[obStyles.ctaText, ((step === 2 && ops.length === 0) || (step === 4 && !plan)) ? { color: '#fff' } : { color: '#fff' }]}>
-                {step === 0 && 'Continue — Vehicle Details →'}
-                {step === 1 && (vehicles.length === 0 ? 'Select a vehicle to continue' : 'Continue — Operator Type →')}
-                {step === 2 && (ops.length === 0 ? 'Select a type to continue' : `Continue — Rank Types →`)}
-                {step === 3 && 'Continue — Choose Your Plan →'}
+                {step === 0 && 'Continue to Vehicle Details →'}
+                {step === 1 && (vehicles.length === 0 ? 'Select a vehicle to continue' : 'Continue to Operator Type →')}
+                {step === 2 && (ops.length === 0 ? 'Select a type to continue' : `Continue to Rank Types →`)}
+                {step === 3 && 'Continue to Choose Your Plan →'}
                 {step === 4 && (!plan ? 'Select a plan to continue' : `Continue with ${plan === 'pro' ? 'Pro' : 'Basic'} →`)}
                 {step === 5 && 'Submit Application ✓'}
               </Text>
@@ -695,15 +697,35 @@ export default function AuthScreen() {
   }
 
   if (!selectedRole) {
-    return <WelcomeScreen onSelectRole={handleRoleSelection} selectedRole={selectedRole} />;
+    return (
+      <WelcomeScreen
+        selectedRole={selectedRole}
+        onSelectRole={async (role, autoMode) => {
+          await handleRoleSelection(role);
+          if (autoMode === 'signup') {
+            setMode(role === 'driver' ? 'signup_driver' : 'signup_customer');
+          } else if (autoMode === 'login') {
+            setMode('login');
+          }
+        }}
+        onSignIn={async () => {
+          await handleRoleSelection('customer');
+          setMode('login');
+        }}
+        onSkip={async () => {
+          await handleRoleSelection('customer');
+          setMode('login');
+        }}
+      />
+    );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: isSignUp ? '#0F2D20' : '#111820' }}>
-      <StatusBar barStyle={isSignUp ? 'light-content' : 'dark-content'} />
+    <View style={{ flex: 1, backgroundColor: '#2E8B57' }}>
+      <StatusBar barStyle="light-content" backgroundColor="#2E8B57" />
       <LinearGradient
-        colors={ isSignUp ? ['#0F2D20', '#0F2D20'] : ['#C8E8D4', '#D8F0E0', '#EAF7EE', '#F5FDF8'] }
-        locations={isSignUp ? [0, 1] : [0, 0.3, 0.65, 1]}
+        colors={['#2E8B57', '#3A9A66', '#2A8452']}
+        locations={[0, 0.52, 1]}
         style={{ flex: 1 }}
       >
         <View style={{ flex: 1 }}>
@@ -712,7 +734,11 @@ export default function AuthScreen() {
             {mode === 'login' && (
               <View style={styles.loginContainer}>
                 <View style={styles.loginBrand}>
-                  <Image source={require('../../assets/logo1.png')} style={styles.logoImage} resizeMode="contain" />
+                  <Image
+                    source={require('../../assets/welcome_logo.png')}
+                    style={styles.logoImage}
+                    resizeMode="contain"
+                  />
                   <Text style={styles.loginTagline}>DELIVERY MATTERS</Text>
                 </View>
 
@@ -764,8 +790,12 @@ export default function AuthScreen() {
                   <TouchableOpacity style={[styles.suBack, { backgroundColor: 'rgba(255,255,255,0.08)', top: Math.max(insets.top, 10) }]} onPress={() => switchMode('login')}>
                     <Ionicons name="chevron-back" size={20} color="#fff" />
                   </TouchableOpacity>
-                  <Text style={[styles.suWordmark, { color: '#fff' }]}>HENCE<Text style={{ color: '#1A7A4A' }}>.</Text></Text>
-                  <Text style={[styles.suSub, { color: 'rgba(255,255,255,0.4)' }]}>Customer sign up</Text>
+                  <Image
+                    source={require('../../assets/welcome_logo.png')}
+                    style={{ width: 140, height: 38, marginBottom: 4 }}
+                    resizeMode="contain"
+                  />
+                  <Text style={[styles.suSub, { color: 'rgba(255,255,255,0.7)' }]}>Customer sign up</Text>
                 </View>
 
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, backgroundColor: '#E8F0EB', paddingBottom: Math.max(insets.bottom + 20, 20) }}>
@@ -834,8 +864,12 @@ export default function AuthScreen() {
                   <TouchableOpacity style={[styles.suBack, { backgroundColor: 'rgba(255,255,255,0.08)', top: Math.max(insets.top, 10) }]} onPress={() => switchMode('login')}>
                     <Ionicons name="chevron-back" size={20} color="#fff" />
                   </TouchableOpacity>
-                  <Text style={[styles.suWordmark, { color: '#fff' }]}>HENCE<Text style={{ color: '#1A7A4A' }}>.</Text></Text>
-                  <Text style={[styles.suSub, { color: 'rgba(255,255,255,0.4)' }]}>Driver sign up</Text>
+                  <Image
+                    source={require('../../assets/welcome_logo.png')}
+                    style={{ width: 140, height: 38, marginBottom: 4 }}
+                    resizeMode="contain"
+                  />
+                  <Text style={[styles.suSub, { color: 'rgba(255,255,255,0.7)' }]}>Driver sign up</Text>
                 </View>
 
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, backgroundColor: '#E8F0EB', paddingBottom: Math.max(insets.bottom + 20, 20) }}>
@@ -847,7 +881,7 @@ export default function AuthScreen() {
                         </View>
                       </View>
                       <Text style={styles.successTitle}>Account created.</Text>
-                      <Text style={styles.successDesc}>Now complete your driver registration — add your vehicle, operator type, and choose your plan.</Text>
+                      <Text style={styles.successDesc}>Now complete your driver registration. Add your vehicle, operator type, and choose your plan.</Text>
                       <TouchableOpacity style={styles.ctaPrimary} onPress={() => setShowOnboarding(true)}>
                         <Text style={styles.ctaPrimaryText}>Continue to Registration →</Text>
                       </TouchableOpacity>
@@ -856,7 +890,7 @@ export default function AuthScreen() {
                     <View style={[styles.suForm, { backgroundColor: '#F4F8F6', borderRadius: 20 }]}>
                       <View style={styles.suInfoBox}>
                         <Ionicons name="information-circle-outline" size={18} color="#1A7A4A" style={{ marginTop: 2, marginRight: 8 }} />
-                        <Text style={styles.suInfoTxt}>Create your account here. You'll complete your <Text style={{ color: '#1A7A4A', fontWeight: '700' }}>full driver registration</Text> — vehicle, operator type, and subscription plan — on the next screen.</Text>
+                        <Text style={styles.suInfoTxt}>Create your account here. You'll complete your <Text style={{ color: '#1A7A4A', fontWeight: '700' }}>full driver registration</Text> (vehicle, operator type, and subscription plan) on the next screen.</Text>
                       </View>
 
                       <Text style={styles.suSecTitle}>PERSONAL DETAILS</Text>
@@ -944,8 +978,8 @@ const styles = StyleSheet.create({
 
   loginContainer: { flex: 1, justifyContent: 'flex-end' },
   loginBrand: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 20 },
-  logoImage: { width: 250, height: 90, marginBottom: 6 },
-  loginTagline: { fontSize: 12, fontWeight: '500', color: 'rgba(10,36,21,0.45)', letterSpacing: 2, marginTop: 4 },
+  logoImage: { width: 230, height: 63, marginBottom: 8 },
+  loginTagline: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.7)', letterSpacing: 2.5, marginTop: 4 },
   loginForm: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 24, paddingTop: 28, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 40, shadowOffset: { width: 0, height: -4 }, elevation: 20 },
   loginTitle: { fontSize: 20, fontWeight: '700', color: '#0F1A14', marginBottom: 20, textAlign: 'center' },
   

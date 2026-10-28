@@ -334,7 +334,7 @@ function DriverChatSupportModal({
         {
           id: 'bot-welcome',
           sender: 'bot',
-          text: `Hi ${user?.full_name?.split(' ')[0] || 'there'} — I’m Hence Driver Support. How can I help today?`,
+          text: `Hi ${user?.full_name?.split(' ')[0] || 'there'}, I’m Hence Driver Support. How can I help today?`,
           time: Date.now(),
         },
       ]);
@@ -2388,7 +2388,7 @@ export default function DriverDashboard() {
                 </View>
               ))}
               {stopIndex === (activeJob.stops?.length || 1) - 1 && (
-                  <Text style={{ fontSize: 12.5, color: H_COLORS.textMuted, paddingVertical: 4 }}>Final stop — no further drop-offs</Text>
+                  <Text style={{ fontSize: 12.5, color: H_COLORS.textMuted, paddingVertical: 4 }}>Final stop: no further drop-offs</Text>
               )}
             </View>
           )}
@@ -2477,7 +2477,7 @@ export default function DriverDashboard() {
 
             {stage === 1 && isMulti && allStopsCompleted && (
               <TouchableOpacity style={[styles.btnGreen, { backgroundColor: H_COLORS.forest, height: 54, borderRadius: 16 }]} onPress={async () => { await markDelivered(activeJob.id); await refreshDriverJobs(); setScreenIndex(0); }}>
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15.5 }}>All Stops Complete — Finish</Text>
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15.5 }}>All Stops Complete: Finish</Text>
               </TouchableOpacity>
             )}
 
@@ -2621,7 +2621,7 @@ export default function DriverDashboard() {
 
         <ScrollView contentContainerStyle={styles.pad}>
           <View style={styles.chartCard}>
-            <Text style={styles.chartTitle}>Daily Earnings — Last 7 Days</Text>
+            <Text style={styles.chartTitle}>Daily Earnings: Last 7 Days</Text>
             <View style={styles.chart}>
               {dayValues.map((v, idx) => {
                 const heightPct = bestDay > 0 ? Math.max(4, Math.round((v / bestDay) * 100)) : 4;
@@ -3053,7 +3053,7 @@ export default function DriverDashboard() {
             ? 'Verified'
             : status === 'pending'
             ? 'Under review / captured'
-            : 'Required — not uploaded',
+            : 'Required (not uploaded)',
       };
     };
 

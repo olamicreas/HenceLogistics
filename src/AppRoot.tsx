@@ -48,7 +48,7 @@ function SupportScreen({ onBack }: { onBack: () => void }) {
             <View style={localStyles.supIco}><Ionicons name="call" size={16} color="#1A7A4A" /></View>
             <View style={localStyles.supInfo}>
               <Text style={localStyles.supTitle}>Call Support</Text>
-              <Text style={localStyles.supSub}>Available 7am – 10pm daily</Text>
+              <Text style={localStyles.supSub}>Available 7am to 10pm daily</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color="#B8CEC3" />
           </TouchableOpacity>
@@ -148,7 +148,7 @@ function DeleteScreen({ logout, onBack }: { logout: () => void; onBack: () => vo
             <Ionicons name={mode === 'deactivate' ? "radio-button-on" : "radio-button-off"} size={18} color={mode === 'deactivate' ? '#1A7A4A' : '#B8CEC3'} />
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 13, fontWeight: '500', color: '#0F1A14' }}>Deactivate my account</Text>
-              <Text style={{ fontSize: 11, color: '#7A9080', marginTop: 2 }}>Temporary — hides your profile and pauses bookings. You can log back in anytime to reactivate.</Text>
+              <Text style={{ fontSize: 11, color: '#7A9080', marginTop: 2 }}>Temporary: hides your profile and pauses bookings. You can log back in anytime to reactivate.</Text>
             </View>
           </TouchableOpacity>
 

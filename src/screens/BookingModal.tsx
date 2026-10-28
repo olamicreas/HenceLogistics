@@ -19,12 +19,12 @@ import { BookingIcon } from './BookingIcons';
 import { Ionicons } from '@expo/vector-icons';
 
 const VEHICLES = [
-  { id: 'large', name: 'Large Van', icon: 'v-large', note: 'Large Van — suitable for large parcels, furniture, appliances, catering and most deliveries up to 1,500 kg.' },
-  { id: 'cargo', name: 'Cargo Van', icon: 'v-cargo', note: 'Cargo Van — best for parcels, electronics, fragile items, medical equipment and food up to 800 kg.' },
-  { id: 'luton', name: 'Luton Van', icon: 'v-luton', note: 'Luton Van — house removals, large furniture and heavy building materials up to 3,000 kg.' },
-  { id: 'dropside', name: 'Dropside', icon: 'v-drop', note: 'Dropside — building materials, scaffolding, garden supplies and oversized flat loads.' },
-  { id: 'flatbed', name: 'Flatbed', icon: 'v-flat', note: 'Flatbed — oversized loads, steel, timber and machinery that cannot be enclosed in a van.' },
-  { id: 'tow', name: 'Tow Truck', icon: 'v-tow', note: 'Tow Truck — vehicle recovery and towing only. Not suitable for cargo or parcel delivery.' },
+  { id: 'large', name: 'Large Van', icon: 'v-large', note: 'Large Van: suitable for large parcels, furniture, appliances, catering and most deliveries up to 1,500 kg.' },
+  { id: 'cargo', name: 'Cargo Van', icon: 'v-cargo', note: 'Cargo Van: best for parcels, electronics, fragile items, medical equipment and food up to 800 kg.' },
+  { id: 'luton', name: 'Luton Van', icon: 'v-luton', note: 'Luton Van: house removals, large furniture and heavy building materials up to 3,000 kg.' },
+  { id: 'dropside', name: 'Dropside', icon: 'v-drop', note: 'Dropside: building materials, scaffolding, garden supplies and oversized flat loads.' },
+  { id: 'flatbed', name: 'Flatbed', icon: 'v-flat', note: 'Flatbed: oversized loads, steel, timber and machinery that cannot be enclosed in a van.' },
+  { id: 'tow', name: 'Tow Truck', icon: 'v-tow', note: 'Tow Truck: vehicle recovery and towing only. Not suitable for cargo or parcel delivery.' },
 ] as const;
 
 const CATEGORIES: Array<{ id: string; icon: string; name: string }> = [
@@ -53,9 +53,9 @@ type Service = {
 const SERVICES: Record<string, Service[]> = {
   parcel: [
     { id: 'p1', name: 'Small Parcel', desc: 'Documents and packages up to 25 kg.', price: 'From €12', base: 12, svc: 0, badge: 'bp', btxt: 'Priority', ico: 'si-01', v: ['large', 'cargo'] },
-    { id: 'p2', name: 'Medium Parcel', desc: 'Mid-size goods 25–100 kg.', price: 'From €22', base: 22, svc: 0, badge: 'bp', btxt: 'Priority', ico: 'si-02', v: ['large', 'cargo'] },
-    { id: 'p3', name: 'Large Parcel', desc: 'Heavy items 100–500 kg. Tail-lift available.', price: 'From €45', base: 45, svc: 5, badge: 'bp', btxt: 'Priority', ico: 'si-03', v: ['large', 'luton'] },
-    { id: 'p4', name: 'Urgent Document', desc: 'Legal and financial documents. 1–2 hr window.', price: 'From €18', base: 18, svc: 8, badge: 'bp', btxt: 'Priority', ico: 'si-04', v: ['large', 'cargo'] },
+    { id: 'p2', name: 'Medium Parcel', desc: 'Mid-size goods 25 to 100 kg.', price: 'From €22', base: 22, svc: 0, badge: 'bp', btxt: 'Priority', ico: 'si-02', v: ['large', 'cargo'] },
+    { id: 'p3', name: 'Large Parcel', desc: 'Heavy items 100 to 500 kg. Tail-lift available.', price: 'From €45', base: 45, svc: 5, badge: 'bp', btxt: 'Priority', ico: 'si-03', v: ['large', 'luton'] },
+    { id: 'p4', name: 'Urgent Document', desc: 'Legal and financial documents. 1 to 2 hr window.', price: 'From €18', base: 18, svc: 8, badge: 'bp', btxt: 'Priority', ico: 'si-04', v: ['large', 'cargo'] },
   ],
   home: [
     { id: 'h1', name: 'Furniture Items', desc: 'Sofas, beds and wardrobes up to 1,500 kg.', price: 'From €55', base: 55, svc: 5, badge: 'bs', btxt: 'Standard', ico: 'si-14', v: ['large', 'luton'] },
@@ -348,7 +348,7 @@ export default function BookingModal({ visible, onClose }: { visible: boolean; o
                 {step === 1 ? 'New Booking' : 'Location & Details'}
               </Text>
               <Text style={styles.headerSub}>
-                {step === 1 ? 'Vehicle & Service' : 'Pickup, drop-off and recipient details'}
+                {step === 1 ? 'Vehicle & Service' : 'Pickup, dropoff and recipient details'}
               </Text>
             </View>
 
@@ -360,7 +360,7 @@ export default function BookingModal({ visible, onClose }: { visible: boolean; o
               <Text style={styles.stepCircle}>{step === 1 ? '1' : '✓'}</Text>
               <Text style={styles.stepLabel}>Vehicle & Service</Text>
             </View>
-            <View style={step === 1 ? styles.stepLinePending : styles.stepLineDone} />
+            <View style={{ width: 16 }} />
             <View style={step === 2 ? styles.stepActive : styles.stepPending}>
               <Text style={styles.stepCircle}>2</Text>
               <Text style={styles.stepLabel}>Location & Details</Text>
@@ -455,7 +455,7 @@ export default function BookingModal({ visible, onClose }: { visible: boolean; o
                   <View style={styles.cardHeader}>
                     <View>
                       <Text style={styles.cardTitle}>What are you moving?</Text>
-                      <Text style={styles.cardSub}>Select a category — filtered for your chosen vehicle</Text>
+                      <Text style={styles.cardSub}>Select a category for your chosen vehicle</Text>
                     </View>
                   </View>
 

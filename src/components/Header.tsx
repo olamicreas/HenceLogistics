@@ -82,9 +82,11 @@ export default function Header() {
       >
         {/* LOGO */}
         <View style={styles.logoRow}>
-          <Text style={styles.logoText}>
-            HENCE<Text style={styles.logoDot}>.</Text>
-          </Text>
+          <Image
+            source={require('../../assets/hence_logo.png')}
+            style={styles.logoImg}
+            resizeMode="contain"
+          />
         </View>
 
         {/* RIGHT ACTION ROW: Bell + Pill Button */}
@@ -379,14 +381,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  logoText: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -0.5,
-  },
-  logoDot: {
-    color: '#1A7A4A',
+  logoImg: {
+    width: 104,
+    height: 27,
   },
   headerRightRow: {
     flexDirection: 'row',
@@ -487,8 +484,8 @@ const styles = StyleSheet.create({
   },
   drawerMenuLabel: {
     fontSize: 11,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.6)',
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.7)',
     letterSpacing: 1.2,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
@@ -550,7 +547,7 @@ const styles = StyleSheet.create({
   },
   drawerUserName: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#FFFFFF',
     marginBottom: 2,
   },
@@ -592,11 +589,12 @@ const styles = StyleSheet.create({
   },
   menuItemLabel: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#0F1A14',
   },
   menuItemSub: {
     fontSize: 11,
+    fontWeight: '400',
     color: '#7A9080',
     marginTop: 1,
   },
