@@ -39,6 +39,8 @@ function UserAvatar({
 }: UserAvatarProps) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const [cachedFallback, setCachedFallback] = useState<string | null>(null);
+  const [imageError, setImageError] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   const rawAvatarUrl = user?.avatar_url || user?.avatar || user?.photo;
   const avatarUrl = getFullAvatarUrl(rawAvatarUrl);
@@ -81,10 +83,16 @@ function UserAvatar({
     displayImageUri = cachedFallback;
   }
 
+  useEffect(() => {
+    setImageError(false);
+    setImageLoaded(false);
+  }, [displayImageUri]);
+
   const defaultBg = bgColor || (isDriver ? '#236D44' : '#2E8B57');
   const defaultText = textColor || (isDriver ? '#C8F135' : '#FFFFFF');
 
   const badgeSize = Math.max(Math.round(size * 0.34), 18);
+  const hasImage = !!displayImageUri && !imageError;
 
   const avatarCircle = (
     <View
@@ -101,36 +109,38 @@ function UserAvatar({
         style,
       ]}
     >
-      {/* 1. Underlying initials text: ALWAYS rendered as foundation so circle is never empty */}
-      <Text
-        style={[
-          styles.initialsText,
-          {
-            color: defaultText,
-            fontSize: Math.round(size * 0.38),
-          },
-        ]}
-        numberOfLines={1}
-      >
-        {initials}
-      </Text>
+      {/* 1. Underlying initials text: only rendered when there is no image, or while image is loading */}
+      {(!hasImage || !imageLoaded) && (
+        <Text
+          style={[
+            styles.initialsText,
+            {
+              color: defaultText,
+              fontSize: Math.round(size * 0.38),
+            },
+          ]}
+          numberOfLines={1}
+        >
+          {initials}
+        </Text>
+      )}
 
-      {/* 2. Real Image: Overlays over initials */}
-      {displayImageUri ? (
+      {/* 2. Real Image: Perfectly fitted to the circle */}
+      {hasImage ? (
         <Image
           source={{ uri: displayImageUri }}
           style={[
-            StyleSheet.absoluteFillObject,
+            styles.avatarImage,
             {
-              width: size,
-              height: size,
               borderRadius: size / 2,
             },
           ]}
           resizeMode="cover"
           fadeDuration={0}
+          onLoad={() => setImageLoaded(true)}
           onError={() => {
             console.warn('Avatar image failed to load, stopping retry:', displayImageUri);
+            setImageError(true);
             setFailedUrl(displayImageUri);
           }}
         />
@@ -200,6 +210,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
     position: 'relative',
+  },
+  avatarImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
   },
   initialsText: {
     fontWeight: '800',
