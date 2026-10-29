@@ -728,18 +728,6 @@ export default function AuthScreen() {
             {mode === 'login' && (
               <View style={styles.loginContainer}>
                 <View style={[styles.loginHero, { paddingTop: Math.max(insets.top + 36, 52) }]}>
-                  <TouchableOpacity
-                    style={[styles.loginBackBtn, { top: Math.max(insets.top + 10, 16) }]}
-                    onPress={() => {
-                      setSelectedRole(null);
-                      setLoginError(null);
-                    }}
-                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
-                  </TouchableOpacity>
-
                   <Image
                     source={require('../../assets/welcome_logo.png')}
                     style={{ width: logoWidth, height: logoHeight }}
@@ -1076,18 +1064,6 @@ const styles = StyleSheet.create({
     minHeight: 180,
     paddingHorizontal: 24,
     paddingBottom: 24,
-    position: 'relative',
-  },
-  loginBackBtn: {
-    position: 'absolute',
-    left: 20,
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
   },
   loginSheet: {
     backgroundColor: '#FFFFFF',
