@@ -12,6 +12,7 @@ import {
   ScrollView,
   StatusBar,
   Image,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -497,6 +498,8 @@ function DriverOnboarding({ onExit }: { onExit: () => void }) {
 }
 
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
 export default function AuthScreen() {
   const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<Mode>('login');
@@ -519,32 +522,22 @@ export default function AuthScreen() {
   const [eircode, setEircode] = useState('');
 
   const [selectedRole, setSelectedRole] = useState<'customer' | 'driver' | null>(null);
-  const [isCheckingRole, setIsCheckingRole] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passFocused, setPassFocused] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+
+  const logoWidth = Math.min(SCREEN_WIDTH * 0.66, 290);
+  const logoHeight = logoWidth * (327 / 1194);
 
   React.useEffect(() => {
-    const loadSavedRole = async () => {
-      try {
-        const savedRole = await AsyncStorage.getItem('@app_role');
-        if (savedRole === 'customer' || savedRole === 'driver') {
-          setSelectedRole(savedRole);
-        }
-      } catch (error) {
-        console.log("Error loading role:", error);
-      } finally {
-        setIsCheckingRole(false);
-      }
-    };
-    loadSavedRole();
+    // Clear any persisted role so unauthenticated cold starts always begin on the Welcome Screen
+    AsyncStorage.removeItem('@app_role').catch(() => {});
   }, []);
 
-  const handleRoleSelection = async (role: 'customer' | 'driver') => {
+  const handleRoleSelection = (role: 'customer' | 'driver') => {
     setSelectedRole(role);
-    try {
-      await AsyncStorage.setItem('@app_role', role);
-    } catch (error) {
-      console.log("Error saving role:", error);
-    }
   };
 
   const getPasswordStrength = (pass: string) => {
@@ -563,6 +556,7 @@ export default function AuthScreen() {
   const switchMode = (newMode: Mode) => {
     setMode(newMode);
     setSuccessScreen(null);
+    setLoginError(null);
     setPassword('');
     setConfirmPassword('');
     setTermsAccepted(false);
@@ -570,13 +564,16 @@ export default function AuthScreen() {
 
   const handleAuth = async () => {
     setLoading(true);
+    setLoginError(null);
     try {
       if (mode === 'login') {
-        if (!selectedRole) throw new Error('Please select whether you need a delivery or are a driver.');
-        if (!email.trim() || !password.trim()) throw new Error('Email and password are required.');
+        if (!email.trim() || !password.trim()) {
+          setLoginError('Email and password are required.');
+          return;
+        }
 
         const params = new URLSearchParams();
-        params.append('username', email);
+        params.append('username', email.trim());
         params.append('password', password);
 
         const res = await axios.post(`${API_URL}/auth/token`, params.toString(), {
@@ -585,12 +582,13 @@ export default function AuthScreen() {
 
         await AsyncStorage.setItem('token', res.data.access_token);
         if (res.data.user) {
-            await AsyncStorage.setItem('userData', JSON.stringify(res.data.user));
+          await AsyncStorage.setItem('userData', JSON.stringify(res.data.user));
         }
 
         setToken(res.data.access_token);
-        setUser(res.data.user || { role: selectedRole });
-        setCurrentScreen(selectedRole === 'driver' ? 'driver-dashboard' : 'home');
+        const resolvedRole = res.data.user?.role || selectedRole || 'customer';
+        setUser(res.data.user || { role: resolvedRole });
+        setCurrentScreen(resolvedRole === 'driver' ? 'driver-dashboard' : 'home');
       }
 
       if (mode === 'signup_customer' || mode === 'signup_driver') {
@@ -605,7 +603,7 @@ export default function AuthScreen() {
         });
         
         const params = new URLSearchParams();
-        params.append('username', email);
+        params.append('username', email.trim());
         params.append('password', password);
         const loginRes = await axios.post(`${API_URL}/auth/token`, params.toString(), {
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -613,7 +611,7 @@ export default function AuthScreen() {
         
         await AsyncStorage.setItem('token', loginRes.data.access_token);
         if (loginRes.data.user) {
-            await AsyncStorage.setItem('userData', JSON.stringify(loginRes.data.user));
+          await AsyncStorage.setItem('userData', JSON.stringify(loginRes.data.user));
         }
 
         setSuccessScreen('customer');
@@ -627,7 +625,7 @@ export default function AuthScreen() {
         });
 
         const params = new URLSearchParams();
-        params.append('username', email);
+        params.append('username', email.trim());
         params.append('password', password);
         const loginRes = await axios.post(`${API_URL}/auth/token`, params.toString(), {
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -635,7 +633,7 @@ export default function AuthScreen() {
         
         await AsyncStorage.setItem('token', loginRes.data.access_token);
         if (loginRes.data.user) {
-            await AsyncStorage.setItem('userData', JSON.stringify(loginRes.data.user));
+          await AsyncStorage.setItem('userData', JSON.stringify(loginRes.data.user));
         }
 
         setSuccessScreen('driver');
@@ -654,7 +652,11 @@ export default function AuthScreen() {
         errorMsg = e.message;
       }
 
-      Alert.alert('Registration Failed', errorMsg);
+      if (mode === 'login') {
+        setLoginError(errorMsg);
+      } else {
+        Alert.alert('Registration Failed', errorMsg);
+      }
     } finally {
       setLoading(false);
     }
@@ -688,32 +690,24 @@ export default function AuthScreen() {
 
   const isSignUp = mode === 'signup_driver' || mode === 'signup_customer';
 
-  if (isCheckingRole) {
-    return (
-      <View style={{ flex: 1, backgroundColor: '#111820', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#1A7A4A" />
-      </View>
-    );
-  }
-
   if (!selectedRole) {
     return (
       <WelcomeScreen
         selectedRole={selectedRole}
-        onSelectRole={async (role, autoMode) => {
-          await handleRoleSelection(role);
+        onSelectRole={(role, autoMode) => {
+          handleRoleSelection(role);
           if (autoMode === 'signup') {
             setMode(role === 'driver' ? 'signup_driver' : 'signup_customer');
           } else if (autoMode === 'login') {
             setMode('login');
           }
         }}
-        onSignIn={async () => {
-          await handleRoleSelection('customer');
+        onSignIn={() => {
+          handleRoleSelection('customer');
           setMode('login');
         }}
-        onSkip={async () => {
-          await handleRoleSelection('customer');
+        onSkip={() => {
+          handleRoleSelection('customer');
           setMode('login');
         }}
       />
@@ -733,53 +727,151 @@ export default function AuthScreen() {
 
             {mode === 'login' && (
               <View style={styles.loginContainer}>
-                <View style={styles.loginBrand}>
+                <View style={[styles.loginHero, { paddingTop: Math.max(insets.top + 36, 52) }]}>
+                  <TouchableOpacity
+                    style={[styles.loginBackBtn, { top: Math.max(insets.top + 10, 16) }]}
+                    onPress={() => {
+                      setSelectedRole(null);
+                      setLoginError(null);
+                    }}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+                  </TouchableOpacity>
+
                   <Image
                     source={require('../../assets/welcome_logo.png')}
-                    style={styles.logoImage}
+                    style={{ width: logoWidth, height: logoHeight }}
                     resizeMode="contain"
                   />
-                  <Text style={styles.loginTagline}>DELIVERY MATTERS</Text>
                 </View>
 
-                <View style={[styles.loginForm, { paddingBottom: Math.max(insets.bottom + 20, 44) }]}>
-                  <Text style={styles.loginTitle}>Sign In</Text>
+                <View
+                  style={[
+                    styles.loginSheet,
+                    { paddingBottom: Math.max(insets.bottom + 30, 40) },
+                  ]}
+                >
+                  {loginError ? (
+                    <View style={styles.alertBanner}>
+                      <Ionicons
+                        name="alert-circle"
+                        size={18}
+                        color="#B3261E"
+                        style={{ marginRight: 8, marginTop: 1 }}
+                      />
+                      <Text style={styles.alertText}>{loginError}</Text>
+                    </View>
+                  ) : null}
 
-                  <TextInput style={styles.loginInput} placeholder="Email address" placeholderTextColor="#9AB5A4" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} />
-                  <TextInput style={styles.loginInput} placeholder="Password" placeholderTextColor="#9AB5A4" secureTextEntry value={password} onChangeText={setPassword} />
+                  {/* Email Field */}
+                  <View style={styles.loginField}>
+                    <TextInput
+                      style={[
+                        styles.loginInput,
+                        emailFocused && styles.loginInputFocused,
+                      ]}
+                      placeholder="Email address"
+                      placeholderTextColor="#8FA698"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      value={email}
+                      onChangeText={(val) => {
+                        setEmail(val);
+                        if (loginError) setLoginError(null);
+                      }}
+                      onFocus={() => setEmailFocused(true)}
+                      onBlur={() => setEmailFocused(false)}
+                    />
+                  </View>
 
-                  <TouchableOpacity style={styles.loginForgot}>
+                  {/* Password Field */}
+                  <View style={styles.loginField}>
+                    <TextInput
+                      style={[
+                        styles.loginInput,
+                        { paddingRight: 64 },
+                        passFocused && styles.loginInputFocused,
+                      ]}
+                      placeholder="Password"
+                      placeholderTextColor="#8FA698"
+                      secureTextEntry={!showPassword}
+                      value={password}
+                      onChangeText={(val) => {
+                        setPassword(val);
+                        if (loginError) setLoginError(null);
+                      }}
+                      onFocus={() => setPassFocused(true)}
+                      onBlur={() => setPassFocused(false)}
+                    />
+                    <TouchableOpacity
+                      style={styles.passToggle}
+                      onPress={() => setShowPassword(!showPassword)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.passToggleText}>
+                        {showPassword ? 'Hide' : 'Show'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Forgot Password */}
+                  <TouchableOpacity
+                    style={styles.loginForgot}
+                    onPress={() => {
+                      Alert.alert(
+                        'Reset Password',
+                        'Please contact support@hencedelivery.com or enter your email to receive password reset instructions.',
+                        [{ text: 'OK' }]
+                      );
+                    }}
+                    activeOpacity={0.7}
+                  >
                     <Text style={styles.loginForgotText}>Forgot password?</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={loading ? styles.ctaPrimary : styles.ctaOutline} onPress={handleAuth} disabled={loading} activeOpacity={0.8}>
-                    {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.ctaOutlineText}>Sign In</Text>}
+                  {/* Submit Button */}
+                  <TouchableOpacity
+                    style={[styles.signInBtn, loading && { opacity: 0.75 }]}
+                    onPress={handleAuth}
+                    disabled={loading}
+                    activeOpacity={0.85}
+                  >
+                    {loading ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <ActivityIndicator size="small" color="#1A7A4A" />
+                        <Text style={styles.signInBtnText}>Signing in…</Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.signInBtnText}>Sign In</Text>
+                    )}
                   </TouchableOpacity>
 
-                  <View style={styles.divider}>
-                    <View style={styles.divLine} />
-                    <Text style={styles.divText}>or</Text>
-                    <View style={styles.divLine} />
+                  {/* Divider ("or") */}
+                  <View style={styles.orDivider}>
+                    <View style={styles.orLine} />
+                    <Text style={styles.orText}>or</Text>
+                    <View style={styles.orLine} />
                   </View>
 
-                  {selectedRole === 'driver' ? (
-                    <TouchableOpacity style={styles.loginRegister} onPress={() => switchMode('signup_driver')}>
-                      <Text style={styles.loginRegisterText}>New driver? <Text style={styles.loginRegisterLink}>Register here →</Text></Text>
+                  {/* Create Account Link */}
+                  <View style={styles.createAccountWrap}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setLoginError(null);
+                        switchMode(
+                          selectedRole === 'driver' ? 'signup_driver' : 'signup_customer'
+                        );
+                      }}
+                      activeOpacity={0.7}
+                      hitSlop={{ top: 12, bottom: 12, left: 16, right: 16 }}
+                    >
+                      <Text style={styles.createAccountText}>Create an account</Text>
                     </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity style={styles.loginRegister} onPress={() => switchMode('signup_customer')}>
-                      <Text style={styles.loginRegisterText}>New to Hence? <Text style={styles.loginRegisterLink}>Create an account</Text></Text>
-                    </TouchableOpacity>
-                  )}
-
-                  <TouchableOpacity style={{ alignItems: 'center', marginTop: 24 }} onPress={async () => {
-                    setSelectedRole(null);
-                    await AsyncStorage.removeItem('@app_role');
-                  }}>
-                    <Text style={{ fontSize: 13, color: '#7A9080', fontWeight: '500' }}>
-                      Not a {selectedRole}? <Text style={{ color: '#1A7A4A', fontWeight: '700' }}>Change Role</Text>
-                    </Text>
-                  </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             )}
@@ -976,26 +1068,144 @@ const styles = StyleSheet.create({
   successTitle: { fontSize: 22, fontWeight: '800', color: '#0F1A14', marginBottom: 8, letterSpacing: -0.2 },
   successDesc: { fontSize: 13, color: '#7A9080', textAlign: 'center', lineHeight: 22, marginBottom: 32, paddingHorizontal: 10 },
 
-  loginContainer: { flex: 1, justifyContent: 'flex-end' },
-  loginBrand: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 20 },
-  logoImage: { width: 230, height: 63, marginBottom: 8 },
-  loginTagline: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.7)', letterSpacing: 2.5, marginTop: 4 },
-  loginForm: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 24, paddingTop: 28, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 40, shadowOffset: { width: 0, height: -4 }, elevation: 20 },
-  loginTitle: { fontSize: 20, fontWeight: '700', color: '#0F1A14', marginBottom: 20, textAlign: 'center' },
-  
-  roleRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
-  roleBox: { flex: 1, borderWidth: 2, borderColor: '#E4EBE7', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F9FBF9' },
-  roleBoxActive: { borderColor: '#1A7A4A', backgroundColor: '#F0FAF4' },
-  roleIco: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#EDF2EF', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  roleIcoActive: { backgroundColor: '#C5E8D4' },
-  roleTextName: { fontSize: 12, fontWeight: '700', color: '#0F1A14', textAlign: 'center' },
-
-  loginInput: { width: '100%', paddingHorizontal: 16, paddingVertical: 14, backgroundColor: '#F2F4F3', borderWidth: 1.5, borderColor: '#E4EBE7', borderRadius: 12, fontSize: 14, color: '#0F1A14', marginBottom: 10 },
-  loginForgot: { alignItems: 'flex-end', marginBottom: 18, marginTop: -2 },
-  loginForgotText: { fontSize: 13, fontWeight: '600', color: '#1A7A4A' },
-  loginRegister: { alignItems: 'center', marginTop: 4 },
-  loginRegisterText: { fontSize: 13, color: '#7A9080', fontWeight: '500' },
-  loginRegisterLink: { color: '#1A7A4A', fontWeight: '700' },
+  loginContainer: { flex: 1, justifyContent: 'space-between' },
+  loginHero: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 180,
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+    position: 'relative',
+  },
+  loginBackBtn: {
+    position: 'absolute',
+    left: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  loginSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    paddingHorizontal: 24,
+    paddingTop: 40,
+    shadowColor: '#0F2D20',
+    shadowOpacity: 0.1,
+    shadowRadius: 40,
+    shadowOffset: { width: 0, height: -10 },
+    elevation: 16,
+  },
+  alertBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FDECEA',
+    borderRadius: 12,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    marginBottom: 14,
+  },
+  alertText: {
+    flex: 1,
+    color: '#B3261E',
+    fontSize: 15,
+    fontWeight: '500',
+    lineHeight: 20,
+  },
+  loginField: {
+    marginBottom: 14,
+    position: 'relative',
+  },
+  loginInput: {
+    width: '100%',
+    height: 54,
+    borderWidth: 1.5,
+    borderColor: '#D4E2DA',
+    backgroundColor: '#F2F5F3',
+    borderRadius: 16,
+    paddingHorizontal: 18,
+    fontSize: 17,
+    color: '#12201A',
+  },
+  loginInputFocused: {
+    borderColor: '#1A7A4A',
+    backgroundColor: '#FFFFFF',
+  },
+  passToggle: {
+    position: 'absolute',
+    right: 8,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    minWidth: 52,
+  },
+  passToggleText: {
+    color: '#1A7A4A',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  loginForgot: {
+    alignSelf: 'flex-end',
+    marginTop: 2,
+    marginRight: 4,
+    marginBottom: 24,
+    paddingVertical: 6,
+  },
+  loginForgotText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1A7A4A',
+  },
+  signInBtn: {
+    width: '100%',
+    height: 56,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#1A7A4A',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signInBtnText: {
+    color: '#1A7A4A',
+    fontSize: 19,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  orDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginTop: 20,
+    marginBottom: 16,
+  },
+  orLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#D4E2DA',
+  },
+  orText: {
+    color: '#5E7467',
+    fontSize: 15,
+    fontWeight: '400',
+  },
+  createAccountWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+  },
+  createAccountText: {
+    color: '#1A7A4A',
+    fontSize: 17,
+    fontWeight: '700',
+  },
 
   suContainer: { flex: 1 },
   suHeader: { paddingHorizontal: 24, alignItems: 'center', position: 'relative' },
