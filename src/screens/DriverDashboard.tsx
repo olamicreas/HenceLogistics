@@ -680,6 +680,22 @@ export default function DriverDashboard() {
           }
         });
 
+        // Fetch verified customer reviews directly from the backend database
+        if (token) {
+          try {
+            const apiRes = await axios.get(`${BASE_URL}/driver/reviews`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (Array.isArray(apiRes.data)) {
+              apiRes.data.forEach((rev: any) => {
+                if (rev && (rev.booking_id || rev.id || rev.rating_id)) {
+                  mergedMap.set(String(rev.booking_id || rev.id || rev.rating_id), rev);
+                }
+              });
+            }
+          } catch {}
+        }
+
         if (mounted) {
           setLocalStoredReviews(Array.from(mergedMap.values()));
         }
@@ -690,7 +706,7 @@ export default function DriverDashboard() {
     return () => {
       mounted = false;
     };
-  }, [user?.id, rideHistory]);
+  }, [user?.id, token, rideHistory]);
 
   // Merge real reviews from backend completed rides and customer ratings
   const realReviews = useMemo(() => {

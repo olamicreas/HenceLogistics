@@ -297,15 +297,22 @@ function ChatSupportModal({ visible, onClose, user, activeBooking, sendSupportMe
   );
 }
 
-function RatingModal({ visible, onClose, onSubmit, defaultRating = 0, proofUrl }: any) {
-  const [rating, setRating] = useState<number>(defaultRating);
+function RatingModal({ visible, onClose, onSubmit, defaultRating = 5, proofUrl }: any) {
+  const [rating, setRating] = useState<number>(defaultRating || 5);
   const [note, setNote] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
-  useEffect(() => { if (visible) { setRating(defaultRating); setNote(''); setSubmitting(false); } }, [visible, defaultRating]);
+  useEffect(() => {
+    if (visible) {
+      setRating(defaultRating || 5);
+      setNote('');
+      setSubmitting(false);
+    }
+  }, [visible, defaultRating]);
 
   const handleSubmit = async () => {
     setSubmitting(true);
-    await onSubmit(rating, note);
+    const finalRating = Math.max(1, Math.min(5, Math.round(rating) || 5));
+    await onSubmit(finalRating, note.trim());
     setSubmitting(false);
   };
 
@@ -1914,7 +1921,40 @@ export default function HomeScreen() {
       </Modal>
 
       {/* 7. RATING MODAL */}
-      <RatingModal visible={ratingModalVisible} proofUrl={activeBooking?.delivery_proof_url ?? activeBooking?.proof_url} onClose={() => { if (ratingBookingContext?.bookingId) setDismissedRatingIds(prev => [...prev, ratingBookingContext.bookingId!]); setRatingModalVisible(false); setRatingBookingContext(null); setActiveBooking(null); }} onSubmit={async (rating: number, note: string) => { if (!ratingBookingContext?.driverId) return; await rateDriver(ratingBookingContext.driverId, rating, note, ratingBookingContext.bookingId); if (ratingBookingContext?.bookingId) setDismissedRatingIds(prev => [...prev, ratingBookingContext.bookingId!]); await acknowledgeBooking?.(ratingBookingContext.bookingId!); setRatingModalVisible(false); setActiveBooking(null); }} />
+      <RatingModal
+        visible={ratingModalVisible}
+        defaultRating={5}
+        proofUrl={activeBooking?.delivery_proof_url ?? activeBooking?.proof_url}
+        onClose={() => {
+          const bId = ratingBookingContext?.bookingId || activeBooking?.id;
+          if (bId) setDismissedRatingIds((prev) => [...prev, bId]);
+          setRatingModalVisible(false);
+          setRatingBookingContext(null);
+          setActiveBooking(null);
+        }}
+        onSubmit={async (rating: number, note: string) => {
+          const targetDriverId =
+            ratingBookingContext?.driverId ||
+            activeBooking?.driver_id ||
+            activeBooking?.driver?.id;
+          const targetBookingId =
+            ratingBookingContext?.bookingId || activeBooking?.id;
+
+          if (!targetDriverId) {
+            setRatingModalVisible(false);
+            setActiveBooking(null);
+            return;
+          }
+
+          await rateDriver(targetDriverId, rating, note, targetBookingId);
+          if (targetBookingId) {
+            setDismissedRatingIds((prev) => [...prev, targetBookingId]);
+            await acknowledgeBooking?.(targetBookingId);
+          }
+          setRatingModalVisible(false);
+          setActiveBooking(null);
+        }}
+      />
 
       {/* 8. LIVE CHAT TRIGGER & MODAL */}
       <TouchableOpacity onPress={() => setChatVisible(true)} style={{ position: 'absolute', right: 18, bottom: 90, width: 60, height: 60, borderRadius: 30, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', elevation: 8, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8 }}><Ionicons name="chatbubbles" size={26} color="#fff" /></TouchableOpacity>
