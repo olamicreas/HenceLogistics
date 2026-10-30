@@ -634,43 +634,6 @@ export default function HomeScreen() {
     }
   }, [stops]);
 
-  // 🚀 THE SWIPEABLE WIDGET STATE
-  const widgetPan = useRef(new Animated.Value(0)).current;
-  const [widgetMinimized, setWidgetMinimized] = useState(false);
-
-  useEffect(() => {
-    widgetPan.setValue(0);
-    setWidgetMinimized(false);
-  }, [activeBooking?.id]);
-
-  const widgetPanResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dx) > 15 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
-      onPanResponderMove: (_, gestureState) => {
-        if (!widgetMinimized && gestureState.dx < 0) {
-          widgetPan.setValue(gestureState.dx); 
-        } else if (widgetMinimized && gestureState.dx > 0) {
-          widgetPan.setValue(-SCREEN_WIDTH + 60 + gestureState.dx); 
-        }
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        if (!widgetMinimized) {
-          if (gestureState.dx < -80 || gestureState.vx < -0.5) {
-            Animated.spring(widgetPan, { toValue: -SCREEN_WIDTH + 55, useNativeDriver: true, speed: 20 }).start(() => setWidgetMinimized(true));
-          } else {
-            Animated.spring(widgetPan, { toValue: 0, useNativeDriver: true, bounciness: 10 }).start();
-          }
-        } else {
-          if (gestureState.dx > 40 || gestureState.vx > 0.5) {
-            Animated.spring(widgetPan, { toValue: 0, useNativeDriver: true, bounciness: 10 }).start(() => setWidgetMinimized(false));
-          } else {
-            Animated.spring(widgetPan, { toValue: -SCREEN_WIDTH + 55, useNativeDriver: true, speed: 20 }).start();
-          }
-        }
-      }
-    })
-  ).current;
-
   // 🚀 THE UNIFIED ZERO-TOUCH AUTOMATION ENGINE
   const prevStatusRef = useRef(String(activeBooking?.status || ''));
   
@@ -1221,32 +1184,6 @@ export default function HomeScreen() {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
-
-      {/* 🚀 PREMIUM SWIPEABLE LIVE WIDGET */}
-      {activeBooking && !trackingModalVisible && !['completed', 'delivered', 'cancelled', 'paid', 'escalated'].includes((activeBooking?.status || '').toLowerCase()) && (
-        <Animated.View 
-          {...widgetPanResponder.panHandlers}
-          style={{ position: 'absolute', top: Math.max(insets.top, 10), left: 16, right: 16, zIndex: 100, transform: [{ translateX: widgetPan }] }}
-        >
-          <TouchableOpacity activeOpacity={0.9} onPress={() => { if (widgetMinimized) { Animated.spring(widgetPan, { toValue: 0, useNativeDriver: true, bounciness: 10 }).start(() => setWidgetMinimized(false)); } else { setTrackingModalVisible(true); } }} style={{ backgroundColor: '#fff', borderRadius: 20, padding: 16, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 16, elevation: 10, borderWidth: 1, borderColor: `${COLORS.primary}33` }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.primarySoft, alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
-                {['arrived_pickup', 'arrived_dropoff'].includes(String(activeBooking.status).toLowerCase()) ? <Ionicons name="location" size={22} color={COLORS.primary} /> : <Ionicons name="car-outline" size={24} color={COLORS.primary} />}
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 15, fontWeight: '800', color: COLORS.ink }}>
-                  {['pending', 'accepted', 'assigned'].includes(String(activeBooking.status).toLowerCase()) ? 'Driver is on the way' : String(activeBooking.status).toLowerCase() === 'arrived_pickup' ? 'Driver at pickup' : ['in_transit', 'picked_up'].includes(String(activeBooking.status).toLowerCase()) ? 'Order is en route' : String(activeBooking.status).toLowerCase() === 'arrived_dropoff' ? 'Driver has arrived' : 'Active Delivery'}
-                </Text>
-                <Text style={{ fontSize: 12, fontWeight: '600', color: COLORS.soft, marginTop: 2 }}>ETA: <Text style={{ color: COLORS.primary, fontWeight: '800' }}>{getLiveETA()}</Text> • {widgetMinimized ? 'Swipe right' : 'Tap to track'}</Text>
-              </View>
-              <View style={{ backgroundColor: COLORS.ink, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 14 }}><Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{widgetMinimized ? '➔' : 'View'}</Text></View>
-            </View>
-            <View style={{ height: 5, backgroundColor: COLORS.line, borderRadius: 3, overflow: 'hidden' }}>
-               <View style={{ height: '100%', backgroundColor: COLORS.primary, borderRadius: 3, width: ['pending', 'accepted', 'assigned'].includes(String(activeBooking.status).toLowerCase()) ? '25%' : String(activeBooking.status).toLowerCase() === 'arrived_pickup' ? '50%' : ['in_transit', 'picked_up'].includes(String(activeBooking.status).toLowerCase()) ? '75%' : '95%' }} />
-            </View>
-          </TouchableOpacity>
-        </Animated.View>
-      )}
 
       {/* --- STEPS --- */}
       <View style={styles.steps}>

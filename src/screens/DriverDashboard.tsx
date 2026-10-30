@@ -2464,7 +2464,7 @@ export default function DriverDashboard() {
 
           {/* Dynamic Master Progression CTA */}
           <View style={{ paddingHorizontal: 22, paddingTop: 24 }}>
-            {stage === 0 && activeJobStatus === 'accepted' && (
+            {stage === 0 && ['accepted', 'assigned'].includes(activeJobStatus) && (
               <TouchableOpacity style={[styles.btnGreen, { backgroundColor: H_COLORS.ink, height: 54, borderRadius: 16 }]} onPress={() => updateJobStatus('arrived_pickup')}>
                 <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15.5 }}>Arrived at Pickup</Text>
               </TouchableOpacity>
@@ -2484,6 +2484,18 @@ export default function DriverDashboard() {
               </TouchableOpacity>
             )}
 
+            {/* If job was already collected or rerouted past pickup */}
+            {stage === 0 && (
+              <TouchableOpacity
+                style={{ marginTop: 12, paddingVertical: 12, alignItems: 'center' }}
+                onPress={() => updateJobStatus('in_transit')}
+              >
+                <Text style={{ color: H_COLORS.textMuted, fontSize: 13, fontWeight: '600', textDecorationLine: 'underline' }}>
+                  Already collected items? Start delivery
+                </Text>
+              </TouchableOpacity>
+            )}
+
             {/* MULTI DROP DROPOFF: Scan individual stops */}
             {stage === 1 && isMulti && nextStop && (
               <TouchableOpacity style={[styles.btnGreen, { backgroundColor: H_COLORS.ink, height: 54, borderRadius: 16 }]} onPress={openScanner}>
@@ -2498,7 +2510,7 @@ export default function DriverDashboard() {
             )}
 
             {/* SINGLE DROP: Arrival at drop-off */}
-            {stage === 1 && !isMulti && activeJobStatus === 'in_transit' && (
+            {stage === 1 && !isMulti && ['in_transit', 'picked_up', 'inprogress', 'in_progress'].includes(activeJobStatus) && (
               <TouchableOpacity style={[styles.btnGreen, { backgroundColor: H_COLORS.ink, height: 54, borderRadius: 16 }]} onPress={() => updateJobStatus('arrived_dropoff')}>
                 <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15.5 }}>Arrived at Drop-off</Text>
               </TouchableOpacity>
@@ -2517,12 +2529,55 @@ export default function DriverDashboard() {
               </View>
             )}
 
-            {activeJobStatus === 'awaiting_confirmation' && !isMulti && (
-              <View style={{ padding: 18, backgroundColor: '#FCF3DE', borderRadius: 16, borderWidth: 1, borderColor: H_COLORS.amber, alignItems: 'center' }}>
+            {activeJobStatus === 'awaiting_confirmation' && (
+              <View style={{ padding: 18, backgroundColor: '#FCF3DE', borderRadius: 16, borderWidth: 1, borderColor: H_COLORS.amber, alignItems: 'center', marginBottom: 12 }}>
                 <Text style={{ fontSize: 15, fontWeight: '700', color: '#7A5708' }}>Waiting on Customer...</Text>
                 <Text style={{ fontSize: 12.5, color: '#8A6A1E', textAlign: 'center', marginTop: 4 }}>Customer is verifying PIN in their app.</Text>
               </View>
             )}
+
+            {/* Direct / Emergency Complete Delivery: ALWAYS accessible once goods are in transit, arrived, awaiting confirmation, or rerouted */}
+            {(stage >= 1 || activeJobStatus === 'awaiting_confirmation' || isDelivered) && (
+              <TouchableOpacity
+                style={{
+                  marginTop: 10,
+                  paddingVertical: 14,
+                  borderRadius: 16,
+                  borderWidth: 1.5,
+                  borderColor: H_COLORS.forest,
+                  backgroundColor: '#EAF7EE',
+                  alignItems: 'center',
+                }}
+                onPress={() => {
+                  Alert.alert(
+                    'Complete Delivery',
+                    `Mark Job HNC-${String(activeJob.id).padStart(4, '0')} as delivered and completed?`,
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      {
+                        text: 'Yes, Complete Job',
+                        style: 'default',
+                        onPress: async () => {
+                          try {
+                            await markDelivered(activeJob.id);
+                            await refreshDriverJobs();
+                            setScreenIndex(0);
+                            Alert.alert('Delivery Completed', `Job HNC-${String(activeJob.id).padStart(4, '0')} marked as delivered.`);
+                          } catch (e) {
+                            Alert.alert('Error', 'Could not complete delivery on server. Please try again.');
+                          }
+                        },
+                      },
+                    ]
+                  );
+                }}
+              >
+                <Text style={{ color: H_COLORS.forestDark, fontWeight: '700', fontSize: 14.5 }}>
+                  ✓ Complete Delivery
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
             
           </View>
