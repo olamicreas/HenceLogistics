@@ -3,7 +3,7 @@
     "name": "Hence",
     "slug": "HenceLogistics",
     "scheme": "hencelogistics",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -33,6 +33,7 @@
     },
     "android": {
       "package": "com.hencelogistics.app",
+      "versionCode": 2,
       "usesCleartextTraffic": true,
       "config": {
         "googleMaps": {
