@@ -21,7 +21,6 @@ import {
   AppState,
   Keyboard
 } from 'react-native';
-import { Polyline } from 'react-native-maps';
 import QRCode from 'react-native-qrcode-svg';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import MapView, { Marker, AnimatedRegion, Polyline } from 'react-native-maps';
