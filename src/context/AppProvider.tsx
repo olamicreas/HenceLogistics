@@ -779,10 +779,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const searchTimeout = useRef(null);
+  const searchTimeout = useRef<any>(null);
   const GOOGLE_MAPS_API_KEY = 'AIzaSyCnt02Uotcj2lXun70USSQ2hRsOcDXrZLY';
 
-  const scheduleSearch = (text, index) => {
+  const scheduleSearch = (text: string, index: any) => {
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
 
     if (!text || text.length < 3) {
@@ -806,15 +806,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
           if (geoData.status === 'OK' && geoData.results.length > 0) {
             const result = geoData.results[0];
+            const locLat = result.geometry.location.lat;
+            const locLng = result.geometry.location.lng;
             const formatted = [{
               display_name: `📍 Eircode Match: ${result.formatted_address}`,
-              lat: result.geometry.location.lat,
-              lon: result.geometry.location.lng,
+              lat: locLat,
+              lon: locLng,
               isExact: true // Flag to skip the second Geocode lookup later
             }];
             
-            if (index === -1) setPickupSuggestions(formatted);
-            else setDropoffSuggestions(formatted);
+            if (index === -1 || index === 'pickup') {
+              setPickupSuggestions(formatted);
+              setPickupCoord({ latitude: locLat, longitude: locLng });
+            } else if (index === 'dropoff') {
+              setDropoffSuggestions(formatted);
+              updateStop(0, 'lat', locLat);
+              updateStop(0, 'lon', locLng);
+            } else if (typeof index === 'number' && index >= 0) {
+              setDropoffSuggestions(formatted);
+              updateStop(index, 'lat', locLat);
+              updateStop(index, 'lon', locLng);
+            }
             return; // Stop here, we got our perfect match!
           }
         }
@@ -844,7 +856,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }, 400); 
   };
 
-  const selectSearchResult = async (index, item) => {
+  const selectSearchResult = async (index: any, item: any) => {
     try {
       let lat = item.lat;
       let lng = item.lon;
@@ -867,10 +879,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       // 🧹 Clean up the "📍 Eircode Match: " tag before saving it to the UI
       const cleanAddress = item.display_name.replace('📍 Eircode Match: ', '');
 
-      if (index === -1) {
+      if (index === -1 || index === 'pickup') {
         setPickupAddr(cleanAddress);
         setPickupCoord({ latitude: lat, longitude: lng });
         setPickupSuggestions([]);
+      } else if (index === 'dropoff') {
+        updateStop(0, 'address', cleanAddress);
+        updateStop(0, 'lat', lat);
+        updateStop(0, 'lon', lng);
+        setDropoffSuggestions([]);
       } else {
         updateStop(index, 'address', cleanAddress);
         updateStop(index, 'lat', lat);

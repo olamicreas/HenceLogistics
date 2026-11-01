@@ -24,7 +24,7 @@ import {
 import { Polyline } from 'react-native-maps';
 import QRCode from 'react-native-qrcode-svg';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import MapView, { Marker, AnimatedRegion } from 'react-native-maps';
+import MapView, { Marker, AnimatedRegion, Polyline } from 'react-native-maps';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
@@ -663,7 +663,7 @@ export default function HomeScreen() {
 
   // 🔥 QR SYNC GUARANTEE
   useEffect(() => {
-    let syncTimer: NodeJS.Timeout;
+    let syncTimer: any;
     if (activeQrStopIndex !== null) {
         syncTimer = setInterval(() => {
             if (activeBookingRef.current && token) {
@@ -722,7 +722,7 @@ export default function HomeScreen() {
   useEffect(() => { activeBookingRef.current = activeBooking; }, [activeBooking]);
 
   useEffect(() => {
-    let syncInterval: NodeJS.Timeout | null = null;
+    let syncInterval: any = null;
     let isPolling = false; 
 
     const pollActiveBooking = async () => {
@@ -1092,7 +1092,15 @@ export default function HomeScreen() {
     }
   };
 
-  const confirmLocation = () => {
+  const computeHaversineKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1 * Math.PI/180)*Math.cos(lat2 * Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+  };
+
+  const confirmLocation = async () => {
     if (mapPickTarget === null) return;
     const cleanAddr = String(tempAddress || '').trim();
 
@@ -1101,8 +1109,26 @@ export default function HomeScreen() {
       return;
     }
 
-    const finalLat = safeCoord(tempCoord?.lat, DUBLIN_PICK_REGION.latitude);
-    const finalLon = safeCoord(tempCoord?.lon, DUBLIN_PICK_REGION.longitude);
+    let resolvedLat = tempCoord?.lat;
+    let resolvedLon = tempCoord?.lon;
+
+    // 🔥 ACCURATE DISTANCE FIX: If coordinates not set yet (typed address without tapping suggestion), geocode immediately!
+    if (!resolvedLat || !resolvedLon) {
+      try {
+        const geoUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(cleanAddr)}&components=country:ie&key=${GOOGLE_MAPS_API_KEY}`;
+        const res = await fetch(geoUrl);
+        const data = await res.json();
+        if (data.status === 'OK' && data.results && data.results.length > 0) {
+          resolvedLat = data.results[0].geometry.location.lat;
+          resolvedLon = data.results[0].geometry.location.lng;
+        }
+      } catch (err) {
+        console.warn("Geocoding fetch error:", err);
+      }
+    }
+
+    const finalLat = safeCoord(resolvedLat, DUBLIN_PICK_REGION.latitude);
+    const finalLon = safeCoord(resolvedLon, DUBLIN_PICK_REGION.longitude);
 
     if (mapPickTarget === -1) {
       if (typeof setPickupAddr === 'function') setPickupAddr(cleanAddr);
@@ -1665,14 +1691,39 @@ export default function HomeScreen() {
                     >
                       {activeBooking.pickup_lat && (
                         <Marker coordinate={{ latitude: safeCoord(activeBooking.pickup_lat), longitude: safeCoord(activeBooking.pickup_lon) }}>
-                          <View style={[globalStyles.pinWrap, { backgroundColor: COLORS.amber }]}><Text style={{ color: '#fff', fontWeight: '800', fontSize: 10 }}>P</Text></View>
+                          <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: COLORS.amber, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#fff' }}>
+                            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 11 }}>P</Text>
+                          </View>
+                        </Marker>
+                      )}
+                      {(activeBooking.dropoff_lat || activeBooking.stops?.[0]?.lat) && (
+                        <Marker coordinate={{ latitude: safeCoord(activeBooking.dropoff_lat || activeBooking.stops?.[0]?.lat), longitude: safeCoord(activeBooking.dropoff_lon || activeBooking.stops?.[0]?.lon) }}>
+                          <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: COLORS.danger, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#fff' }}>
+                            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 11 }}>D</Text>
+                          </View>
                         </Marker>
                       )}
                       {driverLocation && (
                         // @ts-ignore
                         <Marker.Animated coordinate={animatedCoordinate} anchor={{ x: 0.5, y: 0.5 }}>
-                          <View style={globalStyles.driverPin}><Ionicons name="car" size={16} color="#fff" /></View>
+                          <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.forest, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff', elevation: 4 }}>
+                            <Ionicons name="car" size={17} color="#fff" />
+                          </View>
                         </Marker.Animated>
+                      )}
+                      {driverLocation?.lat && activeBooking && (
+                        <Polyline
+                          coordinates={[
+                            { latitude: safeCoord(driverLocation.lat), longitude: safeCoord(driverLocation.lon) },
+                            ['in_transit', 'picked_up', 'arrived_dropoff'].includes(String(activeBooking.status).toLowerCase())
+                              ? { latitude: safeCoord(activeBooking.dropoff_lat || activeBooking.stops?.[0]?.lat), longitude: safeCoord(activeBooking.dropoff_lon || activeBooking.stops?.[0]?.lon) }
+                              : { latitude: safeCoord(activeBooking.pickup_lat), longitude: safeCoord(activeBooking.pickup_lon) }
+                          ]}
+                          strokeWidth={3.5}
+                          strokeColor={COLORS.forest}
+                          lineCap="round"
+                          lineJoin="round"
+                        />
                       )}
                     </MapView>
                     <View style={{ position: 'absolute', left: 16, top: 16, backgroundColor: 'rgba(15,31,23,0.85)', paddingHorizontal: 13, paddingVertical: 7, borderRadius: 18 }}><Text style={{ color: '#fff', fontSize: 12.5, fontWeight: '700' }}>Live Tracking</Text></View>
@@ -1973,10 +2024,40 @@ export default function HomeScreen() {
                 <TextInput 
                   style={styles.fieldInput} 
                   value={tempAddress} 
-                  onChangeText={(t) => { setTempAddress(t); scheduleSearch(t, mapPickTarget!); }} 
+                  onChangeText={(t) => { 
+                    setTempAddress(t); 
+                    scheduleSearch(t, mapPickTarget!); 
+                    // 🔥 LIVE DISTANCE & COORDINATES: If exact Eircode typed, resolve coordinates immediately
+                    const clean = t.trim().toUpperCase();
+                    const isEircode = /^[A-Z]\d{2}\s?[A-Z0-9]{4}$/.test(clean);
+                    if (isEircode) {
+                      fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(clean)}&components=country:ie&key=${GOOGLE_MAPS_API_KEY}`)
+                        .then(r => r.json())
+                        .then(data => {
+                          if (data.status === 'OK' && data.results && data.results.length > 0) {
+                            const loc = data.results[0].geometry.location;
+                            setTempCoord({ lat: loc.lat, lon: loc.lng });
+                            mapRef.current?.animateToRegion({
+                              latitude: loc.lat,
+                              longitude: loc.lng,
+                              latitudeDelta: 0.02,
+                              longitudeDelta: 0.02
+                            }, 500);
+                          }
+                        }).catch(() => {});
+                    }
+                  }} 
                   onFocus={() => setActiveSearchIndex(mapPickTarget!)} 
                   placeholder="Search full address or Eircode..." 
                 />
+                {tempCoord?.lat && tempCoord?.lon && mapPickTarget !== -1 && pickupCoord?.latitude && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, paddingHorizontal: 4 }}>
+                    <Ionicons name="navigate" size={13} color={COLORS.forest} style={{ marginRight: 5 }} />
+                    <Text style={{ fontSize: 12.5, fontWeight: '700', color: COLORS.forest }}>
+                      Distance to pickup: {(computeHaversineKm(pickupCoord.latitude, pickupCoord.longitude, tempCoord.lat, tempCoord.lon) * 1.3).toFixed(1)} km
+                    </Text>
+                  </View>
+                )}
                 {activeSearchIndex === mapPickTarget && (
                   <ScrollView 
                     keyboardShouldPersistTaps="handled"
@@ -2298,7 +2379,7 @@ const styles = StyleSheet.create({
   mapBgReal: { flex: 1, backgroundColor: '#c8e6d4', position: 'relative', overflow: 'hidden' },
   mapRoadMain: { position: 'absolute', left: -10, right: -10, top: '44%', height: 10, backgroundColor: 'rgba(255,255,255,0.5)', transform: [{ rotate: '-2deg' }] },
   mapRouteLine: { position: 'absolute', left: '10%', right: '10%', top: '39%', height: 2, borderBottomWidth: 2, borderBottomColor: COLORS.primary, borderStyle: 'dashed' },
-  mapPinsWrap: { ...StyleSheet.absoluteFillObject, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', paddingHorizontal: '10%', zIndex: 4 },
+  mapPinsWrap: { ...(StyleSheet.absoluteFillObject as any), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', paddingHorizontal: '10%', zIndex: 4 },
   mapPinGroup: { alignItems: 'center', justifyContent: 'center', gap: 1 },
   mapPinDotReal: { width: 16, height: 16, borderRadius: 8, borderTopRightRadius: 0, transform: [{ rotate: '-45deg' }], alignItems: 'center', justifyContent: 'center', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 5 },
   mapPinPickup: { backgroundColor: COLORS.primary },
