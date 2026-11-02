@@ -1030,8 +1030,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         });
         const data = await resp.json();
         if (data && data.routes && data.routes.length > 0) {
-          totalKm = Number(data.routes[0].distance) / 1000;
-          totalDur = Number(data.routes[0].duration) / 60;
+          totalKm = Number((Number(data.routes[0].distance) / 1000).toFixed(2));
+          totalDur = Number((Number(data.routes[0].duration) / 60).toFixed(2));
         }
       } catch (err) {
         console.warn('OSRM error, falling back to Haversine', err);
@@ -1093,8 +1093,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const server = res.data;
       if (server && server.price !== undefined) {
         const serverQuote = {
-          distance_km: server.distance_km || totalKm,
-          duration_min: server.duration_min || Math.ceil((totalKm / 30) * 60),
+          distance_km: Number(Number(server.distance_km || totalKm).toFixed(2)),
+          duration_min: Number(Number(server.duration_min || (totalKm / 30) * 60).toFixed(2)),
           final_price: server.price,
           price_cents: server.price_cents,
           van_type: resolvedVanType,

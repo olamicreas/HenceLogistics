@@ -2979,17 +2979,21 @@ export default function DriverDashboard() {
               <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: item.bg, alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
                 <Ionicons name={item.icon as any} size={18} color={item.color} />
               </View>
-              <Text style={{ fontSize: 17, fontWeight: '800', color: '#0F1F17' }}>{item.value}</Text>
+              <Text style={{ fontSize: 17, color: '#0F1F17' }}>
+                {item.value.includes('100%') ? (
+                  <>
+                    <Text style={{ fontWeight: '400' }}>100%</Text>
+                    {item.value.replace('100%', '').length > 0 && (
+                      <Text style={{ fontWeight: '400' }}>{item.value.replace('100%', '')}</Text>
+                    )}
+                  </>
+                ) : (
+                  <Text style={{ fontWeight: '600' }}>{item.value}</Text>
+                )}
+              </Text>
               <Text style={{ fontSize: 11.5, fontWeight: '600', color: '#6B7670', marginTop: 2 }}>{item.label}</Text>
             </View>
           ))}
-        </View>
-
-        <View style={{ marginTop: 16, padding: 14, backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center' }}>
-          <Ionicons name="information-circle-outline" size={20} color="#64748B" style={{ marginRight: 10 }} />
-          <Text style={{ flex: 1, fontSize: 12, color: '#64748B', lineHeight: 18 }}>
-            Individual customer written feedback is verified by Dispatch in the Admin Portal and released to Hence logistics platforms.
-          </Text>
         </View>
       </View>
     </ScrollView>

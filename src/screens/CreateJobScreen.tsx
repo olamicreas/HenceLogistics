@@ -557,7 +557,7 @@ export default function CreateJobScreen() {
                   Distance: {quoteData.distance_km ?? approxDistanceKm} km
                 </Text>
                 <Text style={{ color: '#6b7280', marginBottom: 6 }}>
-                  ETA: {quoteData.duration_min ?? '--'} min
+                  ETA: {quoteData.duration_min != null ? Number(quoteData.duration_min).toFixed(2) : '--'} min
                 </Text>
                 <Text style={{ fontSize: 28, fontWeight: '800', marginBottom: 12 }}>
                   €{quoteData.final_price ?? quoteData.price ?? '--'}
